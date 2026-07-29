@@ -97,8 +97,8 @@ The dividing line is determinism: any documentation step with a single correct o
 
 **Write ONLY the body below the closing `---`.** Numbering, frontmatter (`type`, `title`, `status`, `supersedes`, `superseded_by`, `timestamp`), and index rows are CLI-owned; `description` and `tags` are yours.
 
-This rule is enforced by gates, not prose (instructions never block; only gates block). Wire them once per project:
+This rule is enforced by gates, not prose (instructions never block; only gates block). Wire them once per project through either of two deterministic channels (ADR 0023):
 
-- **Write-time gate (Claude Code):** copy `skills/living-docs/hooks/block-docs-handwrite.sh` from the living-docs repo into the project and register it in `.claude/settings.json` as a `PreToolUse` hook on `Write|Edit|MultiEdit`. It blocks hand-writes to CLI-owned frontmatter keys, new `NNNN-*.md` records, and type `index.md` files, naming the correct verb. Knobs: `LIVING_DOCS_ENFORCE=block|warn`, `LIVING_DOCS_BUNDLE=<dir>`.
-- **Session teaching:** register `skills/living-docs/hooks/session-context.sh` as a `SessionStart` hook so every session receives this rule and the resolved CLI path at start.
-- **Commit-time gate:** a `pre-commit` hook running `living-docs check <bundle>` (see `.githooks/pre-commit` in the living-docs repo), so a hand-written record fails in the session that authored it, not at CI.
+- **Claude Code plugin:** `/plugin marketplace add ejklock/living-docs-skill` then `/plugin install living-docs@living-docs` (`--scope project` to commit the choice). Installs the write-time gate (`PreToolUse` on `Write|Edit|MultiEdit`, blocking hand-writes to CLI-owned frontmatter keys, new `NNNN-*.md` records, and type `index.md` files, naming the correct verb) and the session-teaching hook (`SessionStart`, so every session receives this rule and the resolved CLI path at start).
+- **`living-docs hooks install [--dir <path>] [--docs-dir <bundle>] [--dry-run]`** (every harness): materializes the same write-gate and session-teaching scripts, wires them into `.claude/settings.json`, and installs a `pre-commit` hook running `living-docs check <bundle>` so a hand-written record fails in the session that authored it, not at CI. Remove everything it wrote with the sibling `living-docs hooks uninstall [--dir <path>] [--dry-run]`.
+- **Knobs:** `LIVING_DOCS_ENFORCE=block|warn` (write-gate strictness), `LIVING_DOCS_BUNDLE=<dir>` (docs bundle scope), documented and honored by either channel.

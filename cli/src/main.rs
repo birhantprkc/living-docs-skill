@@ -6,6 +6,7 @@ use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod hooks;
 mod skill;
 
 #[derive(Parser)]
@@ -167,6 +168,44 @@ enum Command {
         #[arg(long, conflicts_with = "json")]
         plain: bool,
     },
+    /// Materializes the corpus hook scripts into a target project (ADR 0023).
+    Hooks {
+        #[command(subcommand)]
+        cmd: HooksCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum HooksCmd {
+    /// Writes the two corpus hook scripts into `<dir>/.living-docs/hooks/`
+    /// at mode 0755, materializes the pre-commit doc-gate to
+    /// `<dir>/.githooks/pre-commit` (pointing `core.hooksPath` at it), and
+    /// wires the Claude Code hooks into `<dir>/.claude/settings.json`,
+    /// idempotently — re-running replaces the living-docs entries by
+    /// identity rather than appending. The generated commands pin the
+    /// resolved `--docs-dir` bundle as a `LIVING_DOCS_BUNDLE=` prefix.
+    /// `--dry-run` reports the same plan without writing anything.
+    Install {
+        /// Target project root; defaults to the current directory.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Report the plan without writing any file or directory.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Removes the artifacts `install` wrote — the two `.living-docs/hooks/`
+    /// scripts, `.githooks/pre-commit`, and the living-docs entries in
+    /// `<dir>/.claude/settings.json` — leaving unrelated entries and
+    /// `core.hooksPath` untouched. A clean no-op when nothing was installed.
+    /// `--dry-run` reports the same removal plan without deleting anything.
+    Uninstall {
+        /// Target project root; defaults to the current directory.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Report the plan without removing any file.
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -300,11 +339,33 @@ fn main() -> ExitCode {
             json,
             plain,
         } => run_skill(name, topic, list, json, plain),
+        Command::Hooks {
+            cmd: HooksCmd::Install { dir, dry_run },
+        } => run_hooks_install(dir, dry_run, &cli.docs_dir),
+        Command::Hooks {
+            cmd: HooksCmd::Uninstall { dir, dry_run },
+        } => run_hooks_uninstall(dir, dry_run),
     }
 }
 
 fn run_next(docs_dir: &Path, doc_type: &str) -> ExitCode {
     commands::next::run(docs_dir, doc_type)
+}
+
+/// Defaults `--dir` to the current directory when omitted, matching every
+/// other subcommand's cwd-relative default. `docs_dir` is the CLI's global
+/// `--docs-dir` flag, resolved at install time and pinned into the
+/// generated `LIVING_DOCS_BUNDLE=` commands (ADR 0020 scope, resolved once
+/// here rather than at hook run time).
+fn run_hooks_install(dir: Option<PathBuf>, dry_run: bool, docs_dir: &Path) -> ExitCode {
+    let project_root = dir.unwrap_or_else(|| PathBuf::from("."));
+    hooks::install(&project_root, docs_dir, dry_run)
+}
+
+/// Defaults `--dir` to the current directory, mirroring [`run_hooks_install`].
+fn run_hooks_uninstall(dir: Option<PathBuf>, dry_run: bool) -> ExitCode {
+    let project_root = dir.unwrap_or_else(|| PathBuf::from("."));
+    hooks::uninstall(&project_root, dry_run)
 }
 
 fn run_new(

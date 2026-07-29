@@ -1,0 +1,14 @@
+{
+  "name": "living-docs",
+  "owner": {
+    "name": "Evaldo Klock",
+    "url": "https://github.com/ejklock"
+  },
+  "plugins": [
+    {
+      "name": "living-docs",
+      "source": "./",
+      "description": "Deterministic Living Docs authoring with write-time enforcement gates."
+    }
+  ]
+}

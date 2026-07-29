@@ -29,6 +29,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0020 — Hand-write hook is scoped to CLI-owned type directories, not the whole bundle](0020-hand-write-hook-is-scoped-to-cli-owned-type-directories-not-the-whole-bundle.md) - Accepted
 * [0021 — Enforcement layers ship with the repo: write-gate hook, session teaching, and pre-commit doc-gate](0021-enforcement-layers-ship-with-the-repo-write-gate-hook-session-teaching-and-pre-commit-doc-gate.md) - Accepted
 * [0022 — Canonical frontmatter check is scoped to CLI-owned type directories](0022-canonical-frontmatter-check-is-scoped-to-cli-owned-type-directories.md) - Accepted
+* [0023 — Hooks ship through two deterministic channels: an in-repo Claude Code plugin and a living-docs hooks install verb](0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md) - Accepted
 
 ## Superseded
 

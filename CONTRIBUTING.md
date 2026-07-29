@@ -30,8 +30,10 @@ change before you invest time.
 ## Repository layout
 
 ```
+.claude-plugin/            Claude Code plugin manifest + marketplace entry (repo root is the plugin bundle)
+hooks/                     hooks.json wiring the plugin's PreToolUse/SessionStart hooks
 skills/
-  living-docs/             the skill: SKILL.md + rules/ + templates/
+  living-docs/             the skill: SKILL.md + rules/ + templates/ + hooks/ (enforcement scripts)
   okf-knowledge-format/    the file format (OKF spec vendored verbatim)
   research-artifacts/      the research-note format
 references/
@@ -41,6 +43,17 @@ cli/                       the living-docs binary (embeds skills/ via rust-embed
 install.sh                 multi-harness installer
 Makefile                   convenience wrapper around install.sh
 ```
+
+The repo root doubles as the **Claude Code plugin bundle**:
+`.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` declare the
+plugin, `hooks/hooks.json` wires its `PreToolUse`/`SessionStart` hooks, and
+`skills/` auto-discovers from the same root — no duplicated layout.
+`skills/living-docs/hooks/` is the **single source of truth** for all three
+enforcement scripts (`block-docs-handwrite.sh`, `session-context.sh`,
+`pre-commit`): the plugin addresses them through `${CLAUDE_PLUGIN_ROOT}` and
+`living-docs hooks install` materializes them from the same embedded corpus
+(ADR 0023). Edit them there — never in a materialized copy under a consumer
+project's `.living-docs/hooks/`.
 
 Each `SKILL.md` is a slim, self-bootstrapping stub: a trigger plus a task->topic
 router. The per-doc-type prose lives in `skills/<name>/rules/*.md` (one file per

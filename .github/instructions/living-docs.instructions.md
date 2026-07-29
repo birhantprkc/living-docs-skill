@@ -4,7 +4,7 @@ applyTo: "docs/**,**/*.md"
 ---
 name: living-docs
 description: Run a project's documentation as a living system — docs-first issues/PRDs, MADR-lite ADRs (supersede, never delete), Behavior Decision Records (BDRs), a project constitution, research artifacts, living Mermaid architecture diagrams, and semantic-index organization where every doc lands in exactly one place and indexes never drift. Use when setting up or maintaining project docs, writing an ADR/PRD/BDR/constitution/issue/research note, defining a term or acronym in the glossary, drawing or updating an architecture/flow/sequence diagram, splitting an oversized doc into an index, or enforcing the no-drift maintenance rule.
-version: "0.7.0"
+version: "0.8.0"
 metadata:
   type: skill
   layer: procedural
@@ -37,6 +37,8 @@ okf-format, doc-trail, size-targets, about (run --list for the full set).
 This stub is a **pure router** (ADR 0017): it triggers and points at topics — it holds no rules
 inline. The **five core invariants** and the **CLI-owns-the-mechanics hard rule** are topics, not
 stub prose; load them before authoring:
+
+Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`. (ADR 0019)
 
 - The five invariants (the spine) → `living-docs skill living-docs --topic spine`.
 - Authoring mechanics — CLI owns every deterministic step, you write only the prose →
