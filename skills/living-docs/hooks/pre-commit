@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# pre-commit — living-docs doc-gate, distributed copy (ADR 0021 layer 3,
+# ADR 0023 distribution channel 2). `living-docs hooks install` materializes
+# this file to <project>/.githooks/pre-commit and points core.hooksPath at
+# .githooks; skills/living-docs/hooks/ stays the single source of truth.
+#
+# Runs `living-docs check` over the docs bundle so a hand-written or drifted
+# record fails in the authoring session, not at CI. Fail-open when no binary
+# is resolvable (CI still gates); never bypass a real failure with --no-verify.
+
+set -u
+
+ROOT="$(git rev-parse --show-toplevel)"
+BUNDLE="${LIVING_DOCS_BUNDLE:-docs}"
+
+resolve_bin() {
+  if command -v living-docs >/dev/null 2>&1; then
+    command -v living-docs
+  elif [ -x "$ROOT/target/release/living-docs" ]; then
+    printf '%s' "$ROOT/target/release/living-docs"
+  fi
+}
+
+BIN="$(resolve_bin)"
+if [ -z "$BIN" ]; then
+  echo "living-docs pre-commit: no binary found (PATH or target/release) — doc-gate skipped, CI will enforce it. Build with \`make build\`." >&2
+  exit 0
+fi
+
+exec "$BIN" check "$ROOT/$BUNDLE"

@@ -4,13 +4,17 @@ use std::borrow::Cow;
 use std::fs;
 use std::io;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const HOOK_ASSET_PATHS: [&str; 2] = [
     "living-docs/hooks/block-docs-handwrite.sh",
     "living-docs/hooks/session-context.sh",
 ];
+
+const PRE_COMMIT_ASSET_PATH: &str = "living-docs/hooks/pre-commit";
+const GIT_HOOKS_DEST_SUBDIR: &str = ".githooks";
+const GIT_HOOKS_PATH_VALUE: &str = ".githooks";
 
 const HOOKS_DEST_SUBDIR: &str = ".living-docs/hooks";
 const SCRIPT_MODE: u32 = 0o755;
@@ -31,21 +35,29 @@ struct HookEntrySpec {
 }
 
 /// Materializes the corpus hook scripts into `<project_root>/.living-docs/hooks/`
-/// at mode 0755, then wires them into `<project_root>/.claude/settings.json`
+/// at mode 0755, materializes the pre-commit doc-gate to
+/// `<project_root>/.githooks/pre-commit` and points `core.hooksPath` at it,
+/// then wires the two Claude Code hooks into `<project_root>/.claude/settings.json`
 /// via a `serde_json::Value` parse/mutate/serialize merge — idempotently,
 /// replacing any prior living-docs entry by identity rather than appending.
 /// The bundle pinned into each generated command's `LIVING_DOCS_BUNDLE=` is
 /// `docs_dir`, resolved against `project_root` and required to already
 /// exist. Under `dry_run`, reports the same plan on stdout and changes
-/// nothing on disk. A missing embedded asset, a non-existent `docs_dir`, or
-/// a settings file that fails to parse as JSON are hard errors — named on
-/// stderr, no file written, `ExitCode::from(2)`.
+/// nothing on disk — including `core.hooksPath`. A missing embedded asset, a
+/// non-existent `docs_dir`, or a settings file that fails to parse as JSON
+/// are hard errors — named on stderr, no file written, `ExitCode::from(2)`.
+/// A failure setting `core.hooksPath` (e.g. `project_root` is not a git
+/// repository) is only a stderr warning; the verb still succeeds.
 pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> ExitCode {
     if let Err(message) = validate_docs_dir(project_root, docs_dir) {
         return report_failure(&message);
     }
     let scripts = match resolve_scripts() {
         Ok(scripts) => scripts,
+        Err(message) => return report_failure(&message),
+    };
+    let pre_commit = match resolve_one(PRE_COMMIT_ASSET_PATH) {
+        Ok(script) => script,
         Err(message) => return report_failure(&message),
     };
     let settings_path = project_root.join(SETTINGS_REL_PATH);
@@ -57,12 +69,17 @@ pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> Ex
     apply_hook_entries(&mut settings, &bundle);
     if dry_run {
         announce_dry_run(&scripts);
+        announce_dry_run_pre_commit();
         announce_dry_run_wiring(&settings_path, &bundle);
         return ExitCode::SUCCESS;
     }
     if let Err(err) = write_scripts(project_root, &scripts) {
         return report_failure(&err.to_string());
     }
+    if let Err(err) = write_script_to(&project_root.join(GIT_HOOKS_DEST_SUBDIR), &pre_commit) {
+        return report_failure(&err.to_string());
+    }
+    arm_git_hooks_path(project_root);
     match write_settings(&settings_path, &settings) {
         Ok(()) => {
             println!("wired {}", settings_path.display());
@@ -70,6 +87,37 @@ pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> Ex
         }
         Err(err) => report_failure(&err.to_string()),
     }
+}
+
+/// Removes the artifacts [`install`] wrote — the two `.living-docs/hooks/`
+/// scripts, `.githooks/pre-commit`, and the living-docs entries in
+/// `<project_root>/.claude/settings.json` — leaving unrelated entries,
+/// unrelated top-level keys, and `core.hooksPath` untouched. A project
+/// carrying none of these artifacts is a clean no-op: exit 0, nothing
+/// created, nothing deleted. Under `dry_run`, reports the same removal plan
+/// and changes nothing on disk. An existing settings file that fails to
+/// parse as JSON is a hard error, never overwritten.
+pub(crate) fn uninstall(project_root: &Path, dry_run: bool) -> ExitCode {
+    let removable = removable_artifacts(project_root);
+    let settings_path = project_root.join(SETTINGS_REL_PATH);
+    let settings_update = match plan_settings_removal(&settings_path) {
+        Ok(update) => update,
+        Err(message) => return report_failure(&message),
+    };
+    if dry_run {
+        announce_uninstall_dry_run(&removable, settings_update.is_some(), &settings_path);
+        return ExitCode::SUCCESS;
+    }
+    if let Err(err) = remove_artifacts(&removable) {
+        return report_failure(&err.to_string());
+    }
+    if let Some(settings) = settings_update {
+        if let Err(err) = write_settings(&settings_path, &settings) {
+            return report_failure(&err.to_string());
+        }
+        println!("stripped {}", settings_path.display());
+    }
+    ExitCode::SUCCESS
 }
 
 fn validate_docs_dir(project_root: &Path, docs_dir: &Path) -> Result<(), String> {
@@ -105,6 +153,13 @@ fn announce_dry_run(scripts: &[HookScript]) {
     }
 }
 
+fn announce_dry_run_pre_commit() {
+    println!(
+        "[dry-run] would write {GIT_HOOKS_DEST_SUBDIR}/{}",
+        basename_of(PRE_COMMIT_ASSET_PATH)
+    );
+}
+
 fn announce_dry_run_wiring(settings_path: &Path, bundle: &str) {
     println!(
         "[dry-run] would wire {} (LIVING_DOCS_BUNDLE={bundle})",
@@ -118,18 +173,43 @@ fn dest_display(basename: &str) -> String {
 
 fn write_scripts(project_root: &Path, scripts: &[HookScript]) -> io::Result<()> {
     let dest_dir = project_root.join(HOOKS_DEST_SUBDIR);
-    fs::create_dir_all(&dest_dir)?;
     scripts
         .iter()
-        .try_for_each(|script| write_one(&dest_dir, script))
+        .try_for_each(|script| write_script_to(&dest_dir, script))
 }
 
-fn write_one(dest_dir: &Path, script: &HookScript) -> io::Result<()> {
+/// Writes `script` into `dest_dir` (creating it if needed) at [`SCRIPT_MODE`]
+/// — the one write path shared by [`write_scripts`] (`.living-docs/hooks/`)
+/// and [`install`]'s own pre-commit write (`.githooks/`).
+fn write_script_to(dest_dir: &Path, script: &HookScript) -> io::Result<()> {
+    fs::create_dir_all(dest_dir)?;
     let dest = dest_dir.join(script.basename);
     fs::write(&dest, script.bytes.as_ref())?;
     fs::set_permissions(&dest, fs::Permissions::from_mode(SCRIPT_MODE))?;
     println!("wrote {}", dest.display());
     Ok(())
+}
+
+/// Best-effort `git -C project_root config core.hooksPath .githooks`. Any
+/// failure — `project_root` is not a git repository, `git` is unavailable —
+/// is a stderr warning; the installer must still succeed outside a git repo.
+fn arm_git_hooks_path(project_root: &Path) {
+    let outcome = std::process::Command::new("git")
+        .arg("-C")
+        .arg(project_root)
+        .args(["config", "core.hooksPath", GIT_HOOKS_PATH_VALUE])
+        .output();
+    match outcome {
+        Ok(result) if result.status.success() => {}
+        Ok(result) => warn_hooks_path(String::from_utf8_lossy(&result.stderr).trim()),
+        Err(err) => warn_hooks_path(&err.to_string()),
+    }
+}
+
+fn warn_hooks_path(detail: &str) {
+    eprintln!(
+        "living-docs hooks install: could not set core.hooksPath ({detail}) — the pre-commit doc-gate will not run automatically outside a git repository"
+    );
 }
 
 fn hook_entry_specs() -> [HookEntrySpec; 2] {
@@ -240,8 +320,82 @@ fn write_settings(path: &Path, settings: &Value) -> io::Result<()> {
     fs::write(path, rendered)
 }
 
+fn removable_artifacts(project_root: &Path) -> Vec<PathBuf> {
+    let hooks_dir = project_root.join(HOOKS_DEST_SUBDIR);
+    let mut candidates: Vec<PathBuf> = HOOK_ASSET_PATHS
+        .iter()
+        .map(|asset_path| hooks_dir.join(basename_of(asset_path)))
+        .collect();
+    candidates.push(
+        project_root
+            .join(GIT_HOOKS_DEST_SUBDIR)
+            .join(basename_of(PRE_COMMIT_ASSET_PATH)),
+    );
+    candidates
+        .into_iter()
+        .filter(|path| path.is_file())
+        .collect()
+}
+
+/// `None` when `settings_path` does not exist (untouched, so uninstall stays
+/// a clean no-op) or carries no living-docs entry to strip; `Some` with the
+/// filtered value otherwise.
+fn plan_settings_removal(settings_path: &Path) -> Result<Option<Value>, String> {
+    if !settings_path.is_file() {
+        return Ok(None);
+    }
+    let mut settings = load_settings(settings_path)?;
+    if strip_hook_entries(&mut settings) {
+        Ok(Some(settings))
+    } else {
+        Ok(None)
+    }
+}
+
+fn strip_hook_entries(settings: &mut Value) -> bool {
+    let marker = living_docs_hook_marker();
+    let pre_tool_use_changed = strip_section_entries(settings, PRE_TOOL_USE_SECTION, &marker);
+    let session_start_changed = strip_section_entries(settings, SESSION_START_SECTION, &marker);
+    pre_tool_use_changed || session_start_changed
+}
+
+fn strip_section_entries(settings: &mut Value, section: &str, marker: &str) -> bool {
+    let Some(array) = settings
+        .get_mut("hooks")
+        .and_then(|hooks| hooks.get_mut(section))
+        .and_then(Value::as_array_mut)
+    else {
+        return false;
+    };
+    let before = array.len();
+    array.retain(|entry| !is_living_docs_entry(entry, marker));
+    array.len() != before
+}
+
+fn remove_artifacts(paths: &[PathBuf]) -> io::Result<()> {
+    paths.iter().try_for_each(|path| remove_one(path))
+}
+
+fn remove_one(path: &Path) -> io::Result<()> {
+    fs::remove_file(path)?;
+    println!("removed {}", path.display());
+    Ok(())
+}
+
+fn announce_uninstall_dry_run(removable: &[PathBuf], strips_settings: bool, settings_path: &Path) {
+    for path in removable {
+        println!("[dry-run] would remove {}", path.display());
+    }
+    if strips_settings {
+        println!(
+            "[dry-run] would strip living-docs entries from {}",
+            settings_path.display()
+        );
+    }
+}
+
 fn report_failure(message: &str) -> ExitCode {
-    eprintln!("living-docs hooks install: {message}");
+    eprintln!("living-docs hooks: {message}");
     ExitCode::from(2)
 }
 
@@ -295,5 +449,85 @@ mod tests {
         let mut settings = json!({ "hooks": "not-an-object" });
         let section = ensure_hooks_section(&mut settings, PRE_TOOL_USE_SECTION);
         assert!(section.is_empty());
+    }
+
+    #[test]
+    fn resolve_one_finds_the_embedded_pre_commit_asset() {
+        let script = resolve_one(PRE_COMMIT_ASSET_PATH).expect("pre-commit is embedded");
+        assert_eq!(script.basename, "pre-commit");
+        assert!(script.bytes.starts_with(b"#!"));
+    }
+
+    fn scratch_project(label: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock before unix epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("living-docs-hooks-unit-{label}-{nanos}"));
+        fs::create_dir_all(&dir).expect("create scratch project dir");
+        dir
+    }
+
+    #[test]
+    fn removable_artifacts_is_empty_for_a_project_with_nothing_installed() {
+        let project = scratch_project("removable-empty");
+        assert!(removable_artifacts(&project).is_empty());
+        let _ = fs::remove_dir_all(&project);
+    }
+
+    #[test]
+    fn removable_artifacts_lists_only_the_files_actually_present() {
+        let project = scratch_project("removable-partial");
+        let hooks_dir = project.join(HOOKS_DEST_SUBDIR);
+        fs::create_dir_all(&hooks_dir).unwrap();
+        fs::write(
+            hooks_dir.join("session-context.sh"),
+            b"#!/usr/bin/env bash\n",
+        )
+        .unwrap();
+
+        let artifacts = removable_artifacts(&project);
+
+        assert_eq!(artifacts, vec![hooks_dir.join("session-context.sh")]);
+        let _ = fs::remove_dir_all(&project);
+    }
+
+    #[test]
+    fn strip_hook_entries_removes_only_the_living_docs_entries() {
+        let mut settings = json!({
+            "hooks": {
+                "PreToolUse": [
+                    { "matcher": "Bash", "hooks": [ { "type": "command", "command": "echo custom" } ] },
+                    { "matcher": "Write|Edit|MultiEdit", "hooks": [ { "type": "command", "command": format!("\"$CLAUDE_PROJECT_DIR\"/{}block-docs-handwrite.sh", living_docs_hook_marker()) } ] }
+                ]
+            }
+        });
+
+        let changed = strip_hook_entries(&mut settings);
+
+        assert!(changed);
+        let remaining = settings["hooks"]["PreToolUse"].as_array().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0]["matcher"], "Bash");
+    }
+
+    #[test]
+    fn strip_hook_entries_reports_no_change_when_there_is_nothing_to_strip() {
+        let mut settings = json!({
+            "hooks": {
+                "PreToolUse": [
+                    { "matcher": "Bash", "hooks": [ { "type": "command", "command": "echo custom" } ] }
+                ]
+            }
+        });
+
+        assert!(!strip_hook_entries(&mut settings));
+        assert_eq!(settings["hooks"]["PreToolUse"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn strip_hook_entries_reports_no_change_when_the_hooks_key_is_absent() {
+        let mut settings = json!({ "unrelatedTopLevelKey": "keep-me" });
+        assert!(!strip_hook_entries(&mut settings));
     }
 }
