@@ -30,10 +30,11 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0021 — Enforcement layers ship with the repo: write-gate hook, session teaching, and pre-commit doc-gate](0021-enforcement-layers-ship-with-the-repo-write-gate-hook-session-teaching-and-pre-commit-doc-gate.md) - Accepted
 * [0022 — Canonical frontmatter check is scoped to CLI-owned type directories](0022-canonical-frontmatter-check-is-scoped-to-cli-owned-type-directories.md) - Accepted
 * [0023 — Hooks ship through two deterministic channels: an in-repo Claude Code plugin and a living-docs hooks install verb](0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md) - Accepted
-* [0024 — A release is atomic: a missing binary asset fails the workflow and demotes the release to a draft](0024-a-release-is-atomic-a-missing-binary-asset-fails-the-workflow-and-demotes-the-release-to-a-draft.md) - Accepted
+* [0025 — Releases are born draft and earn publication by passing the asset gate](0025-releases-are-born-draft-and-earn-publication-by-passing-the-asset-gate.md) - Accepted
 
 ## Superseded
 
 * [0006 — The web view is a read-only axum server reusing living-docs-core](0006-web-read-only-axum.md) - Superseded
 * [0014 — The CLI serves skill content from an embedded corpus; harness SKILL.md files are slim stubs](0014-the-cli-serves-skill-content-from-an-embedded-corpus-harness-skill-md-files-are-slim-stubs.md) - Superseded
 * [0019 — Hand-written record frontmatter is blocked at write time, detected by check, and taught at point of use](0019-hand-written-record-frontmatter-is-blocked-at-write-time-detected-by-check-and-taught-at-point-of-use.md) - Superseded
+* [0024 — A release is atomic: a missing binary asset fails the workflow and demotes the release to a draft](0024-a-release-is-atomic-a-missing-binary-asset-fails-the-workflow-and-demotes-the-release-to-a-draft.md) - Superseded
