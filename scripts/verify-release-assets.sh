@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 #
 # verify-release-assets.sh — assert a GitHub Release carries every expected asset with a
-# valid SHA-256 checksum (ADR 0024). A missing or mismatched asset demotes the release to a
-# draft with `gh release edit --draft` before failing, so install.sh never sees a
-# half-published tag. Checksum comparison mirrors install.sh's cli_verify_sha256
-# sha256sum-or-shasum portability handling.
+# valid SHA-256 checksum (ADR 0025). The release is born a draft; this gate promotes it with
+# `gh release edit --draft=false` only once every expected asset is present and
+# checksum-valid. On failure it keeps the release draft (`gh release edit --draft`, an
+# idempotent safety net) and still exits 1, so install.sh never sees a half-published tag.
+# Checksum comparison mirrors install.sh's cli_verify_sha256 sha256sum-or-shasum portability
+# handling.
 #
-# Usage:  verify-release-assets.sh [--no-demote] <tag>
-# Exit:   0 = every expected asset is present and checksum-valid
-#         1 = an asset is missing or checksum-mismatched (release demoted unless
-#             --no-demote), or the release itself could not be read (no demotion attempted)
+# Usage:  verify-release-assets.sh [--verify-only] <tag>
+# Exit:   0 = every expected asset is present and checksum-valid (release promoted unless
+#             --verify-only)
+#         1 = an asset is missing or checksum-mismatched (release kept/ensured draft unless
+#             --verify-only), or the release itself could not be read (no mutation attempted)
 #         2 = usage error (missing tag argument)
 
 set -euo pipefail
@@ -22,15 +25,15 @@ readonly TARGET_TRIPLES=(
 )
 
 usage() {
-  printf 'Usage: %s [--no-demote] <tag>\n' "$(basename "$0")" >&2
+  printf 'Usage: %s [--verify-only] <tag>\n' "$(basename "$0")" >&2
 }
 
 parse_args() {
-  DEMOTE=1
+  MUTATE=1
   TAG=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --no-demote) DEMOTE=0 ;;
+      --verify-only) MUTATE=0 ;;
       -h|--help) usage; exit 0 ;;
       *) TAG="$1" ;;
     esac
@@ -95,13 +98,19 @@ mismatched_assets() {
   done
 }
 
-demote_release() {
+ensure_draft() {
+  [[ $MUTATE -eq 1 ]] || return 0
   gh release edit "$TAG" --draft >/dev/null
+}
+
+promote_release() {
+  [[ $MUTATE -eq 1 ]] || return 0
+  gh release edit "$TAG" --draft=false >/dev/null
 }
 
 fail_with() {
   printf '%s\n' "$@"
-  [[ $DEMOTE -eq 1 ]] && { demote_release || true; }
+  ensure_draft || true
   exit 1
 }
 
@@ -125,6 +134,7 @@ main() {
 
   count="$(expected_assets "$TAG" | wc -l | tr -d ' ')"
   printf 'verified %s release assets for %s\n' "$count" "$TAG"
+  promote_release
 }
 
 main "$@"

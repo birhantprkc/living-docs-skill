@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 #
-# run.sh — fixture tests for scripts/verify-release-assets.sh (ADR 0024 verification
+# run.sh — fixture tests for scripts/verify-release-assets.sh (ADR 0025 verification
 # criteria), driven entirely by a stub `gh` placed first on PATH. No network access and no
 # real GitHub release are involved.
 #
 # The stub logs every invocation to $GH_LOG, serves `release view` from a per-case fixture
 # list of asset names (or fails when the case declares the release absent), serves
 # `release download` by writing a payload file plus a matching or deliberately mismatching
-# .sha256, and serves `release edit` by only logging the call.
+# .sha256, and serves `release edit` by logging the exact flag it was invoked with
+# (`--draft` or `--draft=false`), which is how promote/demote is distinguished below.
 #
 # Exit: 0 = all cases pass, 1 = at least one failed.
 
@@ -68,7 +69,8 @@ release_download() {
 
 release_edit() {
   local tag="$1"
-  log_call release edit "$tag" --draft
+  shift
+  log_call release edit "$tag" "$@"
 }
 
 case "$1 $2" in
@@ -170,15 +172,21 @@ assert_out_line_count() { # assert_out_line_count <name> <expected-count>
   check "$1" "$ok"
 }
 
-assert_log_has() { # assert_log_has <name> <substring>
-  local ok=0
-  grep -qF -- "$2" <<<"$LOG" && ok=1
-  check "$1" "$ok"
-}
-
 assert_log_lacks() { # assert_log_lacks <name> <substring>
   local ok=1
   grep -qF -- "$2" <<<"$LOG" && ok=0
+  check "$1" "$ok"
+}
+
+assert_log_line() { # assert_log_line <name> <exact-line>
+  local ok=0
+  grep -qxF -- "$2" <<<"$LOG" && ok=1
+  check "$1" "$ok"
+}
+
+assert_log_line_lacks() { # assert_log_line_lacks <name> <exact-line>
+  local ok=1
+  grep -qxF -- "$2" <<<"$LOG" && ok=0
   check "$1" "$ok"
 }
 
@@ -189,13 +197,15 @@ echo "case 1: all ten assets present, checksums valid"
 invoke "GH_ASSETS_FILE=$ASSETS_ALL" -- "$TAG"
 assert_exit  "1-exit-0"                 0
 assert_out_has "1-names-verified-count" "10"
-assert_log_lacks "1-no-demote"          "release edit"
+assert_log_line "1-promotes"            "release edit $TAG --draft=false"
+assert_log_line_lacks "1-never-demotes" "release edit $TAG --draft"
 
 echo "case 2: one binary asset missing"
 invoke "GH_ASSETS_FILE=$ASSETS_MISSING_ONE" -- "$TAG"
 assert_exit    "2-exit-1"          1
 assert_out_has "2-names-missing"   "living-docs-aarch64-apple-darwin"
-assert_log_has "2-demotes"         "release edit $TAG --draft"
+assert_log_line "2-demotes"             "release edit $TAG --draft"
+assert_log_line_lacks "2-never-promotes" "release edit $TAG --draft=false"
 
 echo "case 3: matrix skipped, only zip assets present"
 invoke "GH_ASSETS_FILE=$ASSETS_ZIP_ONLY" -- "$TAG"
@@ -205,29 +215,49 @@ for triple in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu 
   assert_out_line "3-names-missing-living-docs-$triple"          "living-docs-$triple"
   assert_out_line "3-names-missing-living-docs-$triple-checksum" "living-docs-$triple.sha256"
 done
-assert_log_has "3-demotes" "release edit $TAG --draft"
+assert_log_line "3-demotes"              "release edit $TAG --draft"
+assert_log_line_lacks "3-never-promotes" "release edit $TAG --draft=false"
 
 echo "case 4: all present, one checksum mismatched"
 invoke "GH_ASSETS_FILE=$ASSETS_ALL" "GH_MISMATCH_ASSETS=living-docs-x86_64-unknown-linux-gnu" -- "$TAG"
 assert_exit    "4-exit-1"        1
 assert_out_line "4-names-mismatch" "living-docs-x86_64-unknown-linux-gnu"
-assert_log_has "4-demotes"        "release edit $TAG --draft"
+assert_log_line "4-demotes"              "release edit $TAG --draft"
+assert_log_line_lacks "4-never-promotes" "release edit $TAG --draft=false"
 
 echo "case 5: release not found"
 invoke "GH_RELEASE_ABSENT=1" -- "$TAG"
 assert_exit      "5-exit-1"       1
 assert_out_has   "5-names-tag"    "$TAG"
-assert_log_lacks "5-no-demote"    "release edit"
+assert_log_lacks "5-no-edit"      "release edit"
 
-echo "case 6: --no-demote with a missing asset"
-invoke "GH_ASSETS_FILE=$ASSETS_MISSING_ONE" -- --no-demote "$TAG"
-assert_exit       "6-exit-1"    1
-assert_log_lacks  "6-no-demote" "release edit"
+echo "case 6: release not found, --verify-only"
+invoke "GH_RELEASE_ABSENT=1" -- --verify-only "$TAG"
+assert_exit      "6-exit-1"       1
+assert_out_has   "6-names-tag"    "$TAG"
+assert_log_lacks "6-no-edit"      "release edit"
 
-echo "case 7: no tag argument"
+echo "case 7: --verify-only with a missing asset"
+invoke "GH_ASSETS_FILE=$ASSETS_MISSING_ONE" -- --verify-only "$TAG"
+assert_exit       "7-exit-1"    1
+assert_log_lacks  "7-no-edit"   "release edit"
+
+echo "case 8: --verify-only with all ten assets present"
+invoke "GH_ASSETS_FILE=$ASSETS_ALL" -- --verify-only "$TAG"
+assert_exit       "8-exit-0"    0
+assert_log_lacks  "8-no-edit"   "release edit"
+
+echo "case 9: no tag argument"
 invoke --
-assert_exit    "7-exit-2"   2
-assert_out_has "7-usage"    "Usage:"
+assert_exit    "9-exit-2"   2
+assert_out_has "9-usage"    "Usage:"
+
+echo "case 10: release.yml declares draft: true exactly twice (ADR 0025 fitness function)"
+WORKFLOW="$HERE/../../../.github/workflows/release.yml"
+draft_true_count="$(grep -c 'draft: true' "$WORKFLOW")"
+ok=0
+[[ "$draft_true_count" == "2" ]] && ok=1
+check "10-two-draft-true-declarations" "$ok"
 
 echo
 if ((fail == 0)); then
