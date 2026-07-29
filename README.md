@@ -151,14 +151,14 @@ make test-fixtures   # run the hostile/negative fixtures guarding the parsers
 
 ### Where each tool loads from
 
-| Tool | Mechanism | Default location (global · `--project`) |
-|---|---|---|
-| **Claude Code** | native `SKILL.md` skills | `~/.claude/skills` · `.claude/skills` |
-| **OpenCode** | native `SKILL.md` skills (also reads `.claude/skills`) | `~/.config/opencode/skills` · `.opencode/skills` |
-| **Codex** | native `SKILL.md` skills | `~/.codex/skills` · `.codex/skills` |
-| **Cursor** | project rule | `.cursor/rules/living-docs.mdc` (project-scoped) |
-| **GitHub Copilot** | path-scoped instruction | `.github/instructions/living-docs.instructions.md` (project-scoped) |
-| **Pi** | skills dir + `AGENTS.md` pointer | `~/.pi/agent/skills` · `.pi/skills` |
+| Tool | Mechanism | Default location (global · `--project`) | Enforcement |
+|---|---|---|---|
+| **Claude Code** | native `SKILL.md` skills | `~/.claude/skills` · `.claude/skills` | Plugin **or** `living-docs hooks install` — write-gate + session teaching + pre-commit |
+| **OpenCode** | native `SKILL.md` skills (also reads `.claude/skills`) | `~/.config/opencode/skills` · `.opencode/skills` | `living-docs hooks install` — pre-commit doc-gate only |
+| **Codex** | native `SKILL.md` skills | `~/.codex/skills` · `.codex/skills` | `living-docs hooks install` — pre-commit doc-gate only |
+| **Cursor** | project rule | `.cursor/rules/living-docs.mdc` (project-scoped) | None — pre-commit + CI only |
+| **GitHub Copilot** | path-scoped instruction | `.github/instructions/living-docs.instructions.md` (project-scoped) | None — pre-commit + CI only |
+| **Pi** | skills dir + `AGENTS.md` pointer | `~/.pi/agent/skills` · `.pi/skills` | `living-docs hooks install` — pre-commit doc-gate only |
 
 **Claude Code**, **OpenCode**, and **Codex** share the same model: they
 auto-discover folders of `SKILL.md` files from their skills directory, so the
@@ -176,6 +176,41 @@ skills/okf-knowledge-format/SKILL.md, and skills/research-artifacts/SKILL.md.
 ```
 
 Then restart the session so the tool picks up the skills.
+
+### Enforcement — write-time gates, not just instructions
+
+`./install.sh` ships **skills only** — it copies markdown instructions and never
+touches a hook script or wires any settings file ([ADR 0023](docs/adr/0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md)).
+The write-gate, the session-teaching hook, and the pre-commit doc-gate are
+distributed through two separate, deterministic channels:
+
+- **Claude Code plugin** (Claude Code only):
+  `/plugin marketplace add ejklock/living-docs-skill` then
+  `/plugin install living-docs@living-docs` (add `--scope project` to commit the
+  choice to the repo). Installs the write-gate (`PreToolUse` on
+  `Write|Edit|MultiEdit`, blocking hand-written docs before they land) and the
+  session-teaching hook (`SessionStart`), both resolved through
+  `${CLAUDE_PLUGIN_ROOT}` so no checkout of this bundle is required.
+- **`living-docs hooks install [--dir <project>] [--docs-dir <bundle>] [--dry-run]`**
+  (every harness): materializes the two hook scripts into `.living-docs/hooks/`,
+  wires `.claude/settings.json` with the resolved bundle pinned as
+  `LIVING_DOCS_BUNDLE=`, and installs the pre-commit doc-gate at
+  `.githooks/pre-commit` (pointing `core.hooksPath` at it). The pre-commit gate
+  is git-level and catches every harness at commit time; the
+  `.claude/settings.json` wiring is what gives Claude Code its write-time gate.
+  Remove everything it wrote with the sibling
+  `living-docs hooks uninstall [--dir <project>] [--dry-run]` — `install` and
+  `uninstall` are separate subcommands, not a flag.
+
+**Cursor and GitHub Copilot have no write-time hook surface at all** — neither
+tool exposes a pre-write hook, so they rely entirely on the pre-commit gate and
+CI to catch a hand-written doc after the fact.
+
+One caveat worth knowing: plugin hooks and `.claude/settings.json` hooks fire
+independently, with no deduplication. Installing both channels in the same
+Claude Code project duplicates the `SessionStart` notice and the (still
+correct) block — an accepted trade-off recorded in
+[ADR 0023](docs/adr/0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md).
 
 ### Skill content — served by the CLI, not copied to disk
 

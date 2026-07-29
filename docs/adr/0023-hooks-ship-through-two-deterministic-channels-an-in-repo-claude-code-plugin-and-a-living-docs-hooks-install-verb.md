@@ -70,7 +70,8 @@ plugin cache. Adoption is `/plugin marketplace add ejklock/living-docs-skill` th
 **2. A `living-docs hooks install` verb, for every other harness.** It materializes the hook
 scripts from the embedded corpus into `<project>/.living-docs/hooks/` (mode `0755`), emits
 the harness wiring, and installs the pre-commit doc-gate. It is idempotent — re-running
-converges on the same bytes — and supports `--dry-run` and `--uninstall`. It never merges
+converges on the same bytes — and supports `--dry-run`. Removal is the sibling subcommand
+`living-docs hooks uninstall`, not a flag on `install`. It never merges
 JSON by hand-rolled string surgery: an existing settings file is parsed, the living-docs hook
 entries are replaced by identity, and unrelated entries are preserved verbatim.
 
@@ -132,7 +133,8 @@ outside the deterministic layer that owns them.
   verbatim and the resulting file parses as JSON.
 - The generated wiring pins `LIVING_DOCS_BUNDLE` to the resolved bundle; with no resolvable
   bundle the verb exits non-zero naming the flag to pass.
-- `--uninstall` removes the living-docs entries and leaves unrelated entries intact.
+- `living-docs hooks uninstall` removes the living-docs entries and leaves unrelated entries
+  intact.
 - Every `command` in `hooks/hooks.json` is prefixed by `${CLAUDE_PLUGIN_ROOT}`, and every
   path it names exists in the plugin bundle.
 - Fitness function: `cli/tests/hooks_install.rs` covers the criteria above and a manifest

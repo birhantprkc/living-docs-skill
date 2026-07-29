@@ -9,6 +9,12 @@
 # the `living-docs skill` CLI command, not copied to disk — and, for tools
 # that need it, generating a small rule/instruction pointer file.
 #
+# Enforcement (write-gate, session teaching, pre-commit doc-gate) is NOT part
+# of this script — it ships through two separate channels: the Claude Code
+# plugin (/plugin marketplace add ejklock/living-docs-skill && /plugin install
+# living-docs@living-docs) or `living-docs hooks install` for every harness.
+# See README.md → Enforcement.
+#
 # Usage:
 #   ./install.sh [harness] [options]
 #
@@ -62,7 +68,7 @@ run()  { if [[ $DRYRUN -eq 1 ]]; then log "  [dry-run] $*"; else eval "$*"; fi; 
 note() { if [[ $DRYRUN -eq 1 ]]; then log "  [dry-run] would install: $*"; else log "installed: $*"; fi; }
 die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-usage() { sed -n '2,42p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,50p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # --- parse args ---
 while [[ $# -gt 0 ]]; do
@@ -271,3 +277,6 @@ if [[ "$HARNESS" == "all" ]]; then
 else
   do_harness "$HARNESS"
 fi
+
+log ""
+log "Reminder: this script ships skills only. Enforcement (write-gate, session teaching, pre-commit) installs separately — Claude Code plugin (/plugin marketplace add ejklock/living-docs-skill && /plugin install living-docs@living-docs) or 'living-docs hooks install' for every harness."
