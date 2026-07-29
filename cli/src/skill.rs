@@ -1,5 +1,6 @@
 use rust_embed::RustEmbed;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 /// The `skills/**` corpus embedded in the binary at compile time (ADR
@@ -151,6 +152,14 @@ fn to_minified_json<T: Serialize>(value: &T) -> Result<String, String> {
 fn read_asset(path: &str) -> Result<String, String> {
     let file = SkillAssets::get(path).ok_or_else(|| format!("missing embedded asset: {path}"))?;
     String::from_utf8(file.data.into_owned()).map_err(|_| format!("{path} is not valid UTF-8"))
+}
+
+/// Raw bytes of a `skills/**`-relative embedded asset (e.g.
+/// `living-docs/hooks/session-context.sh`), for consumers that need the
+/// asset's bytes as-is rather than [`read_asset`]'s UTF-8-decoded form. None
+/// when `path` has no embedded asset.
+pub(crate) fn asset(path: &str) -> Option<Cow<'static, [u8]>> {
+    SkillAssets::get(path).map(|file| file.data)
 }
 
 fn skill_names() -> BTreeSet<String> {
@@ -315,5 +324,17 @@ mod tests {
     #[test]
     fn topic_json_errors_for_an_unknown_topic() {
         assert!(topic_json("living-docs", "no-such-topic").is_err());
+    }
+
+    #[test]
+    fn asset_returns_the_raw_bytes_of_an_embedded_hook_script() {
+        let bytes =
+            asset("living-docs/hooks/session-context.sh").expect("session-context.sh is embedded");
+        assert!(bytes.starts_with(b"#!"));
+    }
+
+    #[test]
+    fn asset_returns_none_for_an_unknown_path() {
+        assert!(asset("living-docs/hooks/no-such-script.sh").is_none());
     }
 }

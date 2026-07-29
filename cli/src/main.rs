@@ -6,6 +6,7 @@ use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod hooks;
 mod skill;
 
 #[derive(Parser)]
@@ -167,6 +168,26 @@ enum Command {
         #[arg(long, conflicts_with = "json")]
         plain: bool,
     },
+    /// Materializes the corpus hook scripts into a target project (ADR 0023).
+    Hooks {
+        #[command(subcommand)]
+        cmd: HooksCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum HooksCmd {
+    /// Writes the two corpus hook scripts into `<dir>/.living-docs/hooks/`
+    /// at mode 0755, idempotently. `--dry-run` reports the same plan without
+    /// writing anything.
+    Install {
+        /// Target project root; defaults to the current directory.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Report the plan without writing any file or directory.
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -300,11 +321,21 @@ fn main() -> ExitCode {
             json,
             plain,
         } => run_skill(name, topic, list, json, plain),
+        Command::Hooks {
+            cmd: HooksCmd::Install { dir, dry_run },
+        } => run_hooks_install(dir, dry_run),
     }
 }
 
 fn run_next(docs_dir: &Path, doc_type: &str) -> ExitCode {
     commands::next::run(docs_dir, doc_type)
+}
+
+/// Defaults `--dir` to the current directory when omitted, matching every
+/// other subcommand's cwd-relative default.
+fn run_hooks_install(dir: Option<PathBuf>, dry_run: bool) -> ExitCode {
+    let project_root = dir.unwrap_or_else(|| PathBuf::from("."));
+    hooks::install(&project_root, dry_run)
 }
 
 fn run_new(
