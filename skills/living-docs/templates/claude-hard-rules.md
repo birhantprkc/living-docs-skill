@@ -94,3 +94,11 @@ The dividing line is determinism: any documentation step with a single correct o
 - Use the CLI verb for every mechanical step: `living-docs new <type> "<title>"` (number + frontmatter + skeleton), `living-docs supersede <old> <new>` (wires `supersedes`/`superseded_by` + status on both records), `living-docs index [type]` (regenerates the index), `living-docs check` (the doc-gate, must pass), `living-docs export`/`brief` (byte-stable materialization / pre-filled scaffold).
 - Write the body prose directly — there is no paragraph-editing verb, because wrapping a text edit in the CLI adds no determinism. Editing the body is a normal edit; hand-numbering a doc, hand-writing frontmatter, hand-maintaining an index row, or hand-wiring supersede links is a process error.
 - When a deterministic frontmatter mutation has no verb yet (e.g. set status, add a tag) and it keeps being done by hand, harden it into a new CLI verb rather than normalizing the hand-edit.
+
+**Write ONLY the body below the closing `---`.** Numbering, frontmatter (`type`, `title`, `status`, `supersedes`, `superseded_by`, `timestamp`), and index rows are CLI-owned; `description` and `tags` are yours.
+
+This rule is enforced by gates, not prose (instructions never block; only gates block). Wire them once per project:
+
+- **Write-time gate (Claude Code):** copy `skills/living-docs/hooks/block-docs-handwrite.sh` from the living-docs repo into the project and register it in `.claude/settings.json` as a `PreToolUse` hook on `Write|Edit|MultiEdit`. It blocks hand-writes to CLI-owned frontmatter keys, new `NNNN-*.md` records, and type `index.md` files, naming the correct verb. Knobs: `LIVING_DOCS_ENFORCE=block|warn`, `LIVING_DOCS_BUNDLE=<dir>`.
+- **Session teaching:** register `skills/living-docs/hooks/session-context.sh` as a `SessionStart` hook so every session receives this rule and the resolved CLI path at start.
+- **Commit-time gate:** a `pre-commit` hook running `living-docs check <bundle>` (see `.githooks/pre-commit` in the living-docs repo), so a hand-written record fails in the session that authored it, not at CI.

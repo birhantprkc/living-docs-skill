@@ -1,8 +1,8 @@
 ---
 type: Context
-title: "Glossary"
+title: Glossary
 description: Terms and acronyms used across the Linkly docs.
-tags: [glossary, vocabulary, context]
+tags: [context, glossary, vocabulary]
 timestamp: 2026-06-20T00:00:00Z
 ---
 

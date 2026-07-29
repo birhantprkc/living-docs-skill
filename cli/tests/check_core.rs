@@ -68,31 +68,30 @@ fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
 
 /// The fixture's `type` value is spread across three files as a double-quoted,
 /// single-quoted, and trailing-commented scalar to prove the type-extraction
-/// invariant tolerates all three forms — a concern independent of ADR 0019's
-/// canonical round-trip check, which now (correctly) flags all three as
-/// hand-written, since none of them matches `living-docs fmt`'s plain,
-/// comment-free output.
+/// invariant tolerates all three forms. Its docs sit at the bundle root, so
+/// the ADR 0019 canonical round-trip check does not apply (ADR 0022 scopes it
+/// to CLI-owned type directories) and the bundle checks clean.
 #[test]
-fn fixture_04_quoted_and_commented_frontmatter_parses_type_but_fails_the_canonical_check() {
+fn fixture_04_quoted_and_commented_frontmatter_parses_type_and_checks_clean() {
     let output = run_check(&fixture("04-frontmatter-quoted-commented"));
     let stdout = stdout_of(&output);
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0), "got:\n{stdout}");
     assert!(!stdout.contains("non-empty 'type'"));
-    assert!(stdout.contains("living-docs fmt"));
+    assert!(!stdout.contains("living-docs fmt"));
 }
 
 /// The fixture's `type: |\n  ADR\n` block scalar proves the type-extraction
-/// invariant tolerates YAML block-scalar syntax, independent of the canonical
-/// check, which (correctly) flags it as non-canonical.
+/// invariant tolerates YAML block-scalar syntax; at the bundle root it is
+/// outside the canonical check's ADR 0022 scope and the bundle checks clean.
 #[test]
-fn fixture_06_block_scalar_type_parses_but_fails_the_canonical_check() {
+fn fixture_06_block_scalar_type_parses_and_checks_clean() {
     let output = run_check(&fixture("06-block-scalar-ok"));
     let stdout = stdout_of(&output);
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0), "got:\n{stdout}");
     assert!(!stdout.contains("non-empty 'type'"));
-    assert!(stdout.contains("living-docs fmt"));
+    assert!(!stdout.contains("living-docs fmt"));
 }
 
 #[test]

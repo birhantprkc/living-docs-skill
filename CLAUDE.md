@@ -90,5 +90,11 @@ fronts:
 - Every architectural fork (adapter sync contract, DB schema, web surface) gets an ADR via
   `living-docs new adr "..."` **before** code. Decide, then implement.
 - `living-docs check` must pass over `docs/` — it is the doc-gate.
+- **Docs authoring is CLI-first and gate-enforced (ADR 0021).** Write ONLY the body below
+  the closing `---` of a record; numbering, frontmatter, supersede links, and index rows
+  come from `living-docs new`/`status`/`supersede`/`index`/`fmt`. A PreToolUse hook
+  (`.claude/settings.json` → `skills/living-docs/hooks/block-docs-handwrite.sh`) blocks
+  hand-writes under `docs/{adr,bdr,prd,issues}/`, and `.githooks/pre-commit` runs the
+  doc-gate before every commit.
 - Conventional Commits; ticket ID when one exists. No AI attribution in commit messages.
 - Never bypass a failing hook with `--no-verify`; fix the cause.

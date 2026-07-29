@@ -27,6 +27,8 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0017 — SKILL.md stubs are pure routers; the spine and all detail move to CLI topics](0017-skill-md-stubs-are-pure-routers-the-spine-and-all-detail-move-to-cli-topics.md) - Accepted
 * [0018 — Atlas delete is a soft-delete, scoped to non-decision doc types, refused on inbound relations](0018-atlas-delete-is-a-soft-delete-scoped-to-non-decision-doc-types-refused-on-inbound-relations.md) - Accepted
 * [0020 — Hand-write hook is scoped to CLI-owned type directories, not the whole bundle](0020-hand-write-hook-is-scoped-to-cli-owned-type-directories-not-the-whole-bundle.md) - Accepted
+* [0021 — Enforcement layers ship with the repo: write-gate hook, session teaching, and pre-commit doc-gate](0021-enforcement-layers-ship-with-the-repo-write-gate-hook-session-teaching-and-pre-commit-doc-gate.md) - Accepted
+* [0022 — Canonical frontmatter check is scoped to CLI-owned type directories](0022-canonical-frontmatter-check-is-scoped-to-cli-owned-type-directories.md) - Accepted
 
 ## Superseded
 

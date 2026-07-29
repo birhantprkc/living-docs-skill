@@ -13,24 +13,38 @@
 use super::records::is_reserved;
 use super::{file_name_str, Reporter};
 use crate::frontmatter::frontmatter_block;
+use crate::paths::doc_type_for_dir;
 use crate::record::{extract_record, to_canonical_markdown};
 use crate::store::DocStore;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const NON_CANONICAL_MESSAGE: &str =
     "non-canonical (hand-written?) frontmatter — run `living-docs fmt` or author via the CLI verbs";
 
-/// Flags every non-reserved record in `all_md` whose on-disk frontmatter
-/// block differs from its canonical re-serialization. A record carrying no
-/// frontmatter block at all is the existing untyped-doc check's concern and
-/// is skipped here.
+/// True when the record sits directly inside one of the CLI-owned type
+/// directories (`paths::doc_type_for_dir` — ADR 0020's scope, applied to the
+/// check layer by ADR 0022). Only those records are scaffolded by `new`, so
+/// only they can be expected to byte-match canonical serialization.
+fn in_cli_owned_dir(path: &Path) -> bool {
+    path.parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        .and_then(doc_type_for_dir)
+        .is_some()
+}
+
+/// Flags every non-reserved record inside a CLI-owned type directory whose
+/// on-disk frontmatter block differs from its canonical re-serialization.
+/// Hand-authored records (research, bundle-root notes) are out of scope, and
+/// a record carrying no frontmatter block at all is the existing untyped-doc
+/// check's concern — both are skipped here.
 pub(crate) fn check_canonical_frontmatter(
     store: &dyn DocStore,
     all_md: &[PathBuf],
     reporter: &mut Reporter,
 ) {
     for path in all_md {
-        if is_reserved(&file_name_str(path)) {
+        if is_reserved(&file_name_str(path)) || !in_cli_owned_dir(path) {
             continue;
         }
         let Ok(contents) = store.read(path) else {
@@ -121,8 +135,35 @@ mod tests {
     }
 
     #[test]
+    fn check_canonical_frontmatter_skips_records_outside_cli_owned_directories() {
+        let commented = "---\ntype: Research\ntitle: Field Notes  # a comment\n---\n\nBody.\n";
+        for path in ["/bundle/research/0001-notes.md", "/bundle/0001-notes.md"] {
+            let (store, all_md) = store_with(path, commented);
+            let mut reporter = Reporter::new();
+
+            check_canonical_frontmatter(&store, &all_md, &mut reporter);
+
+            assert!(reporter.into_violations().is_empty());
+        }
+    }
+
+    #[test]
+    fn check_canonical_frontmatter_flags_every_cli_owned_directory() {
+        let commented = "---\ntype: ADR\ntitle: X  # comment\n---\n\nBody.\n";
+        for dir in ["adr", "bdr", "prd", "issues"] {
+            let path = format!("/bundle/{dir}/0001-doc.md");
+            let (store, all_md) = store_with(&path, commented);
+            let mut reporter = Reporter::new();
+
+            check_canonical_frontmatter(&store, &all_md, &mut reporter);
+
+            assert_eq!(reporter.into_violations().len(), 1);
+        }
+    }
+
+    #[test]
     fn check_canonical_frontmatter_skips_a_record_with_no_frontmatter_block() {
-        let (store, all_md) = store_with("/bundle/notes.md", "# Just a heading\n\nBody.\n");
+        let (store, all_md) = store_with("/bundle/adr/notes.md", "# Just a heading\n\nBody.\n");
         let mut reporter = Reporter::new();
 
         check_canonical_frontmatter(&store, &all_md, &mut reporter);
@@ -133,7 +174,7 @@ mod tests {
     #[test]
     fn check_canonical_frontmatter_skips_reserved_files() {
         let commented = "---\ntype: ADR\ntitle: X  # comment\n---\n\nBody.\n";
-        let (store, all_md) = store_with("/bundle/index.md", commented);
+        let (store, all_md) = store_with("/bundle/adr/index.md", commented);
         let mut reporter = Reporter::new();
 
         check_canonical_frontmatter(&store, &all_md, &mut reporter);

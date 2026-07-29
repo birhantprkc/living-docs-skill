@@ -4,7 +4,6 @@ title: SQLite store for minted links
 description: Persist links in a single-file SQLite database so they survive restarts.
 status: Accepted
 supersedes: 0001
-superseded_by:
 tags: [storage]
 timestamp: 2026-06-20T00:00:00Z
 ---
