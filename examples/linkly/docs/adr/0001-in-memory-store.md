@@ -3,7 +3,6 @@ type: ADR
 title: In-memory store for minted links
 description: Store links in a process-local map for the first prototype.
 status: Superseded
-supersedes:
 superseded_by: 0002
 tags: [storage]
 timestamp: 2026-06-20T00:00:00Z

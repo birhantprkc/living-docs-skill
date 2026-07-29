@@ -3,7 +3,6 @@ type: BDR
 title: Shorten & redirect
 description: Mint a short code for a valid URL and redirect that code to the original.
 status: Accepted
-superseded_by:
 tags: [phase-1]
 timestamp: 2026-06-20T00:00:00Z
 ---

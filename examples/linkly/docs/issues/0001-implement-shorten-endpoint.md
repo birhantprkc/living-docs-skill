@@ -5,7 +5,6 @@ description: Build the two Phase 1 endpoints against the SQLite store.
 status: open
 labels: [phase-1, backend]
 blocked_by: []
-tracker:
 timestamp: 2026-06-20T00:00:00Z
 ---
 

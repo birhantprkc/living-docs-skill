@@ -3,7 +3,6 @@ type: PRD
 title: Link shortening & redirect
 description: Mint a short code for a URL and redirect that code back to the original.
 status: Accepted
-superseded_by:
 tags: [phase-1]
 timestamp: 2026-06-20T00:00:00Z
 ---

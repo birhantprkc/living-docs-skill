@@ -31,7 +31,7 @@ LIVING_DOCS_BIN := target/release/living-docs
 .PHONY: help install install-claude install-cursor install-copilot \
         install-opencode install-codex install-pi install-all install-pocock \
         project-claude project-opencode project-codex project-pi \
-        uninstall uninstall-all check lint test-fixtures version \
+        uninstall uninstall-all check lint test-fixtures test-hooks version \
         cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install \
         up down db-up db-psql db-logs db-test
 
@@ -83,7 +83,7 @@ uninstall: ## Remove the global Claude Code install
 uninstall-all: ## Remove the install for every supported harness
 	$(INSTALL) all --uninstall
 
-check: version build test-fixtures ## Check version sync, validate install.sh, run Rust tests, living-docs check + mermaid, dry-run harnesses
+check: version build test-fixtures test-hooks ## Check version sync, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, dry-run harnesses
 	bash -n install.sh
 	bash -n scripts/check-version.sh
 	cargo test --manifest-path cli/Cargo.toml
@@ -93,6 +93,9 @@ check: version build test-fixtures ## Check version sync, validate install.sh, r
 
 test-fixtures: build ## Run the hostile/negative fixtures that guard the check parsers
 	LIVING_DOCS_BIN=$(LIVING_DOCS_BIN) ./skills/living-docs/tests/run.sh
+
+test-hooks: ## Run the write-gate hook fixtures (ADR 0021)
+	./skills/living-docs/tests/hooks/run.sh
 
 version: ## Assert the release version is consistent across VERSION and every SKILL.md
 	./scripts/check-version.sh

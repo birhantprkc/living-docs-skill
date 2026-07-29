@@ -1,6 +1,6 @@
 ---
 type: Context
-title: "Domain concepts"
+title: Domain concepts
 description: Core domain entities and rules for Linkly.
 tags: [domain, vocabulary]
 timestamp: 2026-06-20T00:00:00Z
