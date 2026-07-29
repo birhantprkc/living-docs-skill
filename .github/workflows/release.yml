@@ -10,7 +10,9 @@ name: Release
 # into a versioned zip, and publishes a GitHub Release with auto-generated notes. A second
 # job then cross-compiles the `living-docs` binary for each supported target and uploads
 # `living-docs-<target-triple>` + its `.sha256` to the same release — install.sh downloads
-# these by that exact name (asset-naming contract).
+# these by that exact name (asset-naming contract). A third job, `verify-release-assets`,
+# runs `if: always()` after the first two and demotes the release to a draft if any expected
+# asset is missing or checksum-invalid (ADR 0024).
 
 on:
   push:
@@ -106,3 +108,15 @@ jobs:
           files: |
             living-docs-${{ matrix.target }}
             living-docs-${{ matrix.target }}.sha256
+
+  verify-release-assets:
+    needs: [release, release-binaries]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify every expected release asset is published and checksum-valid
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/verify-release-assets.sh "${GITHUB_REF_NAME}"
