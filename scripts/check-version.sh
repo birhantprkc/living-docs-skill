@@ -27,9 +27,45 @@ check() { # check <label> <actual>
 }
 
 check "VERSION" "$file_ver"
-for s in living-docs okf-knowledge-format research-artifacts; do
-	v="$(grep -E '^version:' "$root/skills/$s/SKILL.md" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
-	check "skills/$s/SKILL.md" "$v"
+
+skill_mds=("$root"/skills/*/SKILL.md)
+if [[ ! -e "${skill_mds[0]}" ]]; then
+	echo "ERROR: no skills/*/SKILL.md files found" >&2
+	exit 1
+fi
+for skill_md in "${skill_mds[@]}"; do
+	v="$(grep -E '^version:' "$skill_md" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
+	check "${skill_md#"$root"/}" "$v"
+done
+
+plugin_json="$root/.claude-plugin/plugin.json"
+plugin_v="$(grep -E '"version":' "$plugin_json" | head -1 | sed -E 's/.*"version":[[:space:]]*"([^"]+)".*/\1/')"
+check ".claude-plugin/plugin.json" "$plugin_v"
+
+# Files under .github/instructions/ may legitimately carry no `version:` line
+# (e.g. an applyTo-only frontmatter block) — those are skipped, not gated.
+instruction_mds=("$root"/.github/instructions/*.md)
+if [[ ! -e "${instruction_mds[0]}" ]]; then
+	echo "ERROR: no .github/instructions/*.md files found" >&2
+	exit 1
+fi
+for instruction_md in "${instruction_mds[@]}"; do
+	grep -qE '^version:' "$instruction_md" || continue
+	v="$(grep -E '^version:' "$instruction_md" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
+	check "${instruction_md#"$root"/}" "$v"
+done
+
+# Files under .cursor/rules/ may legitimately carry no `version:` line
+# (e.g. an applyTo-only frontmatter block) — those are skipped, not gated.
+cursor_rule_mdcs=("$root"/.cursor/rules/*.mdc)
+if [[ ! -e "${cursor_rule_mdcs[0]}" ]]; then
+	echo "ERROR: no .cursor/rules/*.mdc files found" >&2
+	exit 1
+fi
+for cursor_rule_mdc in "${cursor_rule_mdcs[@]}"; do
+	grep -qE '^version:' "$cursor_rule_mdc" || continue
+	v="$(grep -E '^version:' "$cursor_rule_mdc" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
+	check "${cursor_rule_mdc#"$root"/}" "$v"
 done
 
 if [[ "$fail" -ne 0 ]]; then
