@@ -26,6 +26,30 @@ check() { # check <label> <actual>
 	fi
 }
 
+# Detection is deliberately looser than extraction: a file must be caught as "declares a
+# version" even when its key is malformed (e.g. a stray space before the colon), so that
+# case fails loudly below instead of extraction's strict anchor silently missing it and the
+# file being read as if it declared no version at all.
+check_versioned_class() { # check_versioned_class <required|optional> <file>...
+	local requirement="$1"
+	shift
+	local f rel v
+	for f in "$@"; do
+		rel="${f#"$root"/}"
+		if ! grep -qE '^[[:space:]]*version[[:space:]]*:' "$f"; then
+			[[ "$requirement" == required ]] && check "$rel" ""
+			continue
+		fi
+		v="$(sed -nE 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/p' "$f" | head -1)"
+		if [[ -z "$v" ]]; then
+			printf 'MALFORMED: %-40s declares a version key not in canonical form (expected: version: X)\n' "$rel"
+			fail=1
+			continue
+		fi
+		check "$rel" "$v"
+	done
+}
+
 check "VERSION" "$file_ver"
 
 skill_mds=("$root"/skills/*/SKILL.md)
@@ -33,40 +57,25 @@ if [[ ! -e "${skill_mds[0]}" ]]; then
 	echo "ERROR: no skills/*/SKILL.md files found" >&2
 	exit 1
 fi
-for skill_md in "${skill_mds[@]}"; do
-	v="$(grep -E '^version:' "$skill_md" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
-	check "${skill_md#"$root"/}" "$v"
-done
+check_versioned_class required "${skill_mds[@]}"
 
 plugin_json="$root/.claude-plugin/plugin.json"
 plugin_v="$(grep -E '"version":' "$plugin_json" | head -1 | sed -E 's/.*"version":[[:space:]]*"([^"]+)".*/\1/')"
 check ".claude-plugin/plugin.json" "$plugin_v"
 
-# Files under .github/instructions/ may legitimately carry no `version:` line
-# (e.g. an applyTo-only frontmatter block) — those are skipped, not gated.
 instruction_mds=("$root"/.github/instructions/*.md)
 if [[ ! -e "${instruction_mds[0]}" ]]; then
 	echo "ERROR: no .github/instructions/*.md files found" >&2
 	exit 1
 fi
-for instruction_md in "${instruction_mds[@]}"; do
-	grep -qE '^version:' "$instruction_md" || continue
-	v="$(grep -E '^version:' "$instruction_md" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
-	check "${instruction_md#"$root"/}" "$v"
-done
+check_versioned_class optional "${instruction_mds[@]}"
 
-# Files under .cursor/rules/ may legitimately carry no `version:` line
-# (e.g. an applyTo-only frontmatter block) — those are skipped, not gated.
 cursor_rule_mdcs=("$root"/.cursor/rules/*.mdc)
 if [[ ! -e "${cursor_rule_mdcs[0]}" ]]; then
 	echo "ERROR: no .cursor/rules/*.mdc files found" >&2
 	exit 1
 fi
-for cursor_rule_mdc in "${cursor_rule_mdcs[@]}"; do
-	grep -qE '^version:' "$cursor_rule_mdc" || continue
-	v="$(grep -E '^version:' "$cursor_rule_mdc" | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]+)"?.*/\1/')"
-	check "${cursor_rule_mdc#"$root"/}" "$v"
-done
+check_versioned_class optional "${cursor_rule_mdcs[@]}"
 
 if [[ "$fail" -ne 0 ]]; then
 	echo "Version check FAILED."
