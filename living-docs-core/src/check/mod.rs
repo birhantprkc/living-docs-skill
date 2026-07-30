@@ -19,6 +19,7 @@ mod mermaid;
 mod records;
 mod size;
 
+use crate::doc_type::{self, Identity};
 use crate::store::DocStore;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -70,7 +71,7 @@ fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) 
     graph::check_reachability(bundle, &root_index, &all_md, reporter);
     links::check_links(store, bundle, &all_md, reporter);
     records::check_supersede_chain(store, &all_md, reporter);
-    canonical::check_canonical_frontmatter(store, &all_md, reporter);
+    canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
 
     mermaid::check_bundle(&all_md, reporter);
     size::check_body_size(store, &all_md, reporter);
@@ -114,6 +115,25 @@ fn walk_md_files(dir: &Path, out: &mut Vec<PathBuf>) {
             out.push(path);
         }
     }
+}
+
+/// True when `path` is exactly the bundle-root file of some registry
+/// [`Identity::Singleton`] row — the single place the check layer learns
+/// what a singleton is, so a second singleton row is handled without an
+/// edit here.
+///
+/// The comparison is a plain path equality, not a filesystem lookup, so it
+/// only stays correct because every [`DocStore`] enumerates a bundle's paths
+/// rooted at the same `bundle` it was given (see [`collect_md_files`]) —
+/// `read_dir` never resolves symlinks, so this holds even when the caller
+/// reaches the bundle through one. Reach for `canonicalize` here instead and
+/// this pure predicate starts touching disk, breaking every `MapStore`
+/// fixture whose paths never exist on disk.
+pub(crate) fn is_bundle_singleton(bundle: &Path, path: &Path) -> bool {
+    doc_type::DOC_TYPES.iter().any(|spec| match spec.identity {
+        Identity::Singleton { file } => path == bundle.join(file),
+        Identity::Numbered { .. } => false,
+    })
 }
 
 /// Collects violations and renders the final report + exit code, mirroring
@@ -173,6 +193,7 @@ impl Reporter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::record::{extract_record, to_canonical_markdown};
     use crate::test_support::MapStore;
     use std::collections::BTreeMap;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -219,6 +240,111 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.root);
         }
+    }
+
+    /// A `DocStore` that reads and enumerates real files on disk, mirroring
+    /// `fs-store`'s adapter closely enough to exercise `is_bundle_singleton`'s
+    /// rooting invariant against a genuine filesystem rather than `MapStore`'s
+    /// in-memory fixture.
+    struct RealFsStore;
+
+    impl DocStore for RealFsStore {
+        fn list(&self, root: &Path) -> std::io::Result<Vec<PathBuf>> {
+            Ok(collect_md_files(root))
+        }
+
+        fn read(&self, path: &Path) -> std::io::Result<String> {
+            fs::read_to_string(path)
+        }
+
+        fn write(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(path, contents)
+        }
+    }
+
+    /// Pins the invariant `is_bundle_singleton`'s docblock names: an unlisted
+    /// bundle-root singleton stays exempt from every `check` invariant
+    /// whether the caller passes the bundle directly or reaches the same
+    /// directory through a symlink, because both `store.list` and
+    /// `is_bundle_singleton` build their paths from whatever root they were
+    /// handed rather than a resolved one.
+    #[cfg(unix)]
+    #[test]
+    fn is_bundle_singleton_stays_exempt_regardless_of_the_path_form_the_caller_used() {
+        let bundle = ScratchBundle::new("singleton-symlink-invariant");
+        fs::write(bundle.root.join("adr").join("index.md"), "# ADR Index\n")
+            .expect("clear scratch adr index of phantom links");
+
+        let singleton_path = bundle.root.join("constitution.md");
+        let hand_written = "---\ntype: Constitution\ntitle: Root of Trust\n---\n\nBody.\n";
+        let canonical = to_canonical_markdown(&extract_record(&singleton_path, hand_written));
+        fs::write(&singleton_path, &canonical).expect("write scratch constitution.md");
+
+        let direct_violations = check_violations(&RealFsStore, &bundle.root);
+        assert!(
+            direct_violations.is_empty(),
+            "direct violations: {direct_violations:?}"
+        );
+
+        let symlink_root = std::env::temp_dir().join(format!(
+            "living-docs-check-mod-singleton-symlink-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system clock before unix epoch")
+                .as_nanos()
+        ));
+        std::os::unix::fs::symlink(&bundle.root, &symlink_root)
+            .expect("create symlink to scratch bundle");
+
+        let via_symlink_violations = check_violations(&RealFsStore, &symlink_root);
+        let _ = fs::remove_file(&symlink_root);
+
+        assert!(
+            via_symlink_violations.is_empty(),
+            "via-symlink violations: {via_symlink_violations:?}"
+        );
+    }
+
+    /// The positive direction `check_canonical_frontmatter_flags_every_cli_owned_directory`
+    /// and its `canonical.rs` siblings cannot instrument: since their fixture
+    /// paths are built from `spec` too, a premise guard is the only thing
+    /// that would fail after a registry rename, not the behavioral
+    /// assertion. Building both the matching and non-matching paths from
+    /// `spec` here means a rename keeps this test green for the *new* name,
+    /// proving `is_bundle_singleton` follows the registry rather than a
+    /// literal filename.
+    #[test]
+    fn is_bundle_singleton_follows_the_registry_not_a_literal_filename() {
+        let bundle = Path::new("/bundle");
+        let mut exercised = 0;
+
+        for spec in doc_type::DOC_TYPES {
+            let Identity::Singleton { file } = spec.identity else {
+                continue;
+            };
+            exercised += 1;
+
+            assert!(
+                is_bundle_singleton(bundle, &bundle.join(file)),
+                "{file} at the bundle root must be its own singleton"
+            );
+            assert!(
+                !is_bundle_singleton(bundle, &bundle.join("not-a-singleton.md")),
+                "a sibling filename must never match {file}'s singleton slot"
+            );
+            assert!(
+                !is_bundle_singleton(bundle, &bundle.join("reference").join(file)),
+                "{file} nested one level down must not match the bundle-root singleton"
+            );
+        }
+
+        assert!(
+            exercised > 0,
+            "no Identity::Singleton row in DOC_TYPES — this test would pass vacuously"
+        );
     }
 
     /// A record served only by the store (never written to disk) must still

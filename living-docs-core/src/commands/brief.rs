@@ -9,9 +9,9 @@ use crate::commands::new::{
     fill_frontmatter, fill_frontmatter_title, now_iso8601, unsupported_type_message,
 };
 use crate::commands::next::next_number_from_store;
+use crate::doc_type::{self, Identity};
 use crate::paths;
 use crate::store::DocStore;
-use crate::templates;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -49,25 +49,17 @@ fn scaffold_brief(
     timestamp: &str,
     diff: Option<&DiffContext>,
 ) -> Result<PathBuf, String> {
-    let dir_name = paths::dir_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
-    let frontmatter_type = paths::frontmatter_type_for(doc_type)
-        .expect("dir_for and frontmatter_type_for cover the same doc types");
-    let template = templates::template_for(doc_type)
-        .expect("dir_for and template_for cover the same doc types");
-
-    let number = next_number_from_store(store, docs_dir, dir_name).map_err(|e| e.to_string())?;
-    let target_path = docs_dir
-        .join(dir_name)
-        .join(format!("{number:04}-{}.md", paths::slugify(title)));
+    let spec = doc_type::spec_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
+    let (target_path, number) = brief_target_for(store, docs_dir, spec, title)?;
 
     if store.read(&target_path).is_ok() {
         return Err(format!("{} already exists", target_path.display()));
     }
 
     let content = brief_content(
-        template,
+        spec.template,
         doc_type,
-        frontmatter_type,
+        spec.frontmatter,
         timestamp,
         number,
         title,
@@ -77,6 +69,33 @@ fn scaffold_brief(
         .write(&target_path, &content)
         .map_err(|e| e.to_string())?;
     Ok(target_path)
+}
+
+/// Resolves `brief`'s target path and heading number for `spec`'s identity
+/// shape, mirroring [`crate::commands::new::target_path_for`]: a
+/// [`Identity::Numbered`] type allocates the next number and slugifies
+/// `title`; a [`Identity::Singleton`] type resolves straight to
+/// `docs_dir.join(file)` with no number allocated. The returned `0` for a
+/// singleton is never rendered — [`is_title_heading_placeholder`] only
+/// recognizes a `# NNNN. <...>` heading, which a singleton template (e.g.
+/// `constitution.md`'s plain `# Product Constitution`) does not carry.
+fn brief_target_for(
+    store: &dyn DocStore,
+    docs_dir: &Path,
+    spec: &doc_type::DocTypeSpec,
+    title: &str,
+) -> Result<(PathBuf, u32), String> {
+    match spec.identity {
+        Identity::Numbered { dir: dir_name } => {
+            let number =
+                next_number_from_store(store, docs_dir, dir_name).map_err(|e| e.to_string())?;
+            let target_path = docs_dir
+                .join(dir_name)
+                .join(format!("{number:04}-{}.md", paths::slugify(title)));
+            Ok((target_path, number))
+        }
+        Identity::Singleton { file } => Ok((docs_dir.join(file), 0)),
+    }
 }
 
 fn brief_content(
@@ -136,6 +155,18 @@ fn slots_for(doc_type: &str) -> &'static [(&'static str, &'static str)] {
             ("### Acceptance", "acceptance"),
             ("### Plan", "plan"),
         ],
+        "research" => &[
+            ("## Question", "question"),
+            ("## Method", "method"),
+            ("## Implications", "implications"),
+            ("## Open Questions", "open-questions"),
+            ("# References", "references"),
+        ],
+        "constitution" => &[
+            ("## Product", "product"),
+            ("## Scope Boundaries", "scope-boundaries"),
+            ("## Non-negotiables", "non-negotiables"),
+        ],
         _ => &[],
     }
 }
@@ -143,6 +174,8 @@ fn slots_for(doc_type: &str) -> &'static [(&'static str, &'static str)] {
 fn context_marker_for(doc_type: &str) -> &'static str {
     match doc_type {
         "prd" => "problem-motivation",
+        "research" => "question",
+        "constitution" => "product",
         _ => "context",
     }
 }
@@ -155,6 +188,7 @@ fn trail_comment_for(doc_type: &str) -> &'static str {
         "bdr" => "<!-- trail: spawned-by /prd/NNNN-<slug>.md · /adr/NNNN-<slug>.md · tracked-by /issues/NNNN-<slug>.md -->",
         "prd" => "<!-- trail: constitution /constitution.md · behavior /bdr/NNNN-<slug>.md · tracked-by /issues/NNNN-<slug>.md -->",
         "issue" => "<!-- trail: implements /adr/NNNN-<slug>.md · part-of /prd/NNNN-<slug>.md -->",
+        "research" => "<!-- trail: motivates /adr/NNNN-<slug>.md · /prd/NNNN-<slug>.md · tracked-by /issues/NNNN-<slug>.md -->",
         _ => "",
     }
 }
@@ -242,6 +276,9 @@ fn insert_touched_files(content: &str, context_marker: &str, diff: &DiffContext)
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
+    use std::collections::BTreeMap;
+    use std::io;
 
     const TEMPLATE: &str = "---\ntype: ADR\ntitle: <Short decision title>\nstatus: Proposed\ntimestamp: <ISO 8601 datetime>\n---\n\n# NNNN. <Short decision title>\n\n## Context\n\n<guidance with a [link](/research/NNNN-<slug>.md)>\n\n## Decision\n\nWe will <the choice>.\n\n## Consequences\n\n- <what this unlocks>\n\n# References\n\n[1] [<source>](<url>)\n";
 
@@ -341,5 +378,145 @@ mod tests {
         assert!(content.contains("<!-- judgment: context -->"));
         assert!(content.contains("### Scope\n\n<!-- judgment: scope -->"));
         assert!(!content.contains("intro guidance"));
+    }
+
+    #[test]
+    fn constitution_judgment_sections_collapse_while_structural_sections_stay_intact() {
+        let template = doc_type::spec_for("constitution")
+            .expect("constitution must be registered")
+            .template;
+        let content = brief_content(
+            template,
+            "constitution",
+            "Constitution",
+            "2026-07-19T00:00:00Z",
+            0,
+            "Acme Constitution",
+            None,
+        );
+
+        assert!(content.contains("## Product\n\n<!-- judgment: product -->\n"));
+        assert!(content.contains("## Scope Boundaries\n\n<!-- judgment: scope-boundaries -->\n"));
+        assert!(content.contains("## Non-negotiables\n\n<!-- judgment: non-negotiables -->\n"));
+        assert!(content.contains("erDiagram"));
+        assert!(content.contains("ENTITY_A ||--o{ ENTITY_B"));
+        assert!(content.contains("<!-- Append amendments here"));
+        assert!(!content.contains("<What the product is"));
+        assert!(!content.contains("<Capability or domain"));
+        assert!(!content.contains("<Non-negotiable 1>"));
+    }
+
+    #[test]
+    fn constitution_has_no_trail_comment_and_the_empty_trail_does_not_break_the_output() {
+        let template = doc_type::spec_for("constitution")
+            .expect("constitution must be registered")
+            .template;
+        let content = brief_content(
+            template,
+            "constitution",
+            "Constitution",
+            "2026-07-19T00:00:00Z",
+            0,
+            "Acme Constitution",
+            None,
+        );
+
+        assert!(!content.contains("<!-- trail:"));
+        assert!(content.contains("# Product Constitution\n"));
+    }
+
+    /// A minimal in-memory [`DocStore`] test double, mirroring the one in
+    /// `commands::new`'s tests, so `scaffold_brief`'s singleton branch needs
+    /// no filesystem.
+    struct MapStore {
+        files: RefCell<BTreeMap<PathBuf, String>>,
+    }
+
+    impl MapStore {
+        fn new() -> Self {
+            Self {
+                files: RefCell::new(BTreeMap::new()),
+            }
+        }
+
+        fn seeded(seed: &[(&str, &str)]) -> Self {
+            let files = seed
+                .iter()
+                .map(|(path, contents)| (PathBuf::from(path), (*contents).to_string()))
+                .collect();
+            Self {
+                files: RefCell::new(files),
+            }
+        }
+    }
+
+    impl DocStore for MapStore {
+        fn list(&self, root: &Path) -> io::Result<Vec<PathBuf>> {
+            Ok(self
+                .files
+                .borrow()
+                .keys()
+                .filter(|path| path.starts_with(root))
+                .cloned()
+                .collect())
+        }
+
+        fn read(&self, path: &Path) -> io::Result<String> {
+            self.files
+                .borrow()
+                .get(path)
+                .cloned()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
+        }
+
+        fn write(&self, path: &Path, contents: &str) -> io::Result<()> {
+            self.files
+                .borrow_mut()
+                .insert(path.to_path_buf(), contents.to_string());
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn scaffold_brief_writes_a_singleton_constitution_with_no_number_or_slug() {
+        let store = MapStore::new();
+
+        let target = scaffold_brief(
+            &store,
+            Path::new("/bundle"),
+            "constitution",
+            "Acme Constitution",
+            "2026-07-19T00:00:00Z",
+            None,
+        )
+        .expect("scaffold_brief should succeed");
+
+        assert_eq!(target, PathBuf::from("/bundle/constitution.md"));
+        let persisted = store
+            .read(&target)
+            .expect("scaffold_brief must persist through DocStore::write");
+        assert!(persisted.contains("type: Constitution"));
+        assert!(persisted.contains("<!-- judgment: product -->"));
+    }
+
+    #[test]
+    fn scaffold_brief_refuses_a_second_constitution() {
+        let store = MapStore::seeded(&[("/bundle/constitution.md", "existing content")]);
+
+        let err = scaffold_brief(
+            &store,
+            Path::new("/bundle"),
+            "constitution",
+            "Acme Constitution",
+            "2026-07-19T00:00:00Z",
+            None,
+        )
+        .expect_err("a second constitution must be refused");
+
+        assert!(err.contains("already exists"), "got: {err}");
+        assert_eq!(
+            store.read(Path::new("/bundle/constitution.md")).unwrap(),
+            "existing content"
+        );
     }
 }

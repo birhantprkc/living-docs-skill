@@ -1,11 +1,23 @@
+use crate::commands::new::unsupported_type_message;
+use crate::doc_type::{self, Identity, IndexPartition};
 use crate::frontmatter;
-use crate::paths;
 use crate::store::DocStore;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-const SUPPORTED_TYPES: [&str; 4] = ["adr", "bdr", "prd", "issue"];
+/// Every Numbered-identity registry token, in [`doc_type::DOC_TYPES`] order —
+/// the set `index` regenerates when invoked with no explicit type (ADR 0026).
+/// A [`Identity::Singleton`] type has no directory to index, so the bare
+/// sweep excludes it — regenerating it would need a directory that `new`
+/// never creates for a singleton.
+fn all_type_tokens() -> Vec<String> {
+    doc_type::DOC_TYPES
+        .iter()
+        .filter(|spec| matches!(spec.identity, Identity::Numbered { .. }))
+        .map(|spec| spec.token.to_string())
+        .collect()
+}
 
 pub fn run(
     store: &dyn DocStore,
@@ -15,7 +27,7 @@ pub fn run(
 ) -> ExitCode {
     let types: Vec<String> = match doc_type {
         Some(t) => vec![t],
-        None => SUPPORTED_TYPES.iter().map(|t| t.to_string()).collect(),
+        None => all_type_tokens(),
     };
 
     for doc_type in &types {
@@ -34,6 +46,14 @@ pub fn run(
 /// the records feeding its body are read through `store`, meaning a db-mode
 /// run regenerates the filesystem `index.md` from the records in the
 /// database.
+///
+/// `doc_type`'s directory coming into existence is `new`'s job, never
+/// `index`'s (ADR 0026): a type with no directory yet is a successful no-op
+/// here, both for the bare `index` sweep and for an explicit `index
+/// <type>` naming a type the bundle doesn't use — otherwise a bare sweep
+/// would materialize an empty `index.md` per registry token regardless of
+/// whether the bundle carries that type, breaking invariant 3 (an
+/// unreachable directory index) for every type the bundle never populated.
 fn regenerate(
     store: &dyn DocStore,
     docs_dir: &Path,
@@ -42,7 +62,9 @@ fn regenerate(
 ) -> Result<(), String> {
     let (index_path, content) = compute(store, docs_dir, doc_type, visibility_filter)?;
     let type_dir = index_path.parent().unwrap_or(docs_dir);
-    fs::create_dir_all(type_dir).map_err(|e| e.to_string())?;
+    if !type_dir.is_dir() {
+        return Ok(());
+    }
     fs::write(&index_path, content).map_err(|e| e.to_string())
 }
 
@@ -58,7 +80,7 @@ pub fn compute(
     doc_type: &str,
     visibility_filter: Option<&[String]>,
 ) -> Result<(PathBuf, String), String> {
-    let dir_name = paths::dir_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
+    let dir_name = numbered_dir_for(doc_type)?;
     let type_dir = docs_dir.join(dir_name);
     let records: Vec<Record> = collect_records(store, docs_dir, &type_dir)?
         .into_iter()
@@ -73,8 +95,26 @@ pub fn compute(
     Ok((index_path, format!("{preamble}{body}")))
 }
 
-fn unsupported_type_message(doc_type: &str) -> String {
-    format!("unsupported doc type '{doc_type}' (expected one of adr, bdr, prd, issue)")
+/// Resolves the numbered-series directory `index` regenerates for
+/// `doc_type`: an unknown token gets [`unsupported_type_message`], but a
+/// registered [`Identity::Singleton`] token gets its own message instead —
+/// it IS supported, it simply has no directory index, and reusing the
+/// unsupported-type message would list `doc_type` itself among the tokens
+/// the caller is told to pick from.
+fn numbered_dir_for(doc_type: &str) -> Result<&'static str, String> {
+    let spec = doc_type::spec_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
+    match spec.identity {
+        Identity::Numbered { dir } => Ok(dir),
+        Identity::Singleton { file } => {
+            Err(singleton_has_no_directory_index_message(doc_type, file))
+        }
+    }
+}
+
+fn singleton_has_no_directory_index_message(doc_type: &str, file: &str) -> String {
+    format!(
+        "'{doc_type}' has no directory index — it writes a single {file} at the bundle root, not a numbered series"
+    )
 }
 
 struct Record {
@@ -205,17 +245,21 @@ fn numbered_prefix(filename: &str) -> Option<u32> {
     prefix.parse().ok()
 }
 
-/// Dispatches each supported type to the partition axis its lifecycle uses:
-/// issues track work-in-progress (Open/Closed), decisions track what is in
-/// force (Active/Superseded). A future/unknown type falls back to a flat
-/// listing until its own axis is chosen — see `render_flat_body`.
+/// Renders `records` along the partition axis `doc_type`'s registry spec
+/// declares (ADR 0026): [`IndexPartition::OpenClosed`] for work-in-progress
+/// types, [`IndexPartition::ActiveSuperseded`] for types that track what is
+/// in force, and [`IndexPartition::Flat`] — also the fallback for an
+/// unrecognized `doc_type`, unreachable in practice since every caller
+/// already validated it — as a single flat listing (`render_flat_body`).
 fn render_body(doc_type: &str, records: &[Record]) -> String {
-    match doc_type {
-        "issue" => render_partitioned(records, "Open", "Closed", is_open_status),
-        "adr" | "bdr" | "prd" => {
+    match doc_type::spec_for(doc_type).map(|spec| &spec.index_partition) {
+        Some(IndexPartition::OpenClosed) => {
+            render_partitioned(records, "Open", "Closed", is_open_status)
+        }
+        Some(IndexPartition::ActiveSuperseded) => {
             render_partitioned(records, "Active", "Superseded", is_active_status)
         }
-        _ => render_flat_body(records),
+        Some(IndexPartition::Flat) | None => render_flat_body(records),
     }
 }
 
@@ -371,18 +415,32 @@ fn fallback_preamble(existing: &str, doc_type: &str) -> String {
 }
 
 fn heading_title_for(doc_type: &str) -> &'static str {
-    match doc_type {
-        "adr" => "ADRs",
-        "bdr" => "BDRs",
-        "prd" => "PRDs",
-        "issue" => "Issues",
-        _ => "Index",
-    }
+    doc_type::spec_for(doc_type)
+        .map(|spec| spec.index_heading)
+        .unwrap_or("Index")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// ADR 0026 fitness function B (index half): the token set `index`
+    /// regenerates with no explicit type equals the registry's
+    /// Identity::Numbered token set, in the registry's own order.
+    #[test]
+    fn all_type_tokens_matches_every_numbered_registry_token_in_order() {
+        assert_eq!(
+            all_type_tokens(),
+            vec!["adr", "bdr", "prd", "issue", "research"]
+        );
+    }
+
+    /// The `constitution` row is a deliberate exclusion, not an oversight:
+    /// a singleton has no directory index for the bare sweep to regenerate.
+    #[test]
+    fn all_type_tokens_excludes_the_constitution_singleton() {
+        assert!(!all_type_tokens().contains(&"constitution".to_string()));
+    }
 
     #[test]
     fn numbered_prefix_accepts_four_digit_dash_form() {
@@ -608,6 +666,27 @@ mod tests {
     }
 
     #[test]
+    fn regenerate_is_a_no_op_when_the_type_directory_does_not_exist() {
+        let store = MapStore {
+            files: BTreeMap::new(),
+        };
+        let docs_dir = std::env::temp_dir().join(format!(
+            "living-docs-index-regenerate-noop-{}",
+            std::process::id()
+        ));
+        let type_dir = docs_dir.join("research");
+        assert!(!type_dir.exists());
+
+        let result = regenerate(&store, &docs_dir, "research", None);
+
+        assert!(result.is_ok());
+        assert!(
+            !type_dir.exists(),
+            "regenerate must not create the type directory when it is absent"
+        );
+    }
+
+    #[test]
     fn compute_rejects_an_unsupported_doc_type() {
         let store = MapStore {
             files: BTreeMap::new(),
@@ -616,6 +695,25 @@ mod tests {
         let result = compute(&store, Path::new("/bundle"), "glossary", None);
 
         assert!(result.is_err());
+    }
+
+    /// `index constitution` gets its own message, not the unsupported-type
+    /// one — the type IS supported, it just has no directory index, and the
+    /// unsupported-type message would list the very token the caller used.
+    #[test]
+    fn compute_rejects_an_explicit_constitution_index_with_its_own_message() {
+        let store = MapStore {
+            files: BTreeMap::new(),
+        };
+
+        let err = compute(&store, Path::new("/bundle"), "constitution", None)
+            .expect_err("constitution has no directory index");
+
+        assert!(err.contains("constitution.md"), "got: {err}");
+        assert!(
+            !err.contains("expected one of"),
+            "must not reuse the unsupported-type message: {err}"
+        );
     }
 
     #[test]

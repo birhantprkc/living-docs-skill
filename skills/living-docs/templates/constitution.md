@@ -2,14 +2,15 @@
 type: Constitution
 title: <Product> Constitution
 description: Foundational scope, data model, and non-negotiables for <product>.
-status: Draft               # Draft | Ratified | Amended
+status: Draft
 timestamp: <ISO 8601 datetime>
 ---
 
 # Product Constitution
 
-<!-- Status lives in frontmatter (`status`). This file is singular — no NNNN prefix,
-     and it is NOT listed as a concept in any index.md. It is the bundle's root of trace. -->
+<!-- Status lives in frontmatter (`status`: Draft | Ratified | Amended). This file is
+     singular — no NNNN prefix, and it is NOT listed as a concept in any index.md.
+     It is the bundle's root of trace. -->
 
 ## Product
 

@@ -40,6 +40,34 @@ fn run_index_with_visibility(
         .expect("failed to run living-docs index")
 }
 
+fn run_check(docs: &Path) -> Output {
+    living_docs()
+        .args(["check", docs.to_str().unwrap()])
+        .output()
+        .expect("failed to run living-docs check")
+}
+
+/// `examples/linkly/docs` anchored at compile time via `CARGO_MANIFEST_DIR`,
+/// independent of the working directory `cargo test` is invoked from — a
+/// real bundle that passes `check` today and, notably, carries no
+/// `research/` directory (the type-registry token this round adds).
+fn linkly_fixture_dir() -> PathBuf {
+    PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/..")).join("examples/linkly/docs")
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) {
+    fs::create_dir_all(dst).unwrap();
+    for entry in fs::read_dir(src).unwrap() {
+        let entry = entry.unwrap();
+        let dst_path = dst.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_dir_recursive(&entry.path(), &dst_path);
+        } else {
+            fs::copy(entry.path(), &dst_path).unwrap();
+        }
+    }
+}
+
 fn run_supersede(docs: &Path, old: &str, new: &str) -> Output {
     living_docs()
         .args(["--docs-dir", docs.to_str().unwrap(), "supersede", old, new])
@@ -401,6 +429,46 @@ fn index_without_a_type_regenerates_every_supported_type_present() {
 
     assert!(docs.join("adr/index.md").exists());
     assert!(docs.join("prd/index.md").exists());
+
+    let _ = fs::remove_dir_all(&docs);
+}
+
+/// The regression this round fixes (ADR 0026 decision point 7): a bundle
+/// that passes `check` must still pass `check` after a bare `index` run,
+/// for every registry token — not just the ones the bundle happens to use.
+/// `regenerate` used to call `fs::create_dir_all` unconditionally, so a bare
+/// sweep materialized an empty `index.md` (and its directory) for every
+/// registry token regardless of whether the bundle carried that type,
+/// producing a directory index unreachable from the bundle root (invariant
+/// 3). This is registry-blind by construction — it exercises every token in
+/// `all_type_tokens()` through the real bare-`index` sweep against a
+/// fixture that only uses a subset of them, so it keeps holding without
+/// editing as new types are registered.
+#[test]
+fn index_without_a_type_leaves_a_check_clean_bundle_check_clean() {
+    let docs = temp_dir("linkly-check-clean");
+    copy_dir_recursive(&linkly_fixture_dir(), &docs);
+
+    let before = run_check(&docs);
+    assert!(
+        before.status.success(),
+        "fixture must be check-clean before index: stdout: {}",
+        String::from_utf8_lossy(&before.stdout)
+    );
+
+    let index_output = run_index(&docs, None);
+    assert!(
+        index_output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&index_output.stderr)
+    );
+
+    let after = run_check(&docs);
+    assert!(
+        after.status.success(),
+        "bundle regressed from check-clean to failing after a bare index run: stdout: {}",
+        String::from_utf8_lossy(&after.stdout)
+    );
 
     let _ = fs::remove_dir_all(&docs);
 }
