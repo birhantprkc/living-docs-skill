@@ -23,6 +23,7 @@ use std::path::Path;
 
 use serde_yaml::Value;
 
+use crate::doc_type::{self, Identity};
 use crate::frontmatter::{
     frontmatter_block, parse_frontmatter, read_scalar_strict, scalar_to_string,
 };
@@ -33,10 +34,6 @@ pub const NUMBER_IDENTITY_KIND: &str = "number";
 
 /// The `identity_kind` discriminator for a path-identified OKF concept doc.
 pub const CONCEPT_IDENTITY_KIND: &str = "concept";
-
-/// Frontmatter `type` values that carry a sequential `NNNN` identity rather
-/// than a `concept_id` (ADR 0007 decision 2).
-const NUMBERED_DOC_TYPES: [&str; 4] = ["adr", "bdr", "prd", "issue"];
 
 /// Frontmatter keys that already have a universal typed column or dedicated
 /// handling elsewhere, and therefore never land in the EAV
@@ -158,8 +155,15 @@ fn extract_identity(path: &Path, doc_type: &str) -> (Option<i32>, Option<String>
     }
 }
 
+/// True when `doc_type` (matched case-insensitively) carries a sequential
+/// `NNNN` identity rather than a `concept_id` (ADR 0007 decision 2), derived
+/// from the doc-type registry's [`Identity::Numbered`] variant rather than a
+/// hand-maintained list (ADR 0026).
 fn is_numbered_doc_type(doc_type: &str) -> bool {
-    NUMBERED_DOC_TYPES.contains(&doc_type.to_lowercase().as_str())
+    matches!(
+        doc_type::spec_for(&doc_type.to_lowercase()).map(|spec| spec.identity),
+        Some(Identity::Numbered { .. })
+    )
 }
 
 /// The strict `NNNN-*.md` prefix of `path`'s filename (four ASCII digits

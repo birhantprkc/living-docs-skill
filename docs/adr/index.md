@@ -31,6 +31,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0022 — Canonical frontmatter check is scoped to CLI-owned type directories](0022-canonical-frontmatter-check-is-scoped-to-cli-owned-type-directories.md) - Accepted
 * [0023 — Hooks ship through two deterministic channels: an in-repo Claude Code plugin and a living-docs hooks install verb](0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md) - Accepted
 * [0024 — A release is atomic: a missing binary asset fails the workflow and demotes the release to a draft](0024-a-release-is-atomic-a-missing-binary-asset-fails-the-workflow-and-demotes-the-release-to-a-draft.md) - Accepted
+* [0026 — A single DocType registry replaces nine hand-synced enumerations, and research and constitution enter as rows](0026-a-single-doctype-registry-replaces-nine-hand-synced-enumerations-and-research-and-constitution-enter-as-rows.md) - Accepted
 
 ## Superseded
 

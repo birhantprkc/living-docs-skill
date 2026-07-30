@@ -10,6 +10,7 @@
 //! injected as-is through `PreEscaped`.
 
 use db_store::{NavEntry, ProjectView, RecordMeta, RelatedRef, SearchHit};
+use living_docs_core::doc_type;
 use maud::{html, Markup, PreEscaped};
 
 /// Renders the full three-pane document: `<head>` with the served
@@ -353,10 +354,15 @@ fn tags_section(tags: &[String]) -> Markup {
     }
 }
 
-/// The doc types Atlas's create form offers — the same four
-/// `living_docs_core::paths::dir_for` accepts (ADR 0016, issue 0010 slice
-/// 3): `adr`, `bdr`, `prd`, `issue`.
-const CREATABLE_DOC_TYPES: [&str; 4] = ["adr", "bdr", "prd", "issue"];
+/// The doc types Atlas's create form offers, in the doc-type registry's
+/// declared order — every spec whose `web_creatable` flag is set (ADR 0016,
+/// issue 0010 slice 3; ADR 0026), rather than a hand-maintained list.
+fn creatable_doc_types() -> impl Iterator<Item = &'static str> {
+    doc_type::DOC_TYPES
+        .iter()
+        .filter(|spec| spec.web_creatable)
+        .map(|spec| spec.token)
+}
 
 /// Renders `POST /new`'s create form: a doc-type select, a title input, and
 /// a submit button, in the same plain (label-less) input style
@@ -381,7 +387,7 @@ pub fn create_form(doc_type: Option<&str>, title: Option<&str>, error: Option<&s
 fn doc_type_select(selected: Option<&str>) -> Markup {
     html! {
         select name="doc_type" {
-            @for option in CREATABLE_DOC_TYPES {
+            @for option in creatable_doc_types() {
                 option value=(option) selected[selected == Some(option)] { (option) }
             }
         }
@@ -782,6 +788,21 @@ mod tests {
                 "missing option for {doc_type}: {rendered}"
             );
         }
+    }
+
+    /// ADR 0026 fitness function B (web half): the number of options the
+    /// create form renders equals the number of `web_creatable` specs in
+    /// the registry, so a registry row added without setting/clearing
+    /// `web_creatable` can never silently drift from the rendered form.
+    #[test]
+    fn create_form_option_count_matches_the_registrys_web_creatable_count() {
+        let rendered = create_form(None, None, None).into_string();
+        let expected = doc_type::DOC_TYPES
+            .iter()
+            .filter(|spec| spec.web_creatable)
+            .count();
+
+        assert_eq!(rendered.matches("<option value=\"").count(), expected);
     }
 
     #[test]

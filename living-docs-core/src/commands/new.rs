@@ -1,8 +1,8 @@
 use crate::commands::next::next_number_from_store;
+use crate::doc_type::{self, Identity};
 use crate::paths;
 use crate::record::format_scalar;
 use crate::store::DocStore;
-use crate::templates;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -39,23 +39,40 @@ fn plan_at(
     title: &str,
     timestamp: &str,
 ) -> Result<(PathBuf, String), String> {
-    let dir_name = paths::dir_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
-    let frontmatter_type = paths::frontmatter_type_for(doc_type)
-        .expect("dir_for and frontmatter_type_for cover the same doc types");
-    let template = templates::template_for(doc_type)
-        .expect("dir_for and template_for cover the same doc types");
-
-    let type_dir = docs_dir.join(dir_name);
-    let number = next_number_from_store(store, docs_dir, dir_name).map_err(|e| e.to_string())?;
-    let target_path = type_dir.join(format!("{number:04}-{}.md", paths::slugify(title)));
+    let spec = doc_type::spec_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
+    let target_path = target_path_for(store, docs_dir, spec, title)?;
 
     if store.read(&target_path).is_ok() {
         return Err(format!("{} already exists", target_path.display()));
     }
 
-    let filled = fill_frontmatter(template, frontmatter_type, timestamp);
+    let filled = fill_frontmatter(spec.template, spec.frontmatter, timestamp);
     let filled = fill_frontmatter_title(&filled, title);
     Ok((target_path, filled))
+}
+
+/// Resolves `new`'s target path for `spec`'s identity shape: a
+/// [`Identity::Numbered`] type allocates the next number and slugifies
+/// `title` into `<dir>/NNNN-<slug>.md`; a [`Identity::Singleton`] type
+/// allocates nothing and resolves straight to `docs_dir.join(file)` — no
+/// number, no slug. Everything after this call (the clobber guard, the
+/// frontmatter fill) is identity-blind, so only the path itself differs.
+fn target_path_for(
+    store: &dyn DocStore,
+    docs_dir: &Path,
+    spec: &doc_type::DocTypeSpec,
+    title: &str,
+) -> Result<PathBuf, String> {
+    match spec.identity {
+        Identity::Numbered { dir: dir_name } => {
+            let number =
+                next_number_from_store(store, docs_dir, dir_name).map_err(|e| e.to_string())?;
+            Ok(docs_dir
+                .join(dir_name)
+                .join(format!("{number:04}-{}.md", paths::slugify(title))))
+        }
+        Identity::Singleton { file } => Ok(docs_dir.join(file)),
+    }
 }
 
 /// Plans `new`'s target path and filled content, timestamped now, without
@@ -85,8 +102,16 @@ fn scaffold(
     Ok(target_path)
 }
 
+/// The single definition of `new`/`index`'s unsupported-type error, naming
+/// the offending `doc_type` and every token the registry ([`doc_type::DOC_TYPES`])
+/// currently supports, rather than a hand-maintained list (ADR 0026).
 pub(crate) fn unsupported_type_message(doc_type: &str) -> String {
-    format!("unsupported doc type '{doc_type}' (expected one of adr, bdr, prd, issue)")
+    let supported = doc_type::DOC_TYPES
+        .iter()
+        .map(|spec| spec.token)
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("unsupported doc type '{doc_type}' (expected one of {supported})")
 }
 
 /// Targeted line-edit fill of `type`/`status`/`timestamp` inside the leading
@@ -308,6 +333,21 @@ mod tests {
         assert!(unsupported_type_message("constitution").contains("constitution"));
     }
 
+    /// ADR 0026 fitness function C: the message is generated from
+    /// `DOC_TYPES` rather than a hand-maintained list, so it can never omit
+    /// a token the registry actually supports.
+    #[test]
+    fn unsupported_type_message_lists_every_registry_token() {
+        let message = unsupported_type_message("bogus");
+        for spec in doc_type::DOC_TYPES {
+            assert!(
+                message.contains(spec.token),
+                "{message:?} is missing registry token {:?}",
+                spec.token
+            );
+        }
+    }
+
     /// A minimal in-memory [`DocStore`] test double, so `scaffold`'s tests
     /// need no filesystem at all — `living-docs-core` depends on no
     /// concrete adapter (issue 0006 slice 0006-D2).
@@ -374,6 +414,47 @@ mod tests {
         .expect("scaffold should succeed");
 
         assert_eq!(target, PathBuf::from("/bundle/adr/0001-first-decision.md"));
+    }
+
+    #[test]
+    fn scaffold_writes_a_singleton_constitution_with_no_number_or_slug() {
+        let store = MapStore::new();
+
+        let target = scaffold(
+            &store,
+            Path::new("/bundle"),
+            "constitution",
+            "Acme Constitution",
+            "2026-07-17T00:00:00Z",
+        )
+        .expect("scaffold should succeed");
+
+        assert_eq!(target, PathBuf::from("/bundle/constitution.md"));
+        let persisted = store
+            .read(&target)
+            .expect("scaffold must persist through DocStore::write");
+        assert!(persisted.contains("type: Constitution"));
+        assert!(persisted.contains("title: Acme Constitution"));
+    }
+
+    #[test]
+    fn scaffold_refuses_a_second_constitution() {
+        let store = MapStore::seeded(&[("/bundle/constitution.md", "existing content")]);
+
+        let err = scaffold(
+            &store,
+            Path::new("/bundle"),
+            "constitution",
+            "Acme Constitution",
+            "2026-07-17T00:00:00Z",
+        )
+        .expect_err("a second constitution must be refused");
+
+        assert!(err.contains("already exists"), "got: {err}");
+        assert_eq!(
+            store.read(Path::new("/bundle/constitution.md")).unwrap(),
+            "existing content"
+        );
     }
 
     #[test]

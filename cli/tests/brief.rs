@@ -1,3 +1,4 @@
+use living_docs_core::doc_type::{self, Identity};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -48,22 +49,28 @@ fn brief_scaffolds_a_numbered_record_with_filled_title_and_byte_identical_judgme
     let _ = fs::remove_dir_all(&docs);
 }
 
+fn numbered_type_tokens_and_dirs() -> Vec<(&'static str, &'static str)> {
+    doc_type::DOC_TYPES
+        .iter()
+        .filter_map(|spec| match spec.identity {
+            Identity::Numbered { dir } => Some((spec.token, dir)),
+            Identity::Singleton { .. } => None,
+        })
+        .collect()
+}
+
 #[test]
 fn brief_output_passes_check_for_every_supported_doc_type() {
     let docs = temp_dir("passes-check");
-    for (doc_type, title) in [
-        ("adr", "A Decision"),
-        ("bdr", "A Behavior"),
-        ("prd", "A Feature"),
-        ("issue", "A Slice"),
-    ] {
-        assert!(run_brief(&docs, doc_type, title).status.success());
+    let types = numbered_type_tokens_and_dirs();
+    for (doc_type, _) in &types {
+        assert!(run_brief(&docs, doc_type, "A Record").status.success());
     }
-    fs::write(
-        docs.join("index.md"),
-        "# Docs\n\n- [ADRs](/adr/index.md)\n- [BDRs](/bdr/index.md)\n- [PRDs](/prd/index.md)\n- [Issues](/issues/index.md)\n",
-    )
-    .unwrap();
+    let index_links: String = types
+        .iter()
+        .map(|(_, dir)| format!("- [{dir}](/{dir}/index.md)\n"))
+        .collect();
+    fs::write(docs.join("index.md"), format!("# Docs\n\n{index_links}")).unwrap();
     let indexed = living_docs()
         .args(["--docs-dir", docs.to_str().unwrap(), "index"])
         .output()
@@ -179,8 +186,13 @@ fn an_invalid_from_diff_range_fails_with_a_clear_error_and_writes_no_file() {
 #[test]
 fn brief_rejects_an_unsupported_doc_type() {
     let docs = temp_dir("unsupported");
+    let unsupported = "glossary";
+    assert!(
+        doc_type::spec_for(unsupported).is_none(),
+        "fixture premise broken: `{unsupported}` is now a registry token — pick another",
+    );
 
-    let output = run_brief(&docs, "constitution", "Root Rules");
+    let output = run_brief(&docs, unsupported, "Root Rules");
 
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("unsupported doc type"));
