@@ -32,6 +32,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0023 — Hooks ship through two deterministic channels: an in-repo Claude Code plugin and a living-docs hooks install verb](0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md) - Accepted
 * [0025 — Releases are born draft and earn publication by passing the asset gate](0025-releases-are-born-draft-and-earn-publication-by-passing-the-asset-gate.md) - Accepted
 * [0026 — A single DocType registry replaces nine hand-synced enumerations, and research and constitution enter as rows](0026-a-single-doctype-registry-replaces-nine-hand-synced-enumerations-and-research-and-constitution-enter-as-rows.md) - Accepted
+* [0027 — Every rule keyed by doc type becomes a registry field, and glossary is not a doc type](0027-every-rule-keyed-by-doc-type-becomes-a-registry-field-and-glossary-is-not-a-doc-type.md) - Accepted
 
 ## Superseded
 
