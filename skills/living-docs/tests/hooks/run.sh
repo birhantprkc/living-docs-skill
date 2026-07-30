@@ -47,6 +47,28 @@ EOF
 printf '# ADR index\n' >"$TMP/docs/adr/index.md"
 printf '# Docs\n' >"$TMP/docs/index.md"
 
+RESEARCH_RECORD="$TMP/docs/research/0001-field-notes.md"
+cat >"$RESEARCH_RECORD" <<'EOF'
+---
+type: Research
+title: Field notes
+description: A fixture record.
+status: Proposed
+tags: [fixture]
+timestamp: 2026-01-01T00:00:00Z
+---
+
+# 0001. Field notes
+
+## Context
+
+Body prose mentioning frontmatter in passing.
+
+## Findings
+
+We will keep this fixture minimal.
+EOF
+
 fail=0
 
 payload_write() { # payload_write <file> <content>
@@ -112,8 +134,12 @@ run_case fenced-status-edit-allowed 0 absent "living-docs" _=1 -- \
 run_case same-frontmatter-rewrite-allowed 0 absent "living-docs" _=1 -- \
 	"$(payload_write "$RECORD" "$(cat "$RECORD")")"
 
-run_case research-record-allowed 0 absent "living-docs" _=1 -- \
+run_case research-new-record-write-blocked 2 present "living-docs new" _=1 -- \
 	"$(payload_write "$TMP/docs/research/0003-notes.md" $'---\ntype: Research\n---\nbody')"
+run_case research-type-index-write-blocked 2 present "living-docs index" _=1 -- \
+	"$(payload_write "$TMP/docs/research/index.md" '# Research index')"
+run_case research-body-edit-allowed 0 absent "living-docs" _=1 -- \
+	"$(payload_edit "$RESEARCH_RECORD" 'keep this fixture minimal' 'keep this fixture tiny')"
 run_case bundle-root-index-allowed 0 absent "living-docs" _=1 -- \
 	"$(payload_write "$TMP/docs/index.md" '# Docs')"
 run_case non-docs-path-allowed 0 absent "living-docs" _=1 -- \

@@ -1,38 +1,26 @@
+use crate::doc_type::{self, Identity};
+
 /// Maps a doc-type token from the CLI to its docs-tree subdirectory (relative
 /// to `--docs-dir`). `issue` is deliberately plural (`issues`) — everything
-/// else matches the token.
-pub fn dir_for(doc_type: &str) -> Option<&'static str> {
-    match doc_type {
-        "adr" => Some("adr"),
-        "bdr" => Some("bdr"),
-        "prd" => Some("prd"),
-        "issue" => Some("issues"),
-        _ => None,
+/// else matches the token. `None` for both an unknown token and a singleton
+/// type, which has no directory (ADR 0026).
+pub fn dir_for(token: &str) -> Option<&'static str> {
+    match doc_type::spec_for(token)?.identity {
+        Identity::Numbered { dir } => Some(dir),
+        Identity::Singleton { .. } => None,
     }
 }
 
 /// Maps a docs-tree subdirectory name back to its doc-type token — the
 /// exact reverse of [`dir_for`].
 pub fn doc_type_for_dir(dir_name: &str) -> Option<&'static str> {
-    match dir_name {
-        "adr" => Some("adr"),
-        "bdr" => Some("bdr"),
-        "prd" => Some("prd"),
-        "issues" => Some("issue"),
-        _ => None,
-    }
+    Some(doc_type::spec_for_dir(dir_name)?.token)
 }
 
 /// Maps a doc-type token to the canonical value written to the frontmatter
 /// `type` field.
-pub fn frontmatter_type_for(doc_type: &str) -> Option<&'static str> {
-    match doc_type {
-        "adr" => Some("ADR"),
-        "bdr" => Some("BDR"),
-        "prd" => Some("PRD"),
-        "issue" => Some("Issue"),
-        _ => None,
-    }
+pub fn frontmatter_type_for(token: &str) -> Option<&'static str> {
+    Some(doc_type::spec_for(token)?.frontmatter)
 }
 
 /// Lowercase kebab-case slug: keeps ASCII alphanumerics, collapses any run of
@@ -69,10 +57,27 @@ mod tests {
     }
 
     #[test]
-    fn dir_for_rejects_unknown_types() {
-        assert_eq!(dir_for("constitution"), None);
+    fn dir_for_returns_none_for_an_unknown_token() {
         assert_eq!(dir_for("glossary"), None);
         assert_eq!(dir_for(""), None);
+    }
+
+    /// A singleton token is known to the registry but has no directory — a
+    /// different reason for `None` than an unknown token (ADR 0026
+    /// Consequences: "`dir_for` becoming fallible for a reason other than
+    /// unknown type"). The token is read off the registry's first
+    /// [`Identity::Singleton`] row rather than hardcoded, so a renamed row
+    /// fails this test instead of silently passing.
+    #[test]
+    fn dir_for_returns_none_for_a_known_singleton_type() {
+        let singleton_token = doc_type::DOC_TYPES
+            .iter()
+            .find(|spec| matches!(spec.identity, Identity::Singleton { .. }))
+            .expect("registry must carry at least one singleton row")
+            .token;
+
+        assert!(doc_type::spec_for(singleton_token).is_some());
+        assert_eq!(dir_for(singleton_token), None);
     }
 
     #[test]
@@ -92,9 +97,13 @@ mod tests {
 
     #[test]
     fn doc_type_for_dir_is_the_exact_reverse_of_dir_for() {
-        for doc_type in ["adr", "bdr", "prd", "issue"] {
-            let dir = dir_for(doc_type).expect("known doc type has a directory");
-            assert_eq!(doc_type_for_dir(dir), Some(doc_type));
+        let numbered_tokens = doc_type::DOC_TYPES
+            .iter()
+            .filter(|spec| matches!(spec.identity, Identity::Numbered { .. }))
+            .map(|spec| spec.token);
+        for token in numbered_tokens {
+            let dir = dir_for(token).expect("a Numbered doc type has a directory");
+            assert_eq!(doc_type_for_dir(dir), Some(token));
         }
     }
 

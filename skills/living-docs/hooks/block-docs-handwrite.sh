@@ -3,8 +3,9 @@
 # block-docs-handwrite.sh — PreToolUse gate enforcing CLI-owned doc authoring
 # (ADR 0019 block rules, ADR 0020 scope, ADR 0021 in-repo distribution).
 #
-# Reads the Claude Code PreToolUse payload (JSON) on stdin. Inside the four
-# CLI-owned type directories of the docs bundle (adr|bdr|prd|issues) it blocks:
+# Reads the Claude Code PreToolUse payload (JSON) on stdin. Inside the
+# CLI-owned type directories of the docs bundle (adr|bdr|prd|issues|research)
+# it blocks:
 #   - a Write creating a new NNNN-*.md record    -> `living-docs new`
 #   - any direct write to a type index.md        -> `living-docs index`
 #   - a Write/Edit/MultiEdit whose result changes a CLI-owned frontmatter key
@@ -66,7 +67,7 @@ apply_edit() {
 
 guard_write() {
   if [ ! -e "$FILE" ]; then
-    deny "records are scaffolded by the CLI — run \`living-docs new <adr|bdr|prd|issue> \"<title>\"\` (numbering + frontmatter + skeleton), then write ONLY the body below the closing ---. Binary missing? \`make build\`."
+    deny "records are scaffolded by the CLI — run \`living-docs new <adr|bdr|prd|issue|research> \"<title>\"\` (numbering + frontmatter + skeleton), then write ONLY the body below the closing ---. Binary missing? \`make build\`."
   fi
   deny_unless_owned_lines_kept "$(cat "$FILE")" "$(json_field '.tool_input.content')"
 }
@@ -106,7 +107,7 @@ TOOL="$(json_field '.tool_name')"
 FILE="$(json_field '.tool_input.file_path')"
 [ -n "$FILE" ] || allow
 
-[[ "$FILE" =~ (^|/)"$BUNDLE"/(adr|bdr|prd|issues)/([^/]+)$ ]] || allow
+[[ "$FILE" =~ (^|/)"$BUNDLE"/(adr|bdr|prd|issues|research)/([^/]+)$ ]] || allow
 NAME="${BASH_REMATCH[3]}"
 
 if [ "$NAME" = "index.md" ]; then

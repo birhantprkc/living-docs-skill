@@ -1,14 +1,11 @@
-/// Compile-time embedded doc templates, keyed by the CLI's doc-type token.
-/// Embedding (rather than reading from disk at runtime) keeps the binary
+use crate::doc_type;
+
+/// Compile-time embedded doc templates, keyed by the CLI's doc-type token
+/// and looked up through the doc-type registry (ADR 0026). Embedding
+/// (rather than reading from disk at runtime) keeps the binary
 /// self-contained per ADR 0001.
-pub fn template_for(doc_type: &str) -> Option<&'static str> {
-    match doc_type {
-        "adr" => Some(include_str!("../../skills/living-docs/templates/adr.md")),
-        "bdr" => Some(include_str!("../../skills/living-docs/templates/bdr.md")),
-        "prd" => Some(include_str!("../../skills/living-docs/templates/prd.md")),
-        "issue" => Some(include_str!("../../skills/living-docs/templates/issue.md")),
-        _ => None,
-    }
+pub fn template_for(token: &str) -> Option<&'static str> {
+    Some(doc_type::spec_for(token)?.template)
 }
 
 #[cfg(test)]
@@ -27,7 +24,13 @@ mod tests {
 
     #[test]
     fn template_for_rejects_unknown_types() {
+        let unsupported = "glossary";
+        assert!(
+            doc_type::spec_for(unsupported).is_none(),
+            "fixture premise broken: `{unsupported}` is now a registry token — pick another",
+        );
+
         assert_eq!(template_for("bogus"), None);
-        assert_eq!(template_for("constitution"), None);
+        assert_eq!(template_for(unsupported), None);
     }
 }

@@ -2,22 +2,22 @@
 //! reachability, built from the inline links in `index.md` files. Mirrors
 //! `strip_fences`/`links_in`/`resolve_link`/`normpath` from `lint-docs.sh`.
 
-use super::{file_name_str, records, Reporter};
+use super::{file_name_str, is_bundle_singleton, records, Reporter};
 use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Every non-reserved concept file must be linked from its own directory's
-/// `index.md`. The bundle-root `constitution.md` is the root of trace and is
-/// deliberately exempt.
+/// `index.md`. A registry [`crate::doc_type::Identity::Singleton`] file at
+/// the bundle root (e.g. `constitution.md`) is deliberately exempt: it is the
+/// bundle's own root of trace, and has no directory index to be listed in.
 pub(crate) fn check_directory_membership(
     bundle: &Path,
     all_md: &[PathBuf],
     reporter: &mut Reporter,
 ) {
-    let constitution = bundle.join("constitution.md");
     for f in all_md {
-        if records::is_reserved(&file_name_str(f)) || f == &constitution {
+        if records::is_reserved(&file_name_str(f)) || is_bundle_singleton(bundle, f) {
             continue;
         }
         check_file_is_indexed(bundle, f, reporter);

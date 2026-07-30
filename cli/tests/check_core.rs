@@ -1,3 +1,4 @@
+use living_docs_core::doc_type::{self, Identity};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -64,6 +65,27 @@ fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
         ])
         .output()
         .expect("failed to run living-docs new")
+}
+
+fn run_brief(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
+    living_docs()
+        .args([
+            "--docs-dir",
+            docs_dir.to_str().unwrap(),
+            "brief",
+            doc_type,
+            title,
+        ])
+        .output()
+        .expect("failed to run living-docs brief")
+}
+
+fn singleton_token() -> &'static str {
+    doc_type::DOC_TYPES
+        .iter()
+        .find(|spec| matches!(spec.identity, Identity::Singleton { .. }))
+        .expect("registry must carry at least one singleton row")
+        .token
 }
 
 /// The fixture's `type` value is spread across three files as a double-quoted,
@@ -336,7 +358,11 @@ fn hand_written_frontmatter_fails_check_and_passes_after_fmt() {
 /// canonical violation on it, with no `fmt` pass required.
 #[test]
 fn fresh_new_scaffold_is_a_canonical_round_trip_fixed_point_for_every_doc_type() {
-    for doc_type in ["adr", "bdr", "prd", "issue"] {
+    let numbered_types = doc_type::DOC_TYPES
+        .iter()
+        .filter(|spec| matches!(spec.identity, Identity::Numbered { .. }))
+        .map(|spec| spec.token);
+    for doc_type in numbered_types {
         let docs = temp_bundle(&format!("fresh-scaffold-{doc_type}"));
 
         let new_output = run_new(&docs, doc_type, "Fixed Point");
@@ -355,4 +381,78 @@ fn fresh_new_scaffold_is_a_canonical_round_trip_fixed_point_for_every_doc_type()
 
         let _ = fs::remove_dir_all(&docs);
     }
+}
+
+/// ADR 0026 decision point 7: a briefed bundle-root singleton
+/// (`constitution.md`) is CLI-owned for the canonical-frontmatter invariant
+/// and exempt from directory-index membership — `check` reports neither a
+/// dangling markdown link left over from an unfilled slot nor a
+/// non-canonical frontmatter block.
+#[test]
+fn briefed_singleton_scaffold_passes_check_over_its_own_bundle() {
+    let docs = temp_bundle("briefed-singleton");
+    write(&docs, "index.md", "# Index\n");
+
+    let brief_output = run_brief(&docs, singleton_token(), "Acme Constitution");
+    assert!(
+        brief_output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&brief_output.stderr)
+    );
+
+    let singleton_file = doc_type::DOC_TYPES
+        .iter()
+        .find_map(|spec| match spec.identity {
+            Identity::Singleton { file } => Some(file),
+            Identity::Numbered { .. } => None,
+        })
+        .expect("registry must carry at least one singleton row");
+    assert!(
+        docs.join(singleton_file).is_file(),
+        "brief did not scaffold {singleton_file} at the bundle root"
+    );
+
+    let output = run_check(&docs);
+    let stdout = stdout_of(&output);
+    assert_eq!(output.status.code(), Some(0), "got:\n{stdout}");
+    assert!(stdout.contains("no invariant violations"), "got:\n{stdout}");
+
+    let _ = fs::remove_dir_all(&docs);
+}
+
+/// The other half of decision point 7's canonical-frontmatter ownership: a
+/// hand-written bundle-root singleton with non-canonical frontmatter is
+/// caught by `check`, not silently accepted because it sits outside every
+/// CLI-owned type directory. `constitution.md` is hardcoded, matching
+/// `constitution_md_is_exempt_from_the_directory_index_listing_requirement`
+/// above, with the same registry premise guarded explicitly so a renamed
+/// singleton row fails this assertion instead of silently testing the
+/// wrong path.
+#[test]
+fn hand_written_bundle_root_singleton_fails_check_with_the_fmt_remediation() {
+    let spec = doc_type::spec_for("constitution")
+        .expect("fixture premise broken: `constitution` is no longer a registered token");
+    assert_eq!(
+        spec.identity,
+        Identity::Singleton {
+            file: "constitution.md"
+        },
+        "fixture premise broken: the constitution row no longer names constitution.md — update this fixture",
+    );
+
+    let bundle = temp_bundle("hand-written-singleton");
+    write(&bundle, "index.md", "# Index\n");
+    write(
+        &bundle,
+        "constitution.md",
+        "---\ntitle: Acme  # a comment\ntype: Constitution\n---\n\n# Acme\n",
+    );
+
+    let output = run_check(&bundle);
+    let stdout = stdout_of(&output);
+
+    assert_eq!(output.status.code(), Some(1), "got:\n{stdout}");
+    assert!(stdout.contains("living-docs fmt"), "got:\n{stdout}");
+
+    let _ = fs::remove_dir_all(&bundle);
 }

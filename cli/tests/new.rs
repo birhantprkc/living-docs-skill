@@ -1,3 +1,4 @@
+use living_docs_core::doc_type;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -130,13 +131,18 @@ fn new_preserves_body_placeholders_and_guidance_comments_verbatim() {
 #[test]
 fn new_rejects_an_unsupported_doc_type() {
     let docs = temp_dir("unsupported");
+    let unsupported = "glossary";
+    assert!(
+        doc_type::spec_for(unsupported).is_none(),
+        "fixture premise broken: `{unsupported}` is now a registry token — pick another",
+    );
 
-    let output = run_new(&docs, "constitution", "Root Rules");
+    let output = run_new(&docs, unsupported, "Root Rules");
 
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("unsupported doc type"));
-    assert!(!docs.join("constitution").exists());
+    assert!(!docs.join(unsupported).exists());
 
     let _ = fs::remove_dir_all(&docs);
 }
