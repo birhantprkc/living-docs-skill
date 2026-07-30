@@ -32,7 +32,7 @@ LIVING_DOCS_BIN := target/release/living-docs
         install-opencode install-codex install-pi install-all install-pocock \
         project-claude project-opencode project-codex project-pi \
         uninstall uninstall-all check lint test-fixtures test-hooks \
-        test-release-gate version \
+        test-release-gate test-version-gate version \
         cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install \
         up down db-up db-psql db-logs db-test
 
@@ -84,7 +84,7 @@ uninstall: ## Remove the global Claude Code install
 uninstall-all: ## Remove the install for every supported harness
 	$(INSTALL) all --uninstall
 
-check: version build test-fixtures test-hooks test-release-gate ## Check version sync, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, dry-run harnesses
+check: version build test-fixtures test-hooks test-release-gate test-version-gate ## Check version sync, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, dry-run harnesses
 	bash -n install.sh
 	bash -n scripts/check-version.sh
 	bash -n scripts/verify-release-assets.sh
@@ -101,6 +101,9 @@ test-hooks: ## Run the write-gate hook fixtures (ADR 0021)
 
 test-release-gate: ## Run the verify-release-assets.sh fixtures (ADR 0024), stubbed gh
 	./scripts/tests/verify-release-assets/run.sh
+
+test-version-gate: ## Run the check-version.sh fixtures, synthetic repos
+	./scripts/tests/check-version/run.sh
 
 version: ## Assert the release version is consistent across VERSION and every SKILL.md
 	./scripts/check-version.sh
