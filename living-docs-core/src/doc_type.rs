@@ -16,6 +16,14 @@ pub enum Identity {
     Singleton { file: &'static str },
 }
 
+/// Whether a doc type's body is measured against the advisory 100/120-line
+/// target in `check::size`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BodySize {
+    Targeted,
+    Exempt,
+}
+
 /// The axis `index` partitions a type's records along.
 #[derive(PartialEq, Eq, Debug)]
 pub enum IndexPartition {
@@ -26,7 +34,8 @@ pub enum IndexPartition {
 
 /// Everything a doc type needs to be created, indexed and offered by every
 /// consumer: its token, path shape, frontmatter value, embedded template,
-/// index rendering and web-creatability.
+/// index rendering, web-creatability, and whether its body carries the
+/// advisory size target.
 #[derive(PartialEq, Debug)]
 pub struct DocTypeSpec {
     pub token: &'static str,
@@ -36,6 +45,7 @@ pub struct DocTypeSpec {
     pub index_heading: &'static str,
     pub index_partition: IndexPartition,
     pub web_creatable: bool,
+    pub body_size: BodySize,
 }
 
 const ADR: DocTypeSpec = DocTypeSpec {
@@ -46,6 +56,7 @@ const ADR: DocTypeSpec = DocTypeSpec {
     index_heading: "ADRs",
     index_partition: IndexPartition::ActiveSuperseded,
     web_creatable: true,
+    body_size: BodySize::Targeted,
 };
 
 const BDR: DocTypeSpec = DocTypeSpec {
@@ -56,6 +67,7 @@ const BDR: DocTypeSpec = DocTypeSpec {
     index_heading: "BDRs",
     index_partition: IndexPartition::ActiveSuperseded,
     web_creatable: true,
+    body_size: BodySize::Targeted,
 };
 
 const PRD: DocTypeSpec = DocTypeSpec {
@@ -66,6 +78,7 @@ const PRD: DocTypeSpec = DocTypeSpec {
     index_heading: "PRDs",
     index_partition: IndexPartition::ActiveSuperseded,
     web_creatable: true,
+    body_size: BodySize::Targeted,
 };
 
 const ISSUE: DocTypeSpec = DocTypeSpec {
@@ -76,6 +89,7 @@ const ISSUE: DocTypeSpec = DocTypeSpec {
     index_heading: "Issues",
     index_partition: IndexPartition::OpenClosed,
     web_creatable: true,
+    body_size: BodySize::Targeted,
 };
 
 const RESEARCH: DocTypeSpec = DocTypeSpec {
@@ -86,6 +100,7 @@ const RESEARCH: DocTypeSpec = DocTypeSpec {
     index_heading: "Research",
     index_partition: IndexPartition::Flat,
     web_creatable: true,
+    body_size: BodySize::Exempt,
 };
 
 /// `index_heading`/`index_partition` are inert for a singleton — it has no
@@ -102,6 +117,7 @@ const CONSTITUTION: DocTypeSpec = DocTypeSpec {
     index_heading: "Constitution",
     index_partition: IndexPartition::Flat,
     web_creatable: true,
+    body_size: BodySize::Exempt,
 };
 
 /// The sole enumeration of the doc-type taxonomy. Every consumer derives
@@ -111,6 +127,16 @@ pub const DOC_TYPES: &[DocTypeSpec] = &[ADR, BDR, PRD, ISSUE, RESEARCH, CONSTITU
 /// Looks up a doc type by its CLI token.
 pub fn spec_for(token: &str) -> Option<&'static DocTypeSpec> {
     DOC_TYPES.iter().find(|spec| spec.token == token)
+}
+
+/// Looks up a doc type by its `type:` frontmatter value. Returns the first
+/// match, which is well-defined only because `frontmatter` values are unique
+/// across `DOC_TYPES` — an invariant guarded by
+/// `frontmatter_values_are_unique_so_spec_for_frontmatter_is_well_defined`.
+pub fn spec_for_frontmatter(frontmatter: &str) -> Option<&'static DocTypeSpec> {
+    DOC_TYPES
+        .iter()
+        .find(|spec| spec.frontmatter == frontmatter)
 }
 
 /// Looks up a doc type by its numbered-series directory name — the reverse
@@ -201,5 +227,19 @@ mod tests {
         assert!(spec_for_dir("constitution").is_none());
         assert!(spec_for_dir("issue").is_none());
         assert!(spec_for_dir("").is_none());
+    }
+
+    /// ADR 0027: `spec_for_frontmatter` resolves the first row whose
+    /// `frontmatter` matches, so a duplicate would make that resolution
+    /// non-deterministic. This guards the invariant, not a literal list.
+    #[test]
+    fn frontmatter_values_are_unique_so_spec_for_frontmatter_is_well_defined() {
+        let unique: std::collections::HashSet<&str> =
+            DOC_TYPES.iter().map(|spec| spec.frontmatter).collect();
+        assert_eq!(
+            unique.len(),
+            DOC_TYPES.len(),
+            "DOC_TYPES has duplicate frontmatter values"
+        );
     }
 }
