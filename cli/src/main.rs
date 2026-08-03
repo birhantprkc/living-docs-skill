@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use living_docs_core::store::DocStore;
 use living_docs_core::{check, commands, paths};
+use skill_install::Harness;
 use std::io;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
@@ -8,6 +9,7 @@ use std::process::ExitCode;
 
 mod hooks;
 mod skill;
+mod skill_install;
 
 #[derive(Parser)]
 #[command(
@@ -145,7 +147,8 @@ enum Command {
     },
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
-    /// `SKILL.md` body, or print one topic's detail.
+    /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR
+    /// 0028) places the corpus into a harness's skills directory instead.
     Skill {
         /// The skill to query, e.g. `living-docs`. Required unless `--list`.
         name: Option<String>,
@@ -167,6 +170,8 @@ enum Command {
         /// Mutually exclusive with `--json`.
         #[arg(long, conflicts_with = "json")]
         plain: bool,
+        #[command(subcommand)]
+        action: Option<SkillCmd>,
     },
     /// Materializes the corpus hook scripts into a target project (ADR 0023).
     Hooks {
@@ -203,6 +208,29 @@ enum HooksCmd {
         #[arg(long)]
         dir: Option<PathBuf>,
         /// Report the plan without removing any file.
+        #[arg(long)]
+        dry_run: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum SkillCmd {
+    /// Places the three skill directories from the embedded corpus into a
+    /// harness's skills directory (ADR 0028) — no working tree involved.
+    /// `--project` scopes the destination to the current project instead of
+    /// the harness's global, `$HOME`-rooted directory; `--dir` overrides the
+    /// destination outright.
+    Install {
+        #[arg(long, value_enum, default_value = "claude")]
+        harness: Harness,
+        #[arg(long)]
+        project: bool,
+        /// Destination root for the skill directories, overriding both
+        /// `--harness` and `--project` outright. When given, `--harness`
+        /// still parses but no longer affects where anything is placed.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Report the plan without writing any file.
         #[arg(long)]
         dry_run: bool,
     },
@@ -333,11 +361,22 @@ fn main() -> ExitCode {
         } => run_db_sync(&cli.docs_dir, cli.engine, project),
         Command::Search { query, project } => run_search(&query, cli.engine, project),
         Command::Skill {
+            action:
+                Some(SkillCmd::Install {
+                    harness,
+                    project,
+                    dir,
+                    dry_run,
+                }),
+            ..
+        } => skill_install::install(harness, project, dir, dry_run),
+        Command::Skill {
             name,
             topic,
             list,
             json,
             plain,
+            ..
         } => run_skill(name, topic, list, json, plain),
         Command::Hooks {
             cmd: HooksCmd::Install { dir, dry_run },
