@@ -20,7 +20,7 @@ one slice per fresh context, starting from the skeleton.
 * [0020 — The tracker status vocabulary disagrees across the template comment, the validator, and issue 0017 -- and has no in-progress state](0020-the-tracker-status-vocabulary-disagrees-across-the-template-comment-the-validator-and-issue-0017-and-has-no-in-progress-state.md) - Proposed
 * [0021 — new has no --description flag, yet description is CLI-owned frontmatter](0021-new-has-no-description-flag-yet-description-is-cli-owned-frontmatter.md) - Proposed
 * [0022 — Template placeholders are fragile for programmatic editing](0022-template-placeholders-are-fragile-for-programmatic-editing.md) - Proposed
-* [0023 — next reports 0001 for issue and bdr regardless of existing records](0023-next-reports-0001-for-issue-and-bdr-regardless-of-existing-records.md) - Proposed
+* [0023 — next reports 0001 for issue because run_next passes the CLI token straight through instead of resolving its directory](0023-next-reports-0001-for-issue-because-run-next-passes-the-cli-token-straight-through-instead-of-resolving-its-directory.md) - Proposed
 
 ## Closed
 
