@@ -25,6 +25,88 @@ fn run_new(docs: &Path, doc_type: &str, title: &str) -> Output {
         .expect("failed to run living-docs")
 }
 
+fn stderr_of(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).to_string()
+}
+
+fn run_new_with_description(docs: &Path, doc_type: &str, title: &str, description: &str) -> Output {
+    living_docs()
+        .args([
+            "--docs-dir",
+            docs.to_str().unwrap(),
+            "new",
+            doc_type,
+            title,
+            "--description",
+            description,
+        ])
+        .output()
+        .expect("failed to run living-docs")
+}
+
+fn temp_sqlite_url(label: &str) -> (PathBuf, String) {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path = std::env::temp_dir()
+        .join(format!("living-docs-new-test-db-{label}-{nanos}"))
+        .join("index.db");
+    let url = format!("sqlite://{}?mode=rwc", path.display());
+    (path, url)
+}
+
+fn run_new_db_with_description(
+    db_url: &str,
+    docs: &Path,
+    doc_type: &str,
+    title: &str,
+    description: &str,
+) -> Output {
+    living_docs()
+        .env("DATABASE_URL", db_url)
+        .args([
+            "--backend",
+            "db",
+            "--docs-dir",
+            docs.to_str().unwrap(),
+            "new",
+            doc_type,
+            title,
+            "--description",
+            description,
+        ])
+        .output()
+        .expect("failed to run living-docs")
+}
+
+fn run_new_db_export(db_url: &str, docs: &Path, out_dir: &Path) -> Output {
+    living_docs()
+        .env("DATABASE_URL", db_url)
+        .args([
+            "--backend",
+            "db",
+            "--docs-dir",
+            docs.to_str().unwrap(),
+            "export",
+            out_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to run living-docs")
+}
+
+fn seed_root_index_only(docs: &Path) {
+    fs::create_dir_all(docs.join("adr")).unwrap();
+    fs::write(docs.join("index.md"), "# Index\n\n- [ADRs](adr/index.md)\n").unwrap();
+}
+
+fn seed_adr_placeholder_link_targets(docs: &Path) {
+    fs::create_dir_all(docs.join("research").join("NNNN-<slug>.md")).unwrap();
+    fs::create_dir_all(docs.join("prd").join("NNNN-<slug>.md")).unwrap();
+    fs::create_dir_all(docs.join("adr")).unwrap();
+    fs::write(docs.join("adr").join("{{URL}}"), "").unwrap();
+}
+
 #[test]
 fn new_scaffolds_0001_on_an_empty_tree() {
     let docs = temp_dir("empty");
@@ -86,7 +168,7 @@ fn new_maps_issue_to_the_plural_issues_directory() {
 }
 
 #[test]
-fn new_fills_type_status_proposed_and_an_iso8601_timestamp() {
+fn new_fills_type_status_and_an_iso8601_timestamp() {
     let docs = temp_dir("frontmatter");
 
     let output = run_new(&docs, "bdr", "Search Autocomplete");
@@ -95,7 +177,7 @@ fn new_fills_type_status_proposed_and_an_iso8601_timestamp() {
     let contents = fs::read_to_string(docs.join("bdr/0001-search-autocomplete.md")).unwrap();
 
     assert!(contents.contains("type: BDR"));
-    assert!(contents.contains("status: Proposed"));
+    assert!(contents.contains("status: Draft"));
 
     let timestamp_line = contents
         .lines()
@@ -119,11 +201,12 @@ fn new_preserves_body_placeholders_and_guidance_comments_verbatim() {
     let contents = fs::read_to_string(docs.join("adr/0001-preserve-body.md")).unwrap();
 
     assert!(contents.contains(
-        "<!-- Status lives in frontmatter (`status`), not a body line. When superseding a"
+        "<!-- Status lives in frontmatter (`status`), not a body line. Settable values are"
     ));
-    assert!(contents.contains("We will <the choice, in active voice — specific and testable>."));
+    assert!(contents.contains("exactly Proposed | Accepted | Deprecated."));
+    assert!(contents.contains("`living-docs supersede` sets Superseded on the old record"));
+    assert!(contents.contains("We will {{DECISION}}."));
     assert!(contents.contains("status: Proposed"));
-    assert!(contents.contains("# Proposed | Accepted | Superseded | Deprecated"));
 
     let _ = fs::remove_dir_all(&docs);
 }
@@ -218,6 +301,154 @@ fn new_stdout_ends_with_the_body_only_instruction_after_the_created_path() {
     assert!(instruction_line.contains("index"));
 
     let _ = fs::remove_dir_all(&docs);
+}
+
+/// AC1: `--description` writes the given sentence into the frontmatter
+/// `description:` field, replacing the placeholder, for the fs backend.
+#[test]
+fn new_writes_the_given_description_into_frontmatter_for_the_fs_backend() {
+    let docs = temp_dir("description-fs");
+
+    let output =
+        run_new_with_description(&docs, "adr", "Described Decision", "A concise sentence.");
+
+    assert!(output.status.success(), "stderr: {}", stderr_of(&output));
+    let contents = fs::read_to_string(docs.join("adr/0001-described-decision.md")).unwrap();
+    assert!(
+        contents.contains("description: A concise sentence.\n"),
+        "got:\n{contents}"
+    );
+    assert!(!contents.contains("<One sentence"), "got:\n{contents}");
+
+    let _ = fs::remove_dir_all(&docs);
+}
+
+/// AC1: a description needing YAML quoting (e.g. a colon) is quoted the same
+/// way `title` already is, via `record::format_scalar`.
+#[test]
+fn new_quotes_a_description_containing_a_colon_exactly_as_the_canonical_serializer_would() {
+    let docs = temp_dir("description-quoted");
+
+    let output =
+        run_new_with_description(&docs, "adr", "Quoted Description", "Caching: a deep dive");
+
+    assert!(output.status.success(), "stderr: {}", stderr_of(&output));
+    let contents = fs::read_to_string(docs.join("adr/0001-quoted-description.md")).unwrap();
+    assert!(
+        contents.contains("description: \"Caching: a deep dive\"\n"),
+        "got:\n{contents}"
+    );
+
+    let _ = fs::remove_dir_all(&docs);
+}
+
+/// AC2: omitting `--description` keeps today's placeholder behavior
+/// unchanged for the fs backend — no regression.
+#[test]
+fn new_without_description_keeps_the_placeholder_for_the_fs_backend() {
+    let docs = temp_dir("description-omitted");
+
+    let output = run_new(&docs, "adr", "Placeholder Decision");
+
+    assert!(output.status.success(), "stderr: {}", stderr_of(&output));
+    let contents = fs::read_to_string(docs.join("adr/0001-placeholder-decision.md")).unwrap();
+    assert!(
+        contents.contains("description: <One sentence"),
+        "got:\n{contents}"
+    );
+
+    let _ = fs::remove_dir_all(&docs);
+}
+
+/// AC3: the db backend (`run_new_db`/`commit_new_db`/`commands::new::plan`)
+/// also honors `--description` end to end, not just the fs backend. The
+/// record only lives in the db-store, so it is materialized to disk through
+/// `export` before its `description:` line is inspected, matching
+/// `db_authoring.rs`'s own export-then-read pattern.
+#[test]
+fn new_writes_the_given_description_into_frontmatter_for_the_db_backend() {
+    let docs = temp_dir("description-db");
+    let out_dir = temp_dir("description-db-out");
+    let (db_path, db_url) = temp_sqlite_url("description-db");
+    seed_root_index_only(&docs);
+    seed_adr_placeholder_link_targets(&docs);
+
+    let new_output = run_new_db_with_description(
+        &db_url,
+        &docs,
+        "adr",
+        "Db Described Decision",
+        "A db-backed sentence.",
+    );
+    assert!(
+        new_output.status.success(),
+        "stderr: {}",
+        stderr_of(&new_output)
+    );
+
+    let export_output = run_new_db_export(&db_url, &docs, &out_dir);
+    assert!(
+        export_output.status.success(),
+        "stderr: {}",
+        stderr_of(&export_output)
+    );
+    let contents = fs::read_to_string(out_dir.join("adr/0001-db-described-decision.md")).unwrap();
+    assert!(
+        contents.contains("description: A db-backed sentence.\n"),
+        "got:\n{contents}"
+    );
+
+    let _ = fs::remove_dir_all(&docs);
+    let _ = fs::remove_dir_all(&out_dir);
+    let _ = fs::remove_file(&db_path);
+    let _ = fs::remove_dir(db_path.parent().unwrap());
+}
+
+/// AC2/AC3: omitting `--description` also keeps the placeholder for the db
+/// backend, matching the fs backend's no-regression behavior.
+#[test]
+fn new_without_description_keeps_the_placeholder_for_the_db_backend() {
+    let docs = temp_dir("description-db-omitted");
+    let out_dir = temp_dir("description-db-omitted-out");
+    let (db_path, db_url) = temp_sqlite_url("description-db-omitted");
+    seed_root_index_only(&docs);
+    seed_adr_placeholder_link_targets(&docs);
+
+    let new_output = living_docs()
+        .env("DATABASE_URL", &db_url)
+        .args([
+            "--backend",
+            "db",
+            "--docs-dir",
+            docs.to_str().unwrap(),
+            "new",
+            "adr",
+            "Db Placeholder Decision",
+        ])
+        .output()
+        .expect("failed to run living-docs");
+    assert!(
+        new_output.status.success(),
+        "stderr: {}",
+        stderr_of(&new_output)
+    );
+
+    let export_output = run_new_db_export(&db_url, &docs, &out_dir);
+    assert!(
+        export_output.status.success(),
+        "stderr: {}",
+        stderr_of(&export_output)
+    );
+    let contents = fs::read_to_string(out_dir.join("adr/0001-db-placeholder-decision.md")).unwrap();
+    assert!(
+        contents.contains("description: <One sentence"),
+        "got:\n{contents}"
+    );
+
+    let _ = fs::remove_dir_all(&docs);
+    let _ = fs::remove_dir_all(&out_dir);
+    let _ = fs::remove_file(&db_path);
+    let _ = fs::remove_dir(db_path.parent().unwrap());
 }
 
 #[test]

@@ -6,24 +6,32 @@ status: open
 timestamp: <ISO 8601 datetime>
 ---
 
-<!-- OKF frontmatter above carries the tracker metadata (`status`: open | in-progress |
-     closed | superseded) that previously lived only in the directory index. Everything
+<!-- Status lives in frontmatter (`status`), not a body line. Settable values are
+     exactly open | in-progress | closed. `living-docs supersede` sets Superseded on
+     this issue -- never set it by hand -- when a later issue replaces it. Everything
      BELOW the closing `---` is the issue body and MUST stay byte-identical to the
      published tracker body — strip the frontmatter when publishing. -->
 
 ## <Issue title>
 
-<What the change is and why. If it implements a PRD or ADR, link it bundle-relative:
-"Implements [ADR NNNN](/adr/NNNN-<slug>.md)" / "Part of [PRD NNNN](/prd/NNNN-<slug>.md)".>
+{{SUMMARY}}
+
+If it implements a PRD or ADR, link it bundle-relative: "Implements [ADR NNNN](/adr/NNNN-<slug>.md)" / "Part of [PRD NNNN](/prd/NNNN-<slug>.md)".
 
 ### Scope
 
-<What's included. For removals/refactors, state what is explicitly KEPT.>
+<!-- For removals/refactors, state what is explicitly KEPT. -->
+
+{{SCOPE}}
 
 ### Acceptance
 
-- <Observable, testable condition for "done".>
+<!-- An observable, testable condition. -->
+
+- {{ACCEPTANCE_CRITERION}}
 
 ### Plan
 
-<Short outline of the approach. For a large task, list the slices.>
+<!-- For a large task, list the slices. -->
+
+{{PLAN}}

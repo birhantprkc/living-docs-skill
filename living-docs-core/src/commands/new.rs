@@ -13,8 +13,21 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// CLI-owns-the-mechanics rule at the moment it authors a record.
 pub const BODY_ONLY_INSTRUCTION: &str = "Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`.";
 
-pub fn run(store: &dyn DocStore, docs_dir: &Path, doc_type: &str, title: &str) -> ExitCode {
-    match scaffold(store, docs_dir, doc_type, title, &now_iso8601()) {
+pub fn run(
+    store: &dyn DocStore,
+    docs_dir: &Path,
+    doc_type: &str,
+    title: &str,
+    description: Option<&str>,
+) -> ExitCode {
+    match scaffold(
+        store,
+        docs_dir,
+        doc_type,
+        title,
+        description,
+        &now_iso8601(),
+    ) {
         Ok(path) => {
             println!("{}", path.display());
             println!("{BODY_ONLY_INSTRUCTION}");
@@ -37,6 +50,7 @@ fn plan_at(
     docs_dir: &Path,
     doc_type: &str,
     title: &str,
+    description: Option<&str>,
     timestamp: &str,
 ) -> Result<(PathBuf, String), String> {
     let spec = doc_type::spec_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
@@ -48,6 +62,7 @@ fn plan_at(
 
     let filled = fill_frontmatter(spec.template, spec.frontmatter, timestamp);
     let filled = fill_frontmatter_title(&filled, title);
+    let filled = fill_frontmatter_description(&filled, description);
     Ok((target_path, filled))
 }
 
@@ -84,8 +99,16 @@ pub fn plan(
     docs_dir: &Path,
     doc_type: &str,
     title: &str,
+    description: Option<&str>,
 ) -> Result<(PathBuf, String), String> {
-    plan_at(store, docs_dir, doc_type, title, &now_iso8601())
+    plan_at(
+        store,
+        docs_dir,
+        doc_type,
+        title,
+        description,
+        &now_iso8601(),
+    )
 }
 
 fn scaffold(
@@ -93,9 +116,10 @@ fn scaffold(
     docs_dir: &Path,
     doc_type: &str,
     title: &str,
+    description: Option<&str>,
     timestamp: &str,
 ) -> Result<PathBuf, String> {
-    let (target_path, filled) = plan_at(store, docs_dir, doc_type, title, timestamp)?;
+    let (target_path, filled) = plan_at(store, docs_dir, doc_type, title, description, timestamp)?;
     store
         .write(&target_path, &filled)
         .map_err(|e| e.to_string())?;
@@ -117,12 +141,16 @@ pub(crate) fn unsupported_type_message(doc_type: &str) -> String {
 /// Targeted line-edit fill of `type`/`status`/`timestamp` inside the leading
 /// frontmatter block only — never a serde round-trip, so body placeholders
 /// and frontmatter guidance comments outside those three keys survive
-/// byte-for-byte.
+/// byte-for-byte. `status` is seeded with `type_value`'s own resolved
+/// [`doc_type::DocTypeSpec::status_vocabulary`]'s first entry (ADR 0029)
+/// rather than a hardcoded literal, so `new issue "t"` seeds `status: open`
+/// while `new adr "t"` still seeds `status: Proposed`.
 pub(crate) fn fill_frontmatter(template: &str, type_value: &str, timestamp: &str) -> String {
     let lines: Vec<&str> = template.lines().collect();
     let Some(close) = frontmatter_close_index(&lines) else {
         return template.to_string();
     };
+    let status_value = seed_status_for(type_value);
 
     let filled: Vec<String> = lines
         .iter()
@@ -131,12 +159,25 @@ pub(crate) fn fill_frontmatter(template: &str, type_value: &str, timestamp: &str
             if i == 0 || i >= close {
                 line.to_string()
             } else {
-                fill_frontmatter_line(line, type_value, timestamp)
+                fill_frontmatter_line(line, type_value, status_value, timestamp)
             }
         })
         .collect();
 
     filled.join("\n") + "\n"
+}
+
+/// The `status:` value a fresh record of `type_value`'s doc type should seed,
+/// resolved from that type's own registry row rather than a hardcoded
+/// literal (ADR 0029). Falls back to `"Proposed"` — the constant's prior
+/// hardcoded value — when `type_value` does not resolve to a registered type
+/// or that type's vocabulary is empty (e.g. Constitution, whose own `Draft |
+/// Ratified | Amended` vocabulary is out of this fn's scope).
+fn seed_status_for(type_value: &str) -> &'static str {
+    doc_type::spec_for_frontmatter(type_value)
+        .and_then(|spec| spec.status_vocabulary.first())
+        .copied()
+        .unwrap_or("Proposed")
 }
 
 pub(crate) fn frontmatter_close_index(lines: &[&str]) -> Option<usize> {
@@ -175,9 +216,35 @@ pub(crate) fn fill_frontmatter_title(content: &str, title: &str) -> String {
     filled.join("\n") + "\n"
 }
 
-fn fill_frontmatter_line(line: &str, type_value: &str, timestamp: &str) -> String {
+/// Fills the frontmatter `description:` line with `description`, quoted via
+/// [`format_scalar`] exactly as [`fill_frontmatter_title`] fills `title:` —
+/// the CLI-owned counterpart to hand-editing the placeholder (issue 0021).
+/// Delegates to [`crate::commands::supersede::apply_frontmatter_field`], the
+/// same insert-or-replace primitive `describe` uses, so a template missing a
+/// `description:` line gets one inserted rather than the value being
+/// silently dropped. A `None` `description` is a deliberate no-op: `content`
+/// returns unchanged and today's placeholder behavior stays intact.
+pub(crate) fn fill_frontmatter_description(content: &str, description: Option<&str>) -> String {
+    let Some(description) = description else {
+        return content.to_string();
+    };
+
+    crate::commands::supersede::apply_frontmatter_field(
+        content,
+        "description",
+        &format_scalar(description),
+    )
+    .unwrap_or_else(|| content.to_string())
+}
+
+fn fill_frontmatter_line(
+    line: &str,
+    type_value: &str,
+    status_value: &str,
+    timestamp: &str,
+) -> String {
     replace_targeted_value(line, "type", type_value)
-        .or_else(|| replace_targeted_value(line, "status", "Proposed"))
+        .or_else(|| replace_targeted_value(line, "status", status_value))
         .or_else(|| replace_targeted_value(line, "timestamp", timestamp))
         .unwrap_or_else(|| line.to_string())
 }
@@ -271,6 +338,39 @@ mod tests {
         );
     }
 
+    /// ADR 0029 AC4: the seeded `status:` comes from each type's own
+    /// `status_vocabulary[0]`, not a hardcoded literal — issue seeds `open`,
+    /// bdr/prd/research seed `Draft`, adr still seeds `Proposed`.
+    #[test]
+    fn fill_frontmatter_seeds_each_types_own_first_vocabulary_value() {
+        let template =
+            "---\ntype: <TYPE>\nstatus: <STATUS>\ntimestamp: <ISO 8601 datetime>\n---\n\n# Body\n";
+
+        let cases = [
+            ("ADR", "Proposed"),
+            ("BDR", "Draft"),
+            ("PRD", "Draft"),
+            ("Issue", "open"),
+            ("Research", "Draft"),
+        ];
+
+        for (frontmatter_type, expected_status) in cases {
+            let filled = fill_frontmatter(template, frontmatter_type, "2026-07-14T00:00:00Z");
+            assert!(
+                filled.contains(&format!("status: {expected_status}")),
+                "{frontmatter_type} expected status: {expected_status}, got: {filled}"
+            );
+        }
+    }
+
+    #[test]
+    fn fill_frontmatter_falls_back_to_proposed_for_an_unresolvable_type() {
+        let template = "---\ntype: Glossary\nstatus: <STATUS>\n---\n\n# Body\n";
+        let filled = fill_frontmatter(template, "Glossary", "2026-07-14T00:00:00Z");
+
+        assert!(filled.contains("status: Proposed"), "got: {filled}");
+    }
+
     #[test]
     fn fill_frontmatter_title_replaces_the_placeholder_with_the_argument() {
         let template =
@@ -307,6 +407,66 @@ mod tests {
     fn fill_frontmatter_title_without_a_closing_fence_returns_the_content_unchanged() {
         let content = "no frontmatter here\n";
         assert_eq!(fill_frontmatter_title(content, "My Decision"), content);
+    }
+
+    #[test]
+    fn fill_frontmatter_description_replaces_the_placeholder_with_the_argument() {
+        let template = "---\ntype: ADR\ndescription: <One sentence — the decision and its scope.>\nstatus: Proposed\n---\n\n# Body\n";
+        let filled =
+            fill_frontmatter_description(template, Some("A concise decision description."));
+
+        assert!(filled.contains("description: A concise decision description.\n"));
+        assert!(!filled.contains("<One sentence"));
+    }
+
+    #[test]
+    fn fill_frontmatter_description_quotes_exactly_as_the_canonical_serializer_would() {
+        let template = "---\ntype: ADR\ndescription: <One sentence — the decision and its scope.>\nstatus: Proposed\n---\n\n# Body\n";
+        let filled = fill_frontmatter_description(template, Some("Caching: A Deep Dive"));
+
+        assert!(filled.contains(&format!(
+            "description: {}\n",
+            format_scalar("Caching: A Deep Dive")
+        )));
+    }
+
+    #[test]
+    fn fill_frontmatter_description_leaves_the_body_untouched() {
+        let template = "---\ntype: Issue\ndescription: <One sentence>\n---\n\n## <Issue title>\n\n<intro guidance>\n";
+        let filled = fill_frontmatter_description(template, Some("Fix it"));
+
+        assert!(filled.contains("## <Issue title>"));
+        assert!(filled.contains("<intro guidance>"));
+    }
+
+    #[test]
+    fn fill_frontmatter_description_without_a_closing_fence_returns_the_content_unchanged() {
+        let content = "no frontmatter here\n";
+        assert_eq!(
+            fill_frontmatter_description(content, Some("A description")),
+            content
+        );
+    }
+
+    #[test]
+    fn fill_frontmatter_description_is_a_no_op_when_none_is_given() {
+        let template =
+            "---\ntype: ADR\ndescription: <One sentence — the decision and its scope.>\n---\n\n# Body\n";
+        assert_eq!(fill_frontmatter_description(template, None), template);
+    }
+
+    #[test]
+    fn fill_frontmatter_description_inserts_the_line_when_the_frontmatter_lacks_it() {
+        let template = "---\ntype: ADR\nstatus: Proposed\n---\n\n# Body\n";
+        let filled = fill_frontmatter_description(template, Some("A concise sentence."));
+
+        assert!(
+            filled.contains("description: A concise sentence.\n"),
+            "got: {filled}"
+        );
+        assert!(filled.contains("type: ADR\n"));
+        assert!(filled.contains("status: Proposed\n"));
+        assert!(filled.contains("# Body\n"));
     }
 
     #[test]
@@ -409,6 +569,7 @@ mod tests {
             Path::new("/bundle"),
             "adr",
             "First Decision",
+            None,
             "2026-07-17T00:00:00Z",
         )
         .expect("scaffold should succeed");
@@ -425,6 +586,7 @@ mod tests {
             Path::new("/bundle"),
             "constitution",
             "Acme Constitution",
+            None,
             "2026-07-17T00:00:00Z",
         )
         .expect("scaffold should succeed");
@@ -446,6 +608,7 @@ mod tests {
             Path::new("/bundle"),
             "constitution",
             "Acme Constitution",
+            None,
             "2026-07-17T00:00:00Z",
         )
         .expect_err("a second constitution must be refused");
@@ -469,6 +632,7 @@ mod tests {
             Path::new("/bundle"),
             "adr",
             "Fifth Decision",
+            None,
             "2026-07-17T00:00:00Z",
         )
         .expect("scaffold should succeed");
@@ -485,6 +649,7 @@ mod tests {
             Path::new("/bundle"),
             "adr",
             "Persisted Decision",
+            None,
             "2026-07-17T00:00:00Z",
         )
         .expect("scaffold should succeed");
@@ -496,6 +661,53 @@ mod tests {
         assert!(persisted.contains("status: Proposed"));
         assert!(persisted.contains("timestamp: 2026-07-17T00:00:00Z"));
         assert!(persisted.contains("title: Persisted Decision"));
+    }
+
+    #[test]
+    fn scaffold_seeds_the_description_placeholder_when_none_is_given() {
+        let store = MapStore::new();
+
+        let target = scaffold(
+            &store,
+            Path::new("/bundle"),
+            "adr",
+            "Placeholder Description",
+            None,
+            "2026-07-17T00:00:00Z",
+        )
+        .expect("scaffold should succeed");
+
+        let persisted = store
+            .read(&target)
+            .expect("scaffold must persist through DocStore::write");
+        assert!(
+            persisted.contains("description: <One sentence"),
+            "got: {persisted}"
+        );
+    }
+
+    #[test]
+    fn scaffold_writes_the_given_description_when_some_is_passed() {
+        let store = MapStore::new();
+
+        let target = scaffold(
+            &store,
+            Path::new("/bundle"),
+            "adr",
+            "Described Decision",
+            Some("A concise sentence describing the change."),
+            "2026-07-17T00:00:00Z",
+        )
+        .expect("scaffold should succeed");
+
+        let persisted = store
+            .read(&target)
+            .expect("scaffold must persist through DocStore::write");
+        assert!(
+            persisted.contains("description: A concise sentence describing the change."),
+            "got: {persisted}"
+        );
+        assert!(!persisted.contains("<One sentence"));
     }
 
     /// `list` deliberately omits the record `read` still serves, simulating
@@ -537,6 +749,7 @@ mod tests {
             Path::new("/bundle"),
             "adr",
             "First Decision",
+            None,
             "2026-07-17T00:00:00Z",
         )
         .expect_err("clobbering an existing store record must fail");

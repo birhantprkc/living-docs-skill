@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use living_docs_core::store::DocStore;
 use living_docs_core::{check, commands, paths};
+use skill_install::Harness;
 use std::io;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
@@ -8,6 +9,7 @@ use std::process::ExitCode;
 
 mod hooks;
 mod skill;
+mod skill_install;
 
 #[derive(Parser)]
 #[command(
@@ -47,6 +49,10 @@ enum Command {
     New {
         doc_type: String,
         title: String,
+        /// Seeds the frontmatter `description:` field with this sentence
+        /// instead of the template's placeholder (issue 0021).
+        #[arg(long)]
+        description: Option<String>,
     },
     /// `new` plus deterministic pre-fill (issue 0008): frontmatter title,
     /// numbered title heading, a trail comment, and every judgment section
@@ -80,6 +86,15 @@ enum Command {
     Status {
         number: String,
         new_status: String,
+    },
+    /// Sets a record's `description:` frontmatter field directly — the
+    /// CLI-owned counterpart to hand-editing the placeholder, reusing the
+    /// same record-resolution and frontmatter-mutation helpers `status`
+    /// uses (issue 0021, part 2 of 2). Unlike `status`, no vocabulary
+    /// constrains the sentence; any string is accepted.
+    Describe {
+        number: String,
+        description: String,
     },
     Next {
         doc_type: String,
@@ -145,7 +160,8 @@ enum Command {
     },
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
-    /// `SKILL.md` body, or print one topic's detail.
+    /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR
+    /// 0028) places the corpus into a harness's skills directory instead.
     Skill {
         /// The skill to query, e.g. `living-docs`. Required unless `--list`.
         name: Option<String>,
@@ -167,6 +183,8 @@ enum Command {
         /// Mutually exclusive with `--json`.
         #[arg(long, conflicts_with = "json")]
         plain: bool,
+        #[command(subcommand)]
+        action: Option<SkillCmd>,
     },
     /// Materializes the corpus hook scripts into a target project (ADR 0023).
     Hooks {
@@ -203,6 +221,29 @@ enum HooksCmd {
         #[arg(long)]
         dir: Option<PathBuf>,
         /// Report the plan without removing any file.
+        #[arg(long)]
+        dry_run: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum SkillCmd {
+    /// Places the three skill directories from the embedded corpus into a
+    /// harness's skills directory (ADR 0028) — no working tree involved.
+    /// `--project` scopes the destination to the current project instead of
+    /// the harness's global, `$HOME`-rooted directory; `--dir` overrides the
+    /// destination outright.
+    Install {
+        #[arg(long, value_enum, default_value = "claude")]
+        harness: Harness,
+        #[arg(long)]
+        project: bool,
+        /// Destination root for the skill directories, overriding both
+        /// `--harness` and `--project` outright. When given, `--harness`
+        /// still parses but no longer affects where anything is placed.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Report the plan without writing any file.
         #[arg(long)]
         dry_run: bool,
     },
@@ -289,9 +330,18 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Command::Next { doc_type } => run_next(&cli.docs_dir, &doc_type),
-        Command::New { doc_type, title } => {
-            run_new(cli.backend, cli.engine, &cli.docs_dir, &doc_type, &title)
-        }
+        Command::New {
+            doc_type,
+            title,
+            description,
+        } => run_new(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            &doc_type,
+            &title,
+            description.as_deref(),
+        ),
         Command::Brief {
             doc_type,
             title,
@@ -314,6 +364,16 @@ fn main() -> ExitCode {
         Command::Status { number, new_status } => {
             run_status(cli.backend, cli.engine, &cli.docs_dir, &number, &new_status)
         }
+        Command::Describe {
+            number,
+            description,
+        } => run_describe(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            &number,
+            &description,
+        ),
         Command::Check {
             paths,
             mermaid_only,
@@ -333,11 +393,22 @@ fn main() -> ExitCode {
         } => run_db_sync(&cli.docs_dir, cli.engine, project),
         Command::Search { query, project } => run_search(&query, cli.engine, project),
         Command::Skill {
+            action:
+                Some(SkillCmd::Install {
+                    harness,
+                    project,
+                    dir,
+                    dry_run,
+                }),
+            ..
+        } => skill_install::install(harness, project, dir, dry_run),
+        Command::Skill {
             name,
             topic,
             list,
             json,
             plain,
+            ..
         } => run_skill(name, topic, list, json, plain),
         Command::Hooks {
             cmd: HooksCmd::Install { dir, dry_run },
@@ -374,13 +445,14 @@ fn run_new(
     docs_dir: &Path,
     doc_type: &str,
     title: &str,
+    description: Option<&str>,
 ) -> ExitCode {
     match backend {
         Backend::Fs => match build_backend_store(backend, engine, docs_dir) {
-            Ok(store) => commands::new::run(store.as_ref(), docs_dir, doc_type, title),
+            Ok(store) => commands::new::run(store.as_ref(), docs_dir, doc_type, title, description),
             Err(err) => report_failure(&err),
         },
-        Backend::Db => run_new_db(engine, docs_dir, doc_type, title),
+        Backend::Db => run_new_db(engine, docs_dir, doc_type, title, description),
     }
 }
 
@@ -389,12 +461,18 @@ fn run_new(
 /// db-mode plans the target path with [`commands::new::plan`] and commits it
 /// through [`db_store::DbDocStore::write_checked`], so an invalid record is
 /// rejected before it is ever visible (ADR 0016, issue 0010 slice 2).
-fn run_new_db(engine: Engine, docs_dir: &Path, doc_type: &str, title: &str) -> ExitCode {
+fn run_new_db(
+    engine: Engine,
+    docs_dir: &Path,
+    doc_type: &str,
+    title: &str,
+    description: Option<&str>,
+) -> ExitCode {
     let store = match build_db_doc_store(engine, docs_dir) {
         Ok(store) => store,
         Err(err) => return report_failure(&err),
     };
-    match commands::new::plan(&store, docs_dir, doc_type, title) {
+    match commands::new::plan(&store, docs_dir, doc_type, title, description) {
         Ok((target_path, filled)) => commit_new_db(&store, &target_path, &filled),
         Err(err) => report_new_db_failure(&err),
     }
@@ -498,6 +576,19 @@ fn run_status(
 ) -> ExitCode {
     match build_backend_store(backend, engine, docs_dir) {
         Ok(store) => commands::status::run(store.as_ref(), docs_dir, number, new_status),
+        Err(err) => report_failure(&err),
+    }
+}
+
+fn run_describe(
+    backend: Backend,
+    engine: Engine,
+    docs_dir: &Path,
+    number: &str,
+    description: &str,
+) -> ExitCode {
+    match build_backend_store(backend, engine, docs_dir) {
+        Ok(store) => commands::describe::run(store.as_ref(), docs_dir, number, description),
         Err(err) => report_failure(&err),
     }
 }
