@@ -21,13 +21,17 @@ disagree.
 every record — regardless of type — against one hardcoded list: `Proposed | Accepted |
 Deprecated` (`Superseded` is rejected with a hint toward `supersede`). But every generated
 record's body carries an HTML comment stating what that type's vocabulary *actually* is, and
-the four types don't agree with the validator or with each other:
+none of the five numbered types (`status` addresses a record by `NNNN`, so the singleton
+`Constitution` — no `NNNN` — is out of scope for this decision regardless) agree with the
+validator or with each other:
 
 - ADR: `Proposed | Accepted | Superseded | Deprecated` — close to the validator, but still
   wrong (includes `Superseded`, which the validator rejects).
 - BDR / PRD: `Draft | Accepted | Implemented | Superseded` — a different lifecycle entirely.
 - Issue: `open | in-progress | closed | superseded` — tracker language, not decision-record
   language.
+- Research: `Draft | Accepted | Superseded` — its own comment explains why it has no
+  `Implemented`: "a research record is evidence, not a decision."
 
 Meanwhile `living-docs-core/src/commands/index.rs`'s partition predicates were written
 *against the templates' vocabularies, not the validator's*: `is_active_status` already
@@ -57,15 +61,20 @@ We will add `status_vocabulary: &'static [&'static str]` to `DocTypeSpec` — th
 of values that type's `status` verb may set directly, index `0` being the value `new` seeds
 a fresh record with. `Superseded` is never a member of any type's list; it stays a
 cross-cutting special case rejected by `status` with today's hint toward `supersede`, for
-every type.
+every type. `Constitution` (a `Identity::Singleton`, unreachable by `status <NNNN>`) carries
+no `status_vocabulary` obligation — its own `Draft | Ratified | Amended` comment is out of
+scope here and stays whatever it already is.
 
-Per-type values, chosen to match what each type's index predicate and template comment
-already independently expect (this changes zero read-side behavior, only what `status` is
-willing to write):
+Per-type values, extracted from what each type's own template comment and `index.rs`'s
+predicates already independently expect — this decision canonicizes an intent that already
+existed in five different, disagreeing places, rather than inventing a new one (changes zero
+read-side behavior, only what `status` is willing to write):
 
 - ADR: `["Proposed", "Accepted", "Deprecated"]` (unchanged).
 - BDR: `["Draft", "Accepted", "Implemented"]` (newly enforced; unchanged from the template).
 - PRD: `["Draft", "Accepted", "Implemented"]` (newly enforced; unchanged from the template).
+- Research: `["Draft", "Accepted"]` (newly enforced; unchanged from the template — no
+  `Implemented`, per the template's own rationale that a research record is evidence).
 - Issue: `["open", "in-progress", "closed"]` (lowercase, tracker-cased, matching the
   template and `is_open_status`'s existing test cases). `closed` is the terminal state issue
   0017 asked for. `done` remains a recognized *read-side* synonym for `closed` in
@@ -97,9 +106,10 @@ comment text and the registry field agree, so they cannot drift apart silently a
 - `status.rs` moves from one hardcoded constant to a per-type lookup with a fallible type
   resolution step; a record whose `type:` frontmatter cannot be resolved needs an explicit,
   tested error path rather than falling through to the old global list.
-- BDR and PRD records gain enforcement of a vocabulary (`Draft`/`Accepted`/`Implemented`)
-  the validator previously never checked in practice — any existing BDR/PRD record with a
-  status outside that set (none exist yet in this bundle) would need reconciling.
+- BDR, PRD, and Research records gain enforcement of a vocabulary the validator previously
+  never checked in practice — any existing record with a status outside its type's set
+  (none exist yet in this bundle for BDR/PRD; Research's own records would need checking)
+  would need reconciling.
 - Every type's template comment is now a claim a fitness function holds it to; adding a
   fifth doc type means adding its `status_vocabulary` row and comment together, not either
   alone.
@@ -113,7 +123,7 @@ comment text and the registry field agree, so they cannot drift apart silently a
 ## Verification
 
 **Implementation impact:** `living-docs-core/src/doc_type.rs`, `living-docs-core/src/commands/status.rs`,
-`living-docs-core/src/commands/new.rs`, `skills/living-docs/templates/{adr,bdr,prd,issue}.md`.
+`living-docs-core/src/commands/new.rs`, `skills/living-docs/templates/{adr,bdr,prd,issue,research}.md`.
 
 **Verification criteria:**
 - `living-docs status <NNNN> <Status>` accepts exactly each type's own `status_vocabulary`
