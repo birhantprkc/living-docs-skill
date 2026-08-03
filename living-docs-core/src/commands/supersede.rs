@@ -95,7 +95,14 @@ pub(crate) fn set_frontmatter_fields(
     store.write(path, &updated).map_err(|e| e.to_string())
 }
 
-fn apply_frontmatter_field(contents: &str, key: &str, value: &str) -> Option<String> {
+/// The shared single-key insert-or-replace frontmatter primitive: replaces
+/// `key`'s value via [`set_targeted_value`] when the line is already present
+/// in the leading frontmatter block, inserts `key: value` at the block's
+/// close when it is absent, and returns `None` when `contents` has no
+/// leading `---` fence at all. Used by [`set_frontmatter_fields`] and, for
+/// the same insert-or-replace symmetry, by
+/// [`crate::commands::new::fill_frontmatter_description`].
+pub(crate) fn apply_frontmatter_field(contents: &str, key: &str, value: &str) -> Option<String> {
     let lines: Vec<&str> = contents.lines().collect();
     let close = frontmatter_close_index(&lines)?;
     let prefix = format!("{key}:");

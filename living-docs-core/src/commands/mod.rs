@@ -1,4 +1,5 @@
 pub mod brief;
+pub mod describe;
 pub mod export;
 pub mod fmt;
 pub mod index;

@@ -14,30 +14,30 @@ timestamp: <ISO 8601 datetime>
 
 ## Product
 
-<What the product is, in one or two sentences. State the core value it delivers and
-who it delivers it to. This is the north star — every PRD and ADR must be consistent
-with it.>
+<!-- What the product is, in one or two sentences. State the core value it delivers and
+     who it delivers it to. This is the north star -- every PRD and ADR must be consistent
+     with it. -->
+
+{{PRODUCT}}
 
 ## Scope Boundaries
 
 **In scope:**
 
-- <Capability or domain the product owns.>
+- {{IN_SCOPE}}
 
 **Explicitly out of scope:**
 
-- <Tempting-but-excluded capability. Name it so it cannot silently creep in.>
+<!-- Name the tempting-but-excluded capability so it cannot silently creep in. -->
+
+- {{OUT_OF_SCOPE}}
 
 **Phase boundaries:**
 
-- Phase 1: <what is in scope for the current phase and what defers>
-- Phase 2: <…>
+- Phase 1: {{PHASE_1_SCOPE}}
+- Phase 2: {{PHASE_2_SCOPE}}
 
 ## Data Model / Schema Foundation
-
-<The core entities and their relationships. This section fixes what the rest of the
-system is built on. Represent structure as a Mermaid entity-relationship or class
-diagram. Describe cardinalities and invariants in prose below the diagram.>
 
 ```mermaid
 erDiagram
@@ -50,17 +50,23 @@ erDiagram
     ENTITY_A ||--o{ ENTITY_B : "relationship"
 ```
 
+<!-- The core entities and their relationships. This section fixes what the rest of the
+     system is built on. Represent structure as a Mermaid entity-relationship or class
+     diagram. Describe cardinalities and invariants in prose below the diagram. -->
+
+{{DATA_MODEL}}
+
 ## Non-negotiables
 
-<Constraints that hold regardless of feature set, phase, or implementation choice.
-Examples: compliance requirements, security invariants, performance floors, user-trust
-commitments. Each item should be falsifiable — someone could check the running system
-and say "violated" or "holds".>
+<!-- Constraints that hold regardless of feature set, phase, or implementation choice.
+     Examples: compliance requirements, security invariants, performance floors, user-trust
+     commitments. Each item should be falsifiable -- someone could check the running system
+     and say "violated" or "holds". -->
 
-- <Non-negotiable 1>
+- {{NON_NEGOTIABLE}}
 
 ## Amendment Log
 
 <!-- Append amendments here; do not edit sections above once ratified.            -->
-<!-- Format: ## Amendment N — YYYY-MM-DD: <summary of what changed and why>        -->
+<!-- Format: ## Amendment N — YYYY-MM-DD: {{SUMMARY}}                              -->
 <!-- A directory-level log.md (OKF §7) MAY also record amendment history.          -->

@@ -35,6 +35,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0027 — Every rule keyed by doc type becomes a registry field, and glossary is not a doc type](0027-every-rule-keyed-by-doc-type-becomes-a-registry-field-and-glossary-is-not-a-doc-type.md) - Accepted
 * [0028 — The release binary is the unit of distribution: install.sh only bootstraps it and every placement becomes a CLI verb](0028-the-release-binary-is-the-unit-of-distribution-install-sh-only-bootstraps-it-and-every-placement-becomes-a-cli-verb.md) - Accepted
 * [0029 — The status vocabulary is per doc type, sourced from one DocTypeSpec field -- not one global list validated against every template's own dialect](0029-the-status-vocabulary-is-per-doc-type-sourced-from-one-doctypespec-field-not-one-global-list-validated-against-every-template-s-own-dialect.md) - Accepted
+* [0030 — Uniform brace markers for body placeholders](0030-uniform-brace-markers-for-body-placeholders.md) - Proposed
 
 ## Superseded
 

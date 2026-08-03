@@ -163,7 +163,7 @@ fn seed_index_skeleton(docs: &Path, adr_entries: &[&str]) {
 
 /// The ADR template's own "fill this in" example links
 /// (`research/NNNN-<slug>.md`, `prd/NNNN-<slug>.md`, and the References
-/// section's literal `adr/url`) resolve to real paths on disk here, so a
+/// section's literal `adr/{{URL}}`) resolve to real paths on disk here, so a
 /// freshly planned record's `check` gate has something to find — mirrors
 /// `cli/tests/db_authoring.rs`'s `seed_adr_placeholder_link_targets`
 /// exactly, since `create_handler` fills the very same embedded template.
@@ -172,7 +172,7 @@ fn seed_adr_placeholder_link_targets(docs: &Path) {
         .expect("seed research placeholder dir");
     fs::create_dir_all(docs.join("prd").join("NNNN-<slug>.md")).expect("seed prd placeholder dir");
     fs::create_dir_all(docs.join("adr")).expect("create adr dir");
-    fs::write(docs.join("adr").join("url"), "").expect("seed adr url placeholder");
+    fs::write(docs.join("adr").join("{{URL}}"), "").expect("seed adr url placeholder");
 }
 
 /// Builds a db-mode-authoring router: a temp sqlite db migrated and synced

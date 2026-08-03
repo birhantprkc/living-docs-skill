@@ -772,15 +772,19 @@ fn supersede_wires_status_and_both_links_bidirectionally() {
     );
 
     assert!(
-        old_contents.contains("We will <the choice, in active voice"),
+        old_contents.contains("We will {{DECISION}}"),
         "body lost: {old_contents}"
     );
     assert!(
-        new_contents.contains("We will <the choice, in active voice"),
+        new_contents.contains("We will {{DECISION}}"),
         "body lost: {new_contents}"
     );
     assert!(
-        old_contents.contains("# Proposed | Accepted | Superseded | Deprecated"),
+        old_contents.contains("Proposed | Accepted | Deprecated"),
+        "comment lost: {old_contents}"
+    );
+    assert!(
+        old_contents.contains("`living-docs supersede` sets Superseded"),
         "comment lost: {old_contents}"
     );
 
@@ -845,11 +849,15 @@ fn status_sets_the_field_and_preserves_body_and_other_frontmatter() {
     let contents = fs::read_to_string(docs.join("adr/0001-a-decision.md")).unwrap();
     assert!(contents.contains("status: Accepted"), "got: {contents}");
     assert!(
-        contents.contains("We will <the choice, in active voice"),
+        contents.contains("We will {{DECISION}}"),
         "body lost: {contents}"
     );
     assert!(
-        contents.contains("# Proposed | Accepted | Superseded | Deprecated"),
+        contents.contains("Proposed | Accepted | Deprecated"),
+        "comment lost: {contents}"
+    );
+    assert!(
+        contents.contains("`living-docs supersede` sets Superseded"),
         "comment lost: {contents}"
     );
 

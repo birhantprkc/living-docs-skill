@@ -106,7 +106,7 @@ fn seed_index_skeleton(docs: &Path, adr_entries: &[&str]) {
 
 /// Every "fill this in" example link the ADR template embeds verbatim
 /// (`research/NNNN-<slug>.md`, `prd/NNNN-<slug>.md`, and the References
-/// section's literal `adr/url`) — broken by design until an author replaces
+/// section's literal `adr/{{URL}}`) — broken by design until an author replaces
 /// them (see `backend_db_check_reaches_the_same_verdict_as_file_mode_check_on_the_equivalent_corpus`).
 /// `--backend db new` now commits through `write_checked`, which runs the
 /// same link-validity invariant as `check`, so exercising its happy path
@@ -119,7 +119,7 @@ fn seed_adr_placeholder_link_targets(docs: &Path) {
     fs::create_dir_all(docs.join("research").join("NNNN-<slug>.md")).unwrap();
     fs::create_dir_all(docs.join("prd").join("NNNN-<slug>.md")).unwrap();
     fs::create_dir_all(docs.join("adr")).unwrap();
-    fs::write(docs.join("adr").join("url"), "").unwrap();
+    fs::write(docs.join("adr").join("{{URL}}"), "").unwrap();
 }
 
 /// A bundle-root `index.md` linking to the type's `index.md`, with the type

@@ -49,6 +49,10 @@ enum Command {
     New {
         doc_type: String,
         title: String,
+        /// Seeds the frontmatter `description:` field with this sentence
+        /// instead of the template's placeholder (issue 0021).
+        #[arg(long)]
+        description: Option<String>,
     },
     /// `new` plus deterministic pre-fill (issue 0008): frontmatter title,
     /// numbered title heading, a trail comment, and every judgment section
@@ -82,6 +86,15 @@ enum Command {
     Status {
         number: String,
         new_status: String,
+    },
+    /// Sets a record's `description:` frontmatter field directly — the
+    /// CLI-owned counterpart to hand-editing the placeholder, reusing the
+    /// same record-resolution and frontmatter-mutation helpers `status`
+    /// uses (issue 0021, part 2 of 2). Unlike `status`, no vocabulary
+    /// constrains the sentence; any string is accepted.
+    Describe {
+        number: String,
+        description: String,
     },
     Next {
         doc_type: String,
@@ -317,9 +330,18 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Command::Next { doc_type } => run_next(&cli.docs_dir, &doc_type),
-        Command::New { doc_type, title } => {
-            run_new(cli.backend, cli.engine, &cli.docs_dir, &doc_type, &title)
-        }
+        Command::New {
+            doc_type,
+            title,
+            description,
+        } => run_new(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            &doc_type,
+            &title,
+            description.as_deref(),
+        ),
         Command::Brief {
             doc_type,
             title,
@@ -342,6 +364,16 @@ fn main() -> ExitCode {
         Command::Status { number, new_status } => {
             run_status(cli.backend, cli.engine, &cli.docs_dir, &number, &new_status)
         }
+        Command::Describe {
+            number,
+            description,
+        } => run_describe(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            &number,
+            &description,
+        ),
         Command::Check {
             paths,
             mermaid_only,
@@ -413,13 +445,14 @@ fn run_new(
     docs_dir: &Path,
     doc_type: &str,
     title: &str,
+    description: Option<&str>,
 ) -> ExitCode {
     match backend {
         Backend::Fs => match build_backend_store(backend, engine, docs_dir) {
-            Ok(store) => commands::new::run(store.as_ref(), docs_dir, doc_type, title),
+            Ok(store) => commands::new::run(store.as_ref(), docs_dir, doc_type, title, description),
             Err(err) => report_failure(&err),
         },
-        Backend::Db => run_new_db(engine, docs_dir, doc_type, title),
+        Backend::Db => run_new_db(engine, docs_dir, doc_type, title, description),
     }
 }
 
@@ -428,12 +461,18 @@ fn run_new(
 /// db-mode plans the target path with [`commands::new::plan`] and commits it
 /// through [`db_store::DbDocStore::write_checked`], so an invalid record is
 /// rejected before it is ever visible (ADR 0016, issue 0010 slice 2).
-fn run_new_db(engine: Engine, docs_dir: &Path, doc_type: &str, title: &str) -> ExitCode {
+fn run_new_db(
+    engine: Engine,
+    docs_dir: &Path,
+    doc_type: &str,
+    title: &str,
+    description: Option<&str>,
+) -> ExitCode {
     let store = match build_db_doc_store(engine, docs_dir) {
         Ok(store) => store,
         Err(err) => return report_failure(&err),
     };
-    match commands::new::plan(&store, docs_dir, doc_type, title) {
+    match commands::new::plan(&store, docs_dir, doc_type, title, description) {
         Ok((target_path, filled)) => commit_new_db(&store, &target_path, &filled),
         Err(err) => report_new_db_failure(&err),
     }
@@ -537,6 +576,19 @@ fn run_status(
 ) -> ExitCode {
     match build_backend_store(backend, engine, docs_dir) {
         Ok(store) => commands::status::run(store.as_ref(), docs_dir, number, new_status),
+        Err(err) => report_failure(&err),
+    }
+}
+
+fn run_describe(
+    backend: Backend,
+    engine: Engine,
+    docs_dir: &Path,
+    number: &str,
+    description: &str,
+) -> ExitCode {
+    match build_backend_store(backend, engine, docs_dir) {
+        Ok(store) => commands::describe::run(store.as_ref(), docs_dir, number, description),
         Err(err) => report_failure(&err),
     }
 }

@@ -21,6 +21,7 @@ one slice per fresh context, starting from the skeleton.
 * [0021 — new has no --description flag, yet description is CLI-owned frontmatter](0021-new-has-no-description-flag-yet-description-is-cli-owned-frontmatter.md) - Proposed
 * [0022 — Template placeholders are fragile for programmatic editing](0022-template-placeholders-are-fragile-for-programmatic-editing.md) - Proposed
 * [0023 — next reports 0001 for issue because run_next passes the CLI token straight through instead of resolving its directory](0023-next-reports-0001-for-issue-because-run-next-passes-the-cli-token-straight-through-instead-of-resolving-its-directory.md) - Proposed
+* [0024 — Doc-code pairing for living-docs: commit trailers, covers-based drift detection, and executable acceptance](0024-doc-code-pairing-for-living-docs-commit-trailers-covers-based-drift-detection-and-executable-acceptance.md) - open
 
 ## Closed
 
