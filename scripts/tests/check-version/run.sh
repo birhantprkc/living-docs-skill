@@ -38,11 +38,38 @@ write_plugin() { # write_plugin <dir> <version>
 JSON
 }
 
+write_cargo() { # write_cargo <dir> <package-version> -> realistic layout: [package] first, inline deps after
+  mkdir -p "$1/cli"
+  cat >"$1/cli/Cargo.toml" <<TOML
+[package]
+name = "fixture"
+version = "$2"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+TOML
+}
+
+write_cargo_dep_before_package() { # write_cargo_dep_before_package <dir> <package-version> <dependency-version>
+  mkdir -p "$1/cli"
+  cat >"$1/cli/Cargo.toml" <<TOML
+[dependencies]
+version = "$3"
+
+[package]
+name = "fixture"
+version = "$2"
+edition = "2021"
+TOML
+}
+
 set_all_versions() { # set_all_versions <dir> <version>
   local dir="$1" version="$2"
   printf '%s' "$version" >"$dir/VERSION"
   write_frontmatter "$dir/skills/foo/SKILL.md" "version: \"$version\""
   write_plugin "$dir" "$version"
+  write_cargo "$dir" "$version"
   write_frontmatter "$dir/.github/instructions/foo.md" "version: \"$version\""
   write_frontmatter "$dir/.cursor/rules/foo.mdc" "version: \"$version\""
 }
@@ -179,6 +206,20 @@ rm -rf "${repo:?}/skills"
 invoke "$repo"
 assert_exit    "11-exit-1"    1
 assert_out_has "11-error"     "ERROR: no skills/*/SKILL.md files found"
+
+echo "case 12: cli/Cargo.toml [package] version drifted"
+repo="$(new_repo case12)"
+write_cargo "$repo" "0.0.1"
+invoke "$repo"
+assert_exit    "12-exit-1"     1
+assert_out_has "12-names-file" "cli/Cargo.toml"
+
+echo "case 13: cli/Cargo.toml [dependencies] version differs from the correct [package] version"
+repo="$(new_repo case13)"
+write_cargo_dep_before_package "$repo" "0.9.0" "0.0.1"
+invoke "$repo"
+assert_exit    "13-exit-0"     0
+assert_out_has "13-version-ok" "Version OK"
 
 echo
 if ((fail == 0)); then
