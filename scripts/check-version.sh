@@ -52,6 +52,32 @@ check_versioned_class() { # check_versioned_class <required|optional> <file>...
 
 check "VERSION" "$file_ver"
 
+# cli/Cargo.toml declares `version = ` in both [package] and (potentially) [dependencies]
+# entries (e.g. a dotted-key dependency table), so extraction is scoped to the [package]
+# section only — never a bare grep across the whole file.
+check_cargo_package_version() { # check_cargo_package_version <file>
+	local f="$1" rel scoped v
+	rel="${f#"$root"/}"
+	if [[ ! -e "$f" ]]; then
+		check "$rel" ""
+		return
+	fi
+	scoped="$(sed -nE '/^\[package\]/,/^\[/p' "$f")"
+	if ! grep -qE '^version[[:space:]]*=' <<<"$scoped"; then
+		check "$rel" ""
+		return
+	fi
+	v="$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' <<<"$scoped" | head -1)"
+	if [[ -z "$v" ]]; then
+		printf 'MALFORMED: %-40s declares a version key not in canonical form (expected: version = "X")\n' "$rel"
+		fail=1
+		return
+	fi
+	check "$rel" "$v"
+}
+
+check_cargo_package_version "$root/cli/Cargo.toml"
+
 skill_mds=("$root"/skills/*/SKILL.md)
 if [[ ! -e "${skill_mds[0]}" ]]; then
 	echo "ERROR: no skills/*/SKILL.md files found" >&2
