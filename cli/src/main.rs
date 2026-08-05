@@ -1,11 +1,11 @@
 use args::{Cli, Command, DbCmd, HooksCmd, SkillCmd};
 use clap::Parser;
-use config::{is_default_local_sqlite, Backend, Engine, SQLITE_READ_MODEL_PATH};
+use config::{is_default_local_sqlite, Engine, SQLITE_READ_MODEL_PATH};
 use living_docs_core::{check, paths};
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use store::{build_backend_store, build_runtime, report_failure};
+use store::{build_runtime, report_failure};
 
 mod args;
 mod commands;
@@ -73,16 +73,24 @@ fn main() -> ExitCode {
             paths,
             mermaid_only,
         } if mermaid_only => check::run_mermaid_only(&paths),
-        Command::Check { paths, .. } => run_check(cli.backend, cli.engine, &cli.docs_dir, paths),
-        Command::Fmt { paths } => run_fmt(&cli.docs_dir, paths),
+        Command::Check { paths, .. } => {
+            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths)
+        }
+        Command::Fmt { paths } => commands::fmt::run_fmt(&cli.docs_dir, paths),
         Command::Export {
             out_dir,
             visibility,
-        } => run_export(cli.backend, cli.engine, &cli.docs_dir, &out_dir, visibility),
+        } => commands::export::run_export(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            &out_dir,
+            visibility,
+        ),
         Command::LeakGate {
             bundle,
             check_tier3,
-        } => run_leak_gate(&bundle, check_tier3),
+        } => commands::leak_gate::run_leak_gate(&bundle, check_tier3),
         Command::Db {
             cmd: DbCmd::Sync { project },
         } => run_db_sync(&cli.docs_dir, cli.engine, project),
@@ -128,63 +136,6 @@ fn run_hooks_install(dir: Option<PathBuf>, dry_run: bool, docs_dir: &Path) -> Ex
 fn run_hooks_uninstall(dir: Option<PathBuf>, dry_run: bool) -> ExitCode {
     let project_root = dir.unwrap_or_else(|| PathBuf::from("."));
     hooks::uninstall(&project_root, dry_run)
-}
-
-fn run_check(backend: Backend, engine: Engine, docs_dir: &Path, paths: Vec<PathBuf>) -> ExitCode {
-    let bundle = check_bundle(backend, docs_dir, paths);
-    match build_backend_store(backend, engine, &bundle) {
-        Ok(store) => check::run(store.as_ref(), &bundle),
-        Err(err) => report_failure(&err),
-    }
-}
-
-/// The db backend has no notion of `check`'s `[BUNDLE_ROOT]` positional
-/// argument — its `DocStore` is scoped to `--docs-dir` at construction — so
-/// it always checks `docs_dir`, ignoring `paths`; the fs backend keeps its
-/// existing `lint-docs.sh`-compatible behavior unchanged.
-fn check_bundle(backend: Backend, docs_dir: &Path, paths: Vec<PathBuf>) -> PathBuf {
-    match backend {
-        Backend::Db => docs_dir.to_path_buf(),
-        Backend::Fs => paths
-            .into_iter()
-            .next()
-            .unwrap_or_else(|| PathBuf::from("docs")),
-    }
-}
-
-/// `fmt` is fs-backend only (db-mode is canonical by construction on
-/// export), so it needs no `build_backend_store`/`Engine` plumbing — it
-/// reuses [`check_bundle`]'s `[BUNDLE_ROOT]` resolution against a fixed
-/// [`fs_store::FsStore`], the same way [`run_leak_gate`] always inspects a
-/// materialized filesystem bundle regardless of `--backend`.
-fn run_fmt(docs_dir: &Path, paths: Vec<PathBuf>) -> ExitCode {
-    let bundle = check_bundle(Backend::Fs, docs_dir, paths);
-    living_docs_core::commands::fmt::run(&fs_store::FsStore::new(), &bundle)
-}
-
-fn run_export(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    out_dir: &Path,
-    visibility: Option<Vec<String>>,
-) -> ExitCode {
-    match build_backend_store(backend, engine, docs_dir) {
-        Ok(store) => living_docs_core::commands::export::export(
-            store.as_ref(),
-            docs_dir,
-            out_dir,
-            visibility,
-        ),
-        Err(err) => report_failure(&err),
-    }
-}
-
-/// Always inspects a materialized filesystem bundle — a bundle is a directory
-/// tree `export` already wrote, not a `--backend`-selectable projection.
-/// `check_tier3` threads `--check-tier3` down to the opt-in Tier-3 PII scan.
-fn run_leak_gate(bundle: &Path, check_tier3: bool) -> ExitCode {
-    living_docs_core::commands::leak_gate::run(&fs_store::FsStore::new(), bundle, check_tier3)
 }
 
 fn run_db_sync(docs_dir: &Path, engine: Engine, project: Option<String>) -> ExitCode {
@@ -411,32 +362,6 @@ mod tests {
     fn derive_project_slug_falls_back_to_default_when_docs_dir_has_no_final_component() {
         assert_eq!(derive_project_slug(Path::new("/")), DEFAULT_PROJECT_SLUG);
         assert_eq!(derive_project_slug(Path::new("")), DEFAULT_PROJECT_SLUG);
-    }
-
-    #[test]
-    fn check_bundle_uses_docs_dir_for_the_db_backend_ignoring_paths() {
-        let bundle = check_bundle(
-            Backend::Db,
-            Path::new("/repo/docs"),
-            vec![PathBuf::from("/ignored")],
-        );
-        assert_eq!(bundle, PathBuf::from("/repo/docs"));
-    }
-
-    #[test]
-    fn check_bundle_uses_the_first_path_argument_for_the_fs_backend() {
-        let bundle = check_bundle(
-            Backend::Fs,
-            Path::new("/repo/docs"),
-            vec![PathBuf::from("/bundle")],
-        );
-        assert_eq!(bundle, PathBuf::from("/bundle"));
-    }
-
-    #[test]
-    fn check_bundle_defaults_to_docs_for_the_fs_backend_when_no_paths_are_given() {
-        let bundle = check_bundle(Backend::Fs, Path::new("/repo/docs"), Vec::new());
-        assert_eq!(bundle, PathBuf::from("docs"));
     }
 
     #[test]
