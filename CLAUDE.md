@@ -46,6 +46,24 @@ The tool never writes rationale prose, never chooses a doc's epistemic type, nev
 which alternative wins. Those belong to the authoring model. Everything the tool does must
 be reproducible from its inputs.
 
+### 5. Responsibility split + file-size ratchet (issue 0028)
+
+Maintainability is a gate, not an advisory. Layout rules for all Rust code:
+
+- **One responsibility per module.** `cli/src/main.rs` holds only clap wiring and
+  dispatch; every verb lives in `cli/src/commands/<verb>.rs`. New verbs are BORN in
+  their own module — never added to `main.rs`.
+- **Hard cap: 30 lines per function.** Enforced by clippy `too_many_lines`
+  (`clippy.toml` threshold 30, `-D warnings` in CI). This is the primary clarity
+  instrument — Clean Code's limit is about functions, not files.
+- **Hard cap: 300 lines per `.rs` file** (sibling `tests.rs` has its own 300 cap).
+  Enforced by `scripts/check-file-size.sh` (ratchet: a grandfathered file may only
+  shrink; growing one fails the check).
+- **Sibling test files.** A `#[cfg(test)]` module over ~100 lines moves to
+  `<module>/tests.rs` via `mod tests;` — private access preserved, production file clean.
+- Deep modules still win over many shallow files (rule 2): split by responsibility,
+  never by line-count alone — the file cap is the backstop, not the design driver.
+
 ## Architecture
 
 Target shape is a **modular monolith** (start here; split into crates only when a real
