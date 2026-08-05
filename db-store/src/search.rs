@@ -76,20 +76,36 @@ async fn sqlite_search(
                 JOIN records r ON r.id = records_fts.rowid \
                 JOIN projects p ON p.id = r.project_id \
                 WHERE records_fts MATCH ?1 AND r.deleted_at IS NULL";
+    let match_query = fts5_quote(query);
     let statement = match scope {
         Some(slug) => Statement::from_sql_and_values(
             conn.get_database_backend(),
             format!("{base} AND p.slug = ?2 ORDER BY rank"),
-            [query.into(), slug.into()],
+            [match_query.into(), slug.into()],
         ),
         None => Statement::from_sql_and_values(
             conn.get_database_backend(),
             format!("{base} ORDER BY rank"),
-            [query.into()],
+            [match_query.into()],
         ),
     };
 
     SearchRow::find_by_statement(statement).all(conn).await
+}
+
+/// Neutralizes FTS5 query syntax in a user-supplied search string: splits
+/// `query` on whitespace, doubles any `"` inside each token per FTS5's own
+/// escaping rule, and wraps every token in double quotes so it binds as a
+/// literal phrase rather than a column filter, boolean operator, or
+/// NOT-prefix (issue 0026 — a hyphenated term like `bi-temporal` otherwise
+/// aborts the query). An all-whitespace or empty `query` returns an empty
+/// string, matching `MATCH ""`'s existing no-op behavior.
+fn fts5_quote(query: &str) -> String {
+    query
+        .split_whitespace()
+        .map(|token| format!("\"{}\"", token.replace('"', "\"\"")))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 async fn postgres_search(
@@ -132,7 +148,7 @@ fn unsupported_backend_err() -> DbErr {
 mod tests {
     use super::*;
     use crate::sync::sync;
-    use crate::sync::test_support::seeded_corpus;
+    use crate::sync::test_support::{seeded_corpus, single_record_corpus_at};
     use crate::{connect_in_memory, migrate};
 
     #[tokio::test]
@@ -160,5 +176,41 @@ mod tests {
         let hits = search(&conn, "zzzznomatch").await.expect("search");
 
         assert!(hits.is_empty());
+    }
+
+    #[tokio::test]
+    async fn search_with_a_hyphenated_term_matches_instead_of_erroring() {
+        let conn = connect_in_memory().await.expect("connect");
+        migrate(&conn).await.expect("migrate");
+        let (store, bundle) = single_record_corpus_at("/bundle", "Bi-Temporal Edge Tracking");
+        sync(&conn, &store, &bundle).await.expect("sync");
+
+        let hits = search(&conn, "bi-temporal edge")
+            .await
+            .expect("a hyphenated query must not raise an FTS5 syntax error");
+
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Bi-Temporal Edge Tracking");
+    }
+
+    #[tokio::test]
+    async fn search_with_operator_laden_queries_matches_only_literal_terms() {
+        let conn = connect_in_memory().await.expect("connect");
+        migrate(&conn).await.expect("migrate");
+        let (store, bundle) = seeded_corpus();
+        sync(&conn, &store, &bundle).await.expect("sync");
+
+        for injection_shaped_query in ["foo OR bar", "title:x", "unmatched \" quote", "-"] {
+            let hits = search(&conn, injection_shaped_query)
+                .await
+                .unwrap_or_else(|err| {
+                    panic!("query {injection_shaped_query:?} must not raise a syntax error: {err}")
+                });
+
+            assert!(
+                hits.is_empty(),
+                "query {injection_shaped_query:?} must match no seeded record, got: {hits:?}"
+            );
+        }
     }
 }

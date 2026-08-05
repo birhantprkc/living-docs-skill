@@ -255,8 +255,10 @@ enum DbCmd {
     /// one named project (ADR 0005, issue 0005 slice 0005-B).
     Sync {
         /// The project slug to sync into. Defaults to a slug derived from
-        /// `--docs-dir`'s own directory name, keeping single-project usage
-        /// working without naming a project explicitly.
+        /// `--docs-dir`: its own directory name, or its parent directory's
+        /// name when the final component is literally `docs` — so every
+        /// repo's `<repo>/docs` bundle gets a project unique to that repo
+        /// instead of every repo colliding on the literal word `docs`.
         #[arg(long)]
         project: Option<String>,
     },
@@ -747,17 +749,39 @@ async fn sync_read_model(
 
 const DEFAULT_PROJECT_SLUG: &str = "default";
 
-/// Derives a stable project slug from `docs_dir`'s own final path
-/// component when `--project` is omitted, so repeated syncs of the same
-/// bundle land in the same project. Falls back to `"default"` when
-/// `docs_dir` has no usable final component (e.g. `.` or `/`).
+/// Derives a stable project slug from `docs_dir` when `--project` is
+/// omitted, so repeated syncs of the same bundle land in the same project.
+/// The final path component names the project, UNLESS it is literally
+/// `docs` and a parent directory exists — then the parent directory's name
+/// is used instead, so every repo's `<repo>/docs` bundle gets a slug unique
+/// to that repo rather than every repo colliding on the literal word
+/// `docs` (issue 0026). Falls back to `"default"` when no usable component
+/// is derivable (e.g. `.` or `/`).
 fn derive_project_slug(docs_dir: &Path) -> String {
-    docs_dir
-        .file_name()
-        .and_then(|name| name.to_str())
+    let canonical = docs_dir
+        .canonicalize()
+        .unwrap_or_else(|_| docs_dir.to_path_buf());
+    project_slug_component(&canonical)
         .map(paths::slugify)
         .filter(|slug| !slug.is_empty())
         .unwrap_or_else(|| DEFAULT_PROJECT_SLUG.to_owned())
+}
+
+/// The path component `derive_project_slug` should slugify: the parent
+/// directory's name when `path`'s final component is literally `docs` and
+/// a parent name exists, otherwise `path`'s own final component.
+fn project_slug_component(path: &Path) -> Option<&str> {
+    let final_name = path.file_name()?.to_str()?;
+    if final_name == "docs" {
+        if let Some(parent_name) = path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|n| n.to_str())
+        {
+            return Some(parent_name);
+        }
+    }
+    Some(final_name)
 }
 
 fn run_search(query: &str, engine: Engine, project: Option<String>) -> ExitCode {
@@ -943,12 +967,25 @@ mod tests {
     }
 
     #[test]
-    fn derive_project_slug_uses_the_docs_dir_final_component() {
-        assert_eq!(derive_project_slug(Path::new("/repo/docs")), "docs");
+    fn derive_project_slug_uses_the_parent_directory_name_when_the_final_component_is_docs() {
+        assert_eq!(
+            derive_project_slug(Path::new("/repo-name/docs")),
+            "repo-name"
+        );
+        assert_eq!(derive_project_slug(Path::new("/repo/docs")), "repo");
+    }
+
+    #[test]
+    fn derive_project_slug_keeps_the_final_component_when_it_is_not_literally_docs() {
         assert_eq!(
             derive_project_slug(Path::new("/repo/client-docs")),
             "client-docs"
         );
+    }
+
+    #[test]
+    fn derive_project_slug_keeps_docs_when_it_has_no_parent_directory() {
+        assert_eq!(derive_project_slug(Path::new("/docs")), "docs");
     }
 
     #[test]
