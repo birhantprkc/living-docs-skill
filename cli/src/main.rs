@@ -46,17 +46,23 @@ fn main() -> ExitCode {
         Command::Index {
             doc_type,
             visibility,
-        } => run_index(cli.backend, cli.engine, &cli.docs_dir, doc_type, visibility),
+        } => {
+            commands::index::run_index(cli.backend, cli.engine, &cli.docs_dir, doc_type, visibility)
+        }
         Command::Supersede { old, new } => {
-            run_supersede(cli.backend, cli.engine, &cli.docs_dir, &old, &new)
+            commands::supersede::run_supersede(cli.backend, cli.engine, &cli.docs_dir, &old, &new)
         }
-        Command::Status { number, new_status } => {
-            run_status(cli.backend, cli.engine, &cli.docs_dir, &number, &new_status)
-        }
+        Command::Status { number, new_status } => commands::status::run_status(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            &number,
+            &new_status,
+        ),
         Command::Describe {
             number,
             description,
-        } => run_describe(
+        } => commands::describe::run_describe(
             cli.backend,
             cli.engine,
             &cli.docs_dir,
@@ -122,64 +128,6 @@ fn run_hooks_install(dir: Option<PathBuf>, dry_run: bool, docs_dir: &Path) -> Ex
 fn run_hooks_uninstall(dir: Option<PathBuf>, dry_run: bool) -> ExitCode {
     let project_root = dir.unwrap_or_else(|| PathBuf::from("."));
     hooks::uninstall(&project_root, dry_run)
-}
-
-fn run_index(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    doc_type: Option<String>,
-    visibility: Option<Vec<String>>,
-) -> ExitCode {
-    match build_backend_store(backend, engine, docs_dir) {
-        Ok(store) => {
-            living_docs_core::commands::index::run(store.as_ref(), docs_dir, doc_type, visibility)
-        }
-        Err(err) => report_failure(&err),
-    }
-}
-
-fn run_supersede(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    old: &str,
-    new: &str,
-) -> ExitCode {
-    match build_backend_store(backend, engine, docs_dir) {
-        Ok(store) => living_docs_core::commands::supersede::run(store.as_ref(), docs_dir, old, new),
-        Err(err) => report_failure(&err),
-    }
-}
-
-fn run_status(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    number: &str,
-    new_status: &str,
-) -> ExitCode {
-    match build_backend_store(backend, engine, docs_dir) {
-        Ok(store) => {
-            living_docs_core::commands::status::run(store.as_ref(), docs_dir, number, new_status)
-        }
-        Err(err) => report_failure(&err),
-    }
-}
-
-fn run_describe(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    number: &str,
-    description: &str,
-) -> ExitCode {
-    match build_backend_store(backend, engine, docs_dir) {
-        Ok(store) => {
-            living_docs_core::commands::describe::run(store.as_ref(), docs_dir, number, description)
-        }
-        Err(err) => report_failure(&err),
-    }
 }
 
 fn run_check(backend: Backend, engine: Engine, docs_dir: &Path, paths: Vec<PathBuf>) -> ExitCode {
