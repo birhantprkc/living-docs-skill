@@ -30,7 +30,7 @@ pub(crate) fn build_db_doc_store(
     root: &Path,
 ) -> Result<db_store::DbDocStore, String> {
     let url = engine.resolve_url()?;
-    let project_slug = crate::derive_project_slug(root);
+    let project_slug = crate::commands::db::derive_project_slug(root);
     let runtime = build_runtime().map_err(|e| e.to_string())?;
     runtime
         .block_on(prepare_db_project(&url, root, &project_slug))
