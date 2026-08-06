@@ -11,6 +11,7 @@ mod skill;
 mod skill_install;
 mod store;
 
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {

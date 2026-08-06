@@ -253,6 +253,7 @@ async fn tags_frontmatter_yields_tags_and_record_tags_rows_with_the_right_projec
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn resyncing_one_project_does_not_touch_another_projects_rows() {
     let conn = connected_and_migrated().await;
     let (store_a, bundle_a) = supersede_and_tags_corpus("/bundle-a");

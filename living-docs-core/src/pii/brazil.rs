@@ -232,6 +232,7 @@ fn validate_renavam(matched: &str) -> bool {
     dv == ds[10]
 }
 
+#[allow(clippy::too_many_lines)]
 pub(super) fn detectors() -> Vec<super::PiiDetector> {
     vec![
         super::PiiDetector {

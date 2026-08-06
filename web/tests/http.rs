@@ -82,6 +82,7 @@ async fn get_ok_body(router: Router, uri: &str) -> String {
     body_text(response).await
 }
 
+#[allow(clippy::too_many_lines)]
 async fn seeded_router() -> Router {
     let docs = temp_dir("docs");
     write_record(
@@ -618,6 +619,7 @@ async fn an_edit_whose_content_fails_the_check_gate_re_renders_the_form_with_an_
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn a_stale_base_revision_is_rejected_and_the_form_reloads_the_current_server_content_not_the_second_submission(
 ) {
     let router = authoring_fixture_with_editable_starter().await;
@@ -739,6 +741,7 @@ async fn the_record_page_renders_no_edit_link_in_file_mode() {
 /// only one. `extra_records` seeds any additional records (slug, extra
 /// frontmatter, title, body) before the sync, e.g. an already
 /// check-failing record for the check-gate-failure test.
+#[allow(clippy::too_many_lines)]
 async fn supersede_fixture(extra_records: &[(&str, &str, &str, &str)]) -> Router {
     let docs = temp_dir("docs-authoring-supersede");
     let mut adr_entries = vec!["0001-old-record", "0002-new-record"];
@@ -786,6 +789,7 @@ async fn supersede_fixture(extra_records: &[(&str, &str, &str, &str)]) -> Router
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn superseding_a_record_in_db_mode_commits_bumps_both_revisions_and_both_pages_reflect_the_new_chain(
 ) {
     let router = supersede_fixture(&[]).await;
@@ -983,6 +987,7 @@ fn write_delete_type_index(docs: &Path, dir: &str, entries: &[&str]) {
 /// source's `supersedes: 2` frontmatter gives the target an inbound
 /// relation — the three shapes `db_store::DbDocStore::delete_checked`
 /// distinguishes (ADR 0018, issue 0013 slice A/B).
+#[allow(clippy::too_many_lines)]
 async fn delete_fixture() -> Router {
     let docs = temp_dir("docs-authoring-delete");
     seed_delete_index(

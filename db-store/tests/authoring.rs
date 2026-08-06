@@ -240,6 +240,7 @@ fn write_replaces_an_existing_records_frontmatter_tail_on_rewrite() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn write_resolves_supersedes_against_an_existing_project_record() {
     let bundle = scratch_bundle_root("relations");
     let (db_path, db_url) = setup_empty_project(&bundle, "default", "relations");
@@ -296,6 +297,7 @@ fn write_resolves_supersedes_against_an_existing_project_record() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn write_replaces_tag_links_on_rewrite() {
     let bundle = scratch_bundle_root("tags");
     let (db_path, db_url) = setup_empty_project(&bundle, "default", "tags");

@@ -355,6 +355,7 @@ fn backend_db_export_is_idempotent_producing_byte_identical_output_on_a_second_r
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn backend_db_supersede_persists_status_and_relation_through_the_port_and_round_trips_on_export() {
     let docs = temp_dir("supersede-db");
     let (db_path, db_url) = temp_sqlite_url("supersede-db");
@@ -433,6 +434,7 @@ fn backend_db_supersede_fails_when_a_record_number_does_not_exist() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn backend_db_index_regenerates_the_filesystem_index_from_db_records_matching_file_mode_byte_for_byte(
 ) {
     let docs_fs = temp_dir("index-fs");
@@ -515,6 +517,7 @@ fn backend_db_new_honors_the_global_engine_flag_requiring_database_url_for_parad
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn default_backend_new_and_check_reach_the_same_verdict_as_the_explicit_fs_backend() {
     let docs_default = temp_dir("no-flag-regression");
     let docs_explicit = temp_dir("explicit-fs-regression");

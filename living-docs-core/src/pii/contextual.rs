@@ -311,6 +311,7 @@ fn validate_brazil_phone(matched: &str) -> bool {
 }
 
 /// Registers every Tier-2 context-gated detector.
+#[allow(clippy::too_many_lines)]
 pub(super) fn detectors() -> Vec<ContextualDetector> {
     vec![
         ContextualDetector {
@@ -442,6 +443,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn detectors_registers_all_ten_context_gated_detectors_with_their_context_words() {
         let found = detectors();
         assert_eq!(found.len(), 10);

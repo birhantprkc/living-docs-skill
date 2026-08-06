@@ -167,6 +167,7 @@ fn rg_sp_verifier_matches(expected_dv: u32, verifier: char) -> bool {
 /// Tier-3's per-detector false-positive risk is why each addition here is
 /// deliberate rather than batched, unlike the Tier-1 modules that ship a
 /// whole region's classes at once.
+#[allow(clippy::too_many_lines)]
 pub(super) fn detectors() -> Vec<PiiDetector> {
     vec![
         PiiDetector {

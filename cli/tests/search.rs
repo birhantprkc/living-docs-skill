@@ -44,6 +44,7 @@ fn run(cwd: &Path, docs: &Path, args: &[&str]) -> Output {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn db_sync_then_search_finds_the_seeded_record_and_ranks_it_first_while_a_no_match_query_prints_nothing(
 ) {
     let docs = temp_dir("docs");
@@ -192,6 +193,7 @@ fn db_sync_defaults_to_paradedb_and_requires_database_url_when_none_is_set() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn db_sync_then_search_with_a_hyphenated_query_finds_the_seeded_record_instead_of_erroring() {
     let docs = temp_dir("docs-hyphen");
     let cwd = temp_dir("cwd-hyphen");

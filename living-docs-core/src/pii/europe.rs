@@ -302,6 +302,7 @@ fn validate_finland_hetu(matched: &str) -> bool {
     FINLAND_HETU_ALPHABET.as_bytes()[idx] as char == check_char
 }
 
+#[allow(clippy::too_many_lines)]
 pub(super) fn detectors() -> Vec<super::PiiDetector> {
     vec![
         super::PiiDetector {

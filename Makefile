@@ -34,6 +34,7 @@ LIVING_DOCS_BIN := target/release/living-docs
         uninstall uninstall-all check lint test-fixtures test-hooks \
         test-release-gate test-version-gate version \
         test-filesize-gate filesize \
+        allow-inventory test-allow-inventory-gate \
         cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install \
         up down db-up db-psql db-logs db-test
 
@@ -85,11 +86,12 @@ uninstall: ## Remove the global Claude Code install
 uninstall-all: ## Remove the install for every supported harness
 	$(INSTALL) all --uninstall
 
-check: version filesize build test-fixtures test-hooks test-release-gate test-version-gate test-filesize-gate ## Check version sync, file-size ratchet, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, dry-run harnesses
+check: version filesize allow-inventory build test-fixtures test-hooks test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, dry-run harnesses
 	bash -n install.sh
 	bash -n scripts/check-version.sh
 	bash -n scripts/verify-release-assets.sh
 	bash -n scripts/check-file-size.sh
+	bash -n scripts/check-allow-inventory.sh
 	cargo test --manifest-path cli/Cargo.toml
 	$(LIVING_DOCS_BIN) check examples/linkly/docs
 	$(LIVING_DOCS_BIN) check --mermaid-only
@@ -110,11 +112,17 @@ test-version-gate: ## Run the check-version.sh fixtures, synthetic repos
 test-filesize-gate: ## Run the check-file-size.sh fixtures, synthetic repos
 	./scripts/tests/check-file-size/run.sh
 
+test-allow-inventory-gate: ## Run the check-allow-inventory.sh fixtures, synthetic repos
+	./scripts/tests/check-allow-inventory/run.sh
+
 version: ## Assert the release version is consistent across VERSION and every SKILL.md
 	./scripts/check-version.sh
 
 filesize: ## Assert every .rs file stays within the 300-line ratchet (issue 0028)
 	./scripts/check-file-size.sh
+
+allow-inventory: ## Assert the clippy::too_many_lines allow annotations only shrink (issue 0028)
+	./scripts/check-allow-inventory.sh
 
 lint: check ## Alias for check
 
@@ -139,9 +147,9 @@ cli-fmt: cli-dev-image ## Check CLI formatting inside the dev image (cargo fmt -
 	@mkdir -p "$(HOME)/.cargo/registry"
 	$(DOCKER_CARGO) cargo fmt --manifest-path cli/Cargo.toml --check
 
-cli-clippy: cli-dev-image ## Lint the CLI inside the dev image (clippy --all-targets -D warnings)
+cli-clippy: cli-dev-image ## Lint the CLI inside the dev image (clippy --all-targets -D warnings -W clippy::too_many_lines)
 	@mkdir -p "$(HOME)/.cargo/registry"
-	$(DOCKER_CARGO) cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+	$(DOCKER_CARGO) cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings -W clippy::too_many_lines
 
 build: ## Build the release CLI binary natively (host cargo) -> target/release/living-docs
 	cargo build --release --manifest-path cli/Cargo.toml

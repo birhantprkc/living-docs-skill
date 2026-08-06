@@ -123,6 +123,7 @@ fn brief_content(
 /// slot heading opens (until the next heading) is judgment the authoring
 /// model owns; the structural sections (BDR Behavior/Contract/Test Design,
 /// PRD NFR table, ADR Verification) keep their template scaffolding.
+#[allow(clippy::too_many_lines)]
 fn slots_for(doc_type: &str) -> &'static [(&'static str, &'static str)] {
     match doc_type {
         "adr" => &[

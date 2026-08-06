@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+#
+# run.sh — fixture tests for scripts/check-allow-inventory.sh.
+#
+# check-allow-inventory.sh derives its `root` from its own location (dirname "$0"/..), so
+# each case builds a synthetic repo under mktemp -d and runs a COPY of the real script from
+# $TMP/<case>/scripts/check-allow-inventory.sh against that synthetic tree. No network access.
+#
+# Exit: 0 = all cases pass, 1 = at least one failed.
+
+set -uo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_SRC="$HERE/../../check-allow-inventory.sh"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+fail=0
+marker='#[allow(clippy::too_many_lines)]'
+
+write_rs_file() { # write_rs_file <path> <allow-count>
+  local file="$1" n="$2" i
+  mkdir -p "$(dirname "$file")"
+  : >"$file"
+  for ((i = 0; i < n; i++)); do
+    printf '%s\nfn f_%s() {}\n' "$marker" "$i" >>"$file"
+  done
+}
+
+write_baseline() { # write_baseline <dir> <entry>...
+  local dir="$1" entry
+  shift
+  : >"$dir/scripts/allow-inventory-baseline.txt"
+  for entry in "$@"; do
+    echo "$entry" >>"$dir/scripts/allow-inventory-baseline.txt"
+  done
+}
+
+new_repo() { # new_repo <name> -> prints the path to an empty synthetic repo
+  local dir="$TMP/$1"
+  mkdir -p "$dir/scripts"
+  cp "$SCRIPT_SRC" "$dir/scripts/check-allow-inventory.sh"
+  chmod +x "$dir/scripts/check-allow-inventory.sh"
+  : >"$dir/scripts/allow-inventory-baseline.txt"
+  printf '%s' "$dir"
+}
+
+invoke() { # invoke <repo-dir>
+  local dir="$1"
+  OUT="$("$dir/scripts/check-allow-inventory.sh" 2>&1)"
+  RC=$?
+}
+
+check() { # check <name> <ok:0|1>
+  if [[ "$2" == 1 ]]; then
+    printf '  ok    %s\n' "$1"
+  else
+    printf '  FAIL  %s\n' "$1"
+    printf '        exit=%s\n%s\n' "$RC" "$OUT" | sed 's/^/        out | /'
+    fail=1
+  fi
+}
+
+assert_exit() { # assert_exit <name> <expected>
+  local ok=0
+  [[ "$RC" == "$2" ]] && ok=1
+  check "$1" "$ok"
+}
+
+assert_out_has() { # assert_out_has <name> <substring>
+  local ok=0
+  grep -qF -- "$2" <<<"$OUT" && ok=1
+  check "$1" "$ok"
+}
+
+echo "check-allow-inventory fixtures"
+echo
+
+echo "case 1: clean tree, baseline matches reality"
+repo="$(new_repo case1)"
+write_rs_file "$repo/src/lib.rs" 3
+write_baseline "$repo" "3 src/lib.rs"
+invoke "$repo"
+assert_exit    "1-exit-0" 0
+assert_out_has "1-ok"     "Allow-inventory gate OK"
+
+echo "case 2: listed file grew past its baseline"
+repo="$(new_repo case2)"
+write_rs_file "$repo/src/lib.rs" 4
+write_baseline "$repo" "3 src/lib.rs"
+invoke "$repo"
+assert_exit    "2-exit-1" 1
+assert_out_has "2-grew"   "GREW: src/lib.rs has 4 allow(s), exceeds its baseline of 3"
+
+echo "case 3: non-listed file gained an allow"
+repo="$(new_repo case3)"
+write_rs_file "$repo/src/other.rs" 1
+invoke "$repo"
+assert_exit    "3-exit-1"    1
+assert_out_has "3-new-allow" "NEW ALLOW: src/other.rs has 1 allow(s) but is not in the baseline"
+
+echo "case 4: listed file dropped to zero allows but the entry stayed"
+repo="$(new_repo case4)"
+write_rs_file "$repo/src/lib.rs" 0
+write_baseline "$repo" "3 src/lib.rs"
+invoke "$repo"
+assert_exit    "4-exit-1" 1
+assert_out_has "4-stale"  "STALE BASELINE: src/lib.rs now has zero allows"
+
+echo "case 5: baseline entry for a missing path"
+repo="$(new_repo case5)"
+write_baseline "$repo" "3 src/gone.rs"
+invoke "$repo"
+assert_exit    "5-exit-1"        1
+assert_out_has "5-stale-missing" "STALE BASELINE: src/gone.rs no longer exists"
+
+echo "case 6: listed file shrunk but still above zero"
+repo="$(new_repo case6)"
+write_rs_file "$repo/src/lib.rs" 2
+write_baseline "$repo" "3 src/lib.rs"
+invoke "$repo"
+assert_exit    "6-exit-0"   0
+assert_out_has "6-advisory" "ADVISORY: src/lib.rs shrank to 2 allow(s) (baseline 3)"
+
+echo
+if ((fail == 0)); then
+  echo "All check-allow-inventory fixtures passed."
+  exit 0
+else
+  echo "check-allow-inventory fixture failures."
+  exit 1
+fi
