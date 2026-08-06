@@ -18,6 +18,14 @@ Records, PRDs, a constitution, a glossary, living
 [Mermaid](https://mermaid.js.org/) diagrams), never *what* technology a project
 uses.
 
+The mechanical half of that discipline is owned end-to-end by the bundled
+**`living-docs` CLI** — one self-contained Rust binary that **scaffolds records**
+(`new`, `brief`), **drives their lifecycle** (`status`, `describe`, `supersede`),
+**rebuilds indexes** (`index`, `fmt`), **validates the invariants** (`check`), and
+serves **ranked full-text search** (`search`) over a derived read-model — embedded
+SQLite + FTS5 or ParadeDB. There is no LLM inside the tool: the agent writes only
+the judgment prose; everything mechanical is deterministic and reproducible.
+
 The whole discipline collapses to one spine:
 
 > **Every piece of knowledge has exactly one home, that home is indexed, and
@@ -50,7 +58,8 @@ every action from:
    same change. No "I'll document it later."
 
 These invariants are carried **in YAML frontmatter as a fact contract** and wired
-to a deterministic checker (the `living-docs` CLI). The pitch is **not** novelty —
+to a deterministic CLI (`living-docs`) that both authors the mechanical parts and
+checks them. The pitch is **not** novelty —
 arc42 + ADR + C4 + docs-as-code is a well-trodden stack — it is the **explicit,
 agent-enforceable packaging** of it. See [Provenance](#provenance--honest-attribution).
 
@@ -86,7 +95,7 @@ flowchart LR
 
 ## What's in the box
 
-This repo bundles the Living Docs skill together with its two composition
+This repo bundles the Living Docs skill together with its composition
 dependencies and the prior-art research that backs its honesty claims:
 
 | Path | What it is |
@@ -94,6 +103,9 @@ dependencies and the prior-art research that backs its honesty claims:
 | [`skills/living-docs/`](skills/living-docs/) | The skill: the five invariants, the doc trail, per-doc-type conventions (`rules/`) and starter templates (`templates/`). |
 | [`skills/okf-knowledge-format/`](skills/okf-knowledge-format/) | The **format** standard the docs use — Open Knowledge Format (OKF): markdown + YAML frontmatter, required `type`, reserved `index.md`/`log.md`, bundle-relative links. The OKF spec is **vendored verbatim** from Google Cloud Platform. |
 | [`skills/research-artifacts/`](skills/research-artifacts/) | The research-note format and source discipline that feeds ADRs/PRDs (the `docs/research/` half of the trail). |
+| [`skills/public-export/`](skills/public-export/) | Publish a clean **public build** of a private living-docs project without leaking the private "why": a default-deny allowlist export driven by document visibility, a deterministic **leak gate** (`living-docs export` + `living-docs leak-gate`), and a human-gated clean-history publish. |
+| [`cli/`](cli/) (authoring verbs) | **Deterministic authoring**: `new` / `brief` scaffold a record with CLI-owned numbering and frontmatter, `status` / `describe` set the lifecycle fields, `supersede` wires both link directions, `index` rebuilds every index, `fmt` canonicalizes frontmatter. The agent writes only the judgment body below the frontmatter; write-time hooks block hand-edits to the rest. |
+| [`cli/`](cli/) (`living-docs search` / `db`) | **Ranked full-text search** over a derived read-model — the embedded SQLite + FTS5 file (`--engine sqlite`) or ParadeDB via `$DATABASE_URL` ([ADR 0004](docs/adr/0004-db-engine-and-data-layer.md)) — with an explicit `db sync` step that (re)builds the projection from the `.md` records. Exactly one backend is authoritative per deployment ([ADR 0003](docs/adr/0003-storage-backend-model.md)): no bidirectional sync, no source-of-truth conflict. |
 | [`references/prior-art-landscape.md`](references/prior-art-landscape.md) | The sourced prior-art analysis — every part of Living Docs (the doc trail, the OKF format, the diagrams, the governance invariants) mapped to its established originator, so every "credit, not invention" claim has a checkable citation. |
 | [`cli/`](cli/) ([`living-docs check`](cli/)) | The **deterministic checker** for the mechanical invariants — frontmatter/`type`, indexing + reachability, link resolution, supersede integrity. A single self-contained Rust binary: native `serde_yaml` frontmatter parsing and native `pulldown-cmark` link extraction/resolution — no host tools (no lychee/yq/jq) needed. *A constraint without an instrument is a vibe*; this is the instrument. Wire it into CI. Install with `./install.sh cli` or `make cli-install`. |
 | [`cli/`](cli/) (`living-docs check --mermaid-only`) | Validates every fenced ```` ```mermaid ```` block **in-process** via the pure-Rust [`merman-core`](https://crates.io/crates/merman-core) parser — the real Mermaid grammar, not a hand-rolled check — and fails with a `file:line` pointer at the first broken diagram. **No Docker, no daemon, no Chromium** ([ADR 0013](docs/adr/0013-mermaid-validation-runs-in-process-via-merman-core-not-a-docker-mermaid-cli-shell-out.md)): the same self-contained binary does it. With no path argument it sweeps every git-tracked `.md` file in the repo. |
@@ -108,7 +120,7 @@ bundle's markdown and frontmatter are shaped.**
 
 ## Installation
 
-The skill is plain **markdown instruction files** — nothing to compile or install to use it. The optional `living-docs` checker is a single self-contained Rust binary with **no host-tool dependencies at all**: native frontmatter and link parsing (no lychee/yq/jq) and — since **v0.6.0** — in-process Mermaid validation via the pure-Rust `merman-core` parser, so `--mermaid-only` **no longer needs Docker**. Install it with `./install.sh cli` or `make cli-install`.
+The skill is plain **markdown instruction files** — nothing to compile or install to use it. The optional `living-docs` CLI — deterministic authoring, checking, and full-text search — is a single self-contained Rust binary with **no host-tool dependencies at all**: native frontmatter and link parsing (no lychee/yq/jq) and — since **v0.6.0** — in-process Mermaid validation via the pure-Rust `merman-core` parser, so `--mermaid-only` **no longer needs Docker**. Install it with `./install.sh cli` or `make cli-install`.
 Installing Living Docs always means the same thing: **put the three `skills/`
 directories (or a generated rule file) where your tool discovers instructions,
 then start a fresh session.** A cross-platform installer and a `Makefile` do this
@@ -336,7 +348,8 @@ use it. See [Installation](#installation).
 Living Docs is not a generator and not a hosting tool. It is a *discipline* — five
 no-drift governance invariants plus a doc trail (constitution → PRD → ADR + BDR →
 issues → code). The agent **follows** the discipline as it works; a deterministic
-checker (`living-docs check`) **verifies** the mechanical half when you wire it into
+CLI **authors** the mechanical half (`living-docs new` / `status` / `supersede` /
+`index`) and **verifies** it (`living-docs check`) when you wire it into
 CI or the agent's loop. Prompt-level guidance plus a machine check — not one
 pretending to be the other. Your docs live in the repo, in Git, next to the code.
 
@@ -382,5 +395,6 @@ its own upstream license — see [`ATTRIBUTION.md`](ATTRIBUTION.md).
 AI agent skill · Claude Code skill · Cursor rules · GitHub Copilot instructions ·
 OpenCode · Codex · Pi · Architecture Decision Records (ADR) · Behavior Decision Records
 (BDR) · PRD · project constitution · glossary · Mermaid architecture diagrams ·
-semantic index · Open Knowledge Format (OKF) · knowledge management · technical
-writing · software architecture · markdown documentation · no-drift docs.</sub>
+semantic index · Open Knowledge Format (OKF) · deterministic docs CLI · full-text
+search · SQLite FTS5 · public docs export · leak gate · knowledge management ·
+technical writing · software architecture · markdown documentation · no-drift docs.</sub>
