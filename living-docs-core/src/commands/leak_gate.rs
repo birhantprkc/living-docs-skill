@@ -178,6 +178,7 @@ impl SecretClass {
 /// secret/token/password/api_key assignments, email addresses, and named
 /// provider token formats for Stripe/GitHub/GitLab/Google/Slack/JWT/Bearer)
 /// and is versioned alongside those ADRs rather than grown ad hoc.
+#[allow(clippy::too_many_lines)]
 fn secret_patterns() -> &'static [(SecretClass, Regex)] {
     static PATTERNS: OnceLock<Vec<(SecretClass, Regex)>> = OnceLock::new();
     PATTERNS.get_or_init(|| {
@@ -700,6 +701,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn leak_gate_composes_private_doc_dangling_link_and_secret_leak_classes() {
         let bundle = TempBundle::new("compose-classes");
         let private_path = bundle.root.join("adr").join("0001-private.md");
@@ -915,6 +917,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn leak_gate_composes_the_pii_scan_with_the_private_dangling_link_and_secret_checks() {
         let bundle = TempBundle::new("compose-with-pii");
         let private_path = bundle.root.join("adr").join("0001-private.md");

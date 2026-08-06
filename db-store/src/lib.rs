@@ -482,6 +482,7 @@ impl DbDocStore {
     /// [`WriteCheckedError::StaleRevision`] and nothing is written — ADR
     /// 0016's "changed underneath you — reload", never a merge. On success
     /// the stored `revision` is bumped by one and returned.
+    #[allow(clippy::too_many_lines)]
     pub fn update_checked(
         &self,
         path: &Path,
@@ -1550,6 +1551,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn record_by_path_in_project_scopes_to_one_project_when_two_share_a_path() {
         let conn = connect_in_memory().await.expect("connect");
         migrate(&conn).await.expect("migrate");
@@ -1669,6 +1671,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn records_by_type_dedupes_identical_paths_synced_into_two_projects() {
         let conn = connect_in_memory().await.expect("connect");
         migrate(&conn).await.expect("migrate");
@@ -1721,6 +1724,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn record_meta_resolves_both_supersede_directions_with_status_and_tags() {
         let conn = connect_in_memory().await.expect("connect");
         migrate(&conn).await.expect("migrate");
@@ -1959,6 +1963,7 @@ mod tests {
     const BROKEN_SUPERSEDE_ADR: &str = "---\ntype: ADR\ntitle: Broken Supersede\ndescription: d.\nstatus: Superseded\nsuperseded_by: 9999\ntags: []\ntimestamp: 2026-07-21T00:00:00Z\n---\n\n# Broken Supersede\n\nBody.\n";
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn write_checked_rolls_back_and_reports_check_failed_when_a_supersede_target_is_missing() {
         let root = temp_root_dir("rollback");
         seed_index(&root, &["0001-broken-supersede"]);
@@ -2158,6 +2163,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn update_checked_refuses_a_second_edit_reusing_a_now_stale_base_revision_and_leaves_the_first_commit_intact(
     ) {
         let root = temp_root_dir("update-stale");
@@ -2355,6 +2361,7 @@ mod tests {
     const NEW_SUPERSEDE_ADR: &str = "---\ntype: ADR\ntitle: New Decision\ndescription: d.\nstatus: Proposed\nsupersedes:\nsuperseded_by:\ntags: []\ntimestamp: 2026-07-21T00:00:00Z\n---\n\n# New Decision\n\nBody.\n";
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn supersede_checked_produces_the_same_frontmatter_the_cli_unchecked_path_produces_and_bumps_both_revisions(
     ) {
         let root = temp_root_dir("supersede-checked-commit");
@@ -2400,6 +2407,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn supersede_checked_rejects_a_nonexistent_target_number_with_the_cli_message_and_leaves_records_unchanged(
     ) {
         let root = temp_root_dir("supersede-checked-missing");
@@ -2443,6 +2451,7 @@ mod tests {
     const PRE_BROKEN_ADR: &str = "---\ntype: ADR\ntitle: Pre Broken\ndescription: d.\nstatus: Superseded\nsuperseded_by: 9999\ntags: []\ntimestamp: 2026-07-21T00:00:00Z\n---\n\n# Pre Broken\n\nBody.\n";
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn supersede_checked_rolls_back_everything_when_an_unrelated_record_already_fails_check() {
         let root = temp_root_dir("supersede-checked-rollback");
         seed_index(
@@ -2540,6 +2549,7 @@ mod tests {
     const CLEAN_ISSUE: &str = "---\ntype: Issue\ntitle: Clean Issue\ndescription: A minimal issue record with no links.\nstatus: Open\nsupersedes:\nsuperseded_by:\ntags: []\ntimestamp: 2026-07-21T00:00:00Z\n---\n\n# Clean Issue\n\nA self-contained issue record about quokka onboarding, so it passes check outright.\n";
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn delete_checked_soft_deletes_an_eligible_issue_with_no_inbound_relations() {
         let root = temp_root_dir_with_issues("delete-success");
         seed_index_with_issues(&root, &[], &["0001-clean-issue"]);

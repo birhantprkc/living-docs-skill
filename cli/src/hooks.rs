@@ -48,6 +48,7 @@ struct HookEntrySpec {
 /// are hard errors — named on stderr, no file written, `ExitCode::from(2)`.
 /// A failure setting `core.hooksPath` (e.g. `project_root` is not a git
 /// repository) is only a stderr warning; the verb still succeeds.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> ExitCode {
     if let Err(message) = validate_docs_dir(project_root, docs_dir) {
         return report_failure(&message);

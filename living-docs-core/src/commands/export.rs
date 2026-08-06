@@ -132,7 +132,7 @@ mod tests {
 
     impl DocStore for FailingListStore {
         fn list(&self, _root: &Path) -> io::Result<Vec<PathBuf>> {
-            Err(io::Error::new(io::ErrorKind::Other, "listing unavailable"))
+            Err(io::Error::other("listing unavailable"))
         }
 
         fn read(&self, _path: &Path) -> io::Result<String> {

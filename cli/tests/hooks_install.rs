@@ -412,6 +412,7 @@ fn install_dry_run_does_not_touch_githooks_or_git_config() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn uninstall_removes_installed_artifacts_and_strips_settings_preserving_unrelated_entries() {
     let project = project_with_bundle("uninstall-full", "docs");
     init_git_repo(&project);

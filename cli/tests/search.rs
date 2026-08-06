@@ -44,6 +44,7 @@ fn run(cwd: &Path, docs: &Path, args: &[&str]) -> Output {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn db_sync_then_search_finds_the_seeded_record_and_ranks_it_first_while_a_no_match_query_prints_nothing(
 ) {
     let docs = temp_dir("docs");
@@ -188,5 +189,79 @@ fn db_sync_defaults_to_paradedb_and_requires_database_url_when_none_is_set() {
     assert!(stderr.contains("DATABASE_URL"), "got: {stderr}");
 
     let _ = fs::remove_dir_all(&docs);
+    let _ = fs::remove_dir_all(&cwd);
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn db_sync_then_search_with_a_hyphenated_query_finds_the_seeded_record_instead_of_erroring() {
+    let docs = temp_dir("docs-hyphen");
+    let cwd = temp_dir("cwd-hyphen");
+    write_record(
+        &docs,
+        "adr",
+        "0001-bi-temporal.md",
+        "Bi-Temporal Edge Tracking",
+        "Adopt a bi-temporal model for the edge cache.",
+        "The bi-temporal edge model tracks both valid time and system time.",
+    );
+
+    let sync_output = run(&cwd, &docs, &["--engine", "sqlite", "db", "sync"]);
+    assert!(
+        sync_output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&sync_output.stderr)
+    );
+
+    let hit_output = run(
+        &cwd,
+        &docs,
+        &["--engine", "sqlite", "search", "bi-temporal edge"],
+    );
+    assert!(
+        hit_output.status.success(),
+        "a hyphenated query must not error, stderr: {}",
+        String::from_utf8_lossy(&hit_output.stderr)
+    );
+    let hit_stdout = String::from_utf8_lossy(&hit_output.stdout);
+    assert!(
+        hit_stdout.contains("Bi-Temporal Edge Tracking"),
+        "got: {hit_stdout}"
+    );
+
+    let _ = fs::remove_dir_all(&docs);
+    let _ = fs::remove_dir_all(&cwd);
+}
+
+#[test]
+fn db_sync_derives_the_project_slug_from_the_repo_directory_when_docs_dir_is_named_docs() {
+    let repo_root = temp_dir("repo-for-slug");
+    let docs = repo_root.join("docs");
+    fs::create_dir_all(&docs).unwrap();
+    let cwd = temp_dir("cwd-repo-slug");
+    write_record(
+        &docs,
+        "adr",
+        "0001-only.md",
+        "Only Decision",
+        "The only seeded record.",
+        "Body text.",
+    );
+    let expected_project_slug = repo_root.file_name().unwrap().to_str().unwrap();
+
+    let sync_output = run(&cwd, &docs, &["--engine", "sqlite", "db", "sync"]);
+
+    assert!(
+        sync_output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&sync_output.stderr)
+    );
+    let sync_stdout = String::from_utf8_lossy(&sync_output.stdout);
+    assert!(
+        sync_stdout.contains(&format!("(project: {expected_project_slug})")),
+        "expected the repo directory name as the project slug, got: {sync_stdout}"
+    );
+
+    let _ = fs::remove_dir_all(&repo_root);
     let _ = fs::remove_dir_all(&cwd);
 }

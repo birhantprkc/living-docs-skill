@@ -33,6 +33,7 @@ impl MigrationName for CreateRecords {
 
 #[async_trait::async_trait]
 impl MigrationTrait for CreateRecords {
+    #[allow(clippy::too_many_lines)]
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .create_table(
@@ -171,6 +172,7 @@ impl MigrationTrait for CreateAuthoringSchema {
 /// identity columns in place of the single polymorphic `identity` column,
 /// keeping the same `project_id` foreign key and `UNIQUE(project_id, path)`
 /// index as [`create_records_table`].
+#[allow(clippy::too_many_lines)]
 async fn create_authoring_records_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
@@ -364,6 +366,7 @@ impl MigrationTrait for AddRecordDeletedAt {
 /// Creates the ordered EAV frontmatter tail: one row per non-typed
 /// frontmatter key, scoped to its record via `record_id` and cascaded on
 /// the record's delete so a record's tail never outlives it.
+#[allow(clippy::too_many_lines)]
 async fn create_frontmatter_fields_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
@@ -430,6 +433,7 @@ async fn create_projects_table(manager: &SchemaManager<'_>) -> Result<(), DbErr>
 /// Creates `records` with a `project_id` foreign key into `projects` and a
 /// `UNIQUE(project_id, path)` index, replacing the single-project global
 /// unique on `path`.
+#[allow(clippy::too_many_lines)]
 async fn create_records_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
@@ -483,6 +487,7 @@ async fn create_records_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> 
         .await
 }
 
+#[allow(clippy::too_many_lines)]
 async fn create_relations_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
@@ -523,6 +528,7 @@ async fn create_relations_table(manager: &SchemaManager<'_>) -> Result<(), DbErr
         .await
 }
 
+#[allow(clippy::too_many_lines)]
 async fn create_tags_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(

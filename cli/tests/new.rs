@@ -366,6 +366,7 @@ fn new_without_description_keeps_the_placeholder_for_the_fs_backend() {
 /// `export` before its `description:` line is inspected, matching
 /// `db_authoring.rs`'s own export-then-read pattern.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn new_writes_the_given_description_into_frontmatter_for_the_db_backend() {
     let docs = temp_dir("description-db");
     let out_dir = temp_dir("description-db-out");
@@ -407,6 +408,7 @@ fn new_writes_the_given_description_into_frontmatter_for_the_db_backend() {
 /// AC2/AC3: omitting `--description` also keeps the placeholder for the db
 /// backend, matching the fs backend's no-regression behavior.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn new_without_description_keeps_the_placeholder_for_the_db_backend() {
     let docs = temp_dir("description-db-omitted");
     let out_dir = temp_dir("description-db-omitted-out");

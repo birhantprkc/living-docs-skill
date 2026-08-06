@@ -315,6 +315,7 @@ impl std::fmt::Display for CreateError {
 /// record's page; on a [`CreateError`], re-renders [`views::create_form`]
 /// with the submitted fields preserved and the error's `Display` shown; a
 /// panicked blocking task becomes a `500`.
+#[allow(clippy::too_many_lines)]
 async fn create_handler(
     State(state): State<AppState>,
     axum::Form(input): axum::Form<CreateForm>,

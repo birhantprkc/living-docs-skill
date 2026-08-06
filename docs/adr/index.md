@@ -36,6 +36,9 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0028 — The release binary is the unit of distribution: install.sh only bootstraps it and every placement becomes a CLI verb](0028-the-release-binary-is-the-unit-of-distribution-install-sh-only-bootstraps-it-and-every-placement-becomes-a-cli-verb.md) - Accepted
 * [0029 — The status vocabulary is per doc type, sourced from one DocTypeSpec field -- not one global list validated against every template's own dialect](0029-the-status-vocabulary-is-per-doc-type-sourced-from-one-doctypespec-field-not-one-global-list-validated-against-every-template-s-own-dialect.md) - Accepted
 * [0030 — Uniform brace markers for body placeholders](0030-uniform-brace-markers-for-body-placeholders.md) - Proposed
+* [0031 — The knowledge graph is a typed bi-temporal edge set in the existing relational store](0031-the-knowledge-graph-is-a-typed-bi-temporal-edge-set-in-the-existing-relational-store.md) - Proposed
+* [0032 — Doc-code lineage is declared, not inferred](0032-doc-code-lineage-is-declared-not-inferred.md) - Proposed
+* [0033 — New consumers are fronts in the workspace, never new repos, until a deploy-cadence or ownership trigger fires](0033-new-consumers-are-fronts-in-the-workspace-never-new-repos-until-a-deploy-cadence-or-ownership-trigger-fires.md) - Proposed
 
 ## Superseded
 

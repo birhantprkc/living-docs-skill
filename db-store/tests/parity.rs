@@ -305,6 +305,7 @@ async fn project_id_for(conn: &DatabaseConnection, slug: &str) -> i32 {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn reconstructed_tail_preserves_both_field_order_and_the_concrete_ordinal_sequence() {
     let (db_path, db_url) = temp_sqlite_url("field-order-and-ordinals");
     let (store, bundle) = tailed_corpus();

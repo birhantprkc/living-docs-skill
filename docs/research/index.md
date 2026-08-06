@@ -6,3 +6,4 @@ spawns implementation slices.
 
 * [0001 — Worldwide PII detection catalog — deterministic regex + checksum reference](0001-worldwide-pii-detection-catalog.md) - Accepted
 * [0002 — Ontology tooling and the code-to-docs bridge — Rust-native options for a living-docs knowledge layer](0002-ontology-tooling-codegraph-docs-bridge.md) - Accepted
+* [0003 — Provenance-aware knowledge graph for living-docs](0003-provenance-aware-knowledge-graph-for-living-docs.md) - Draft

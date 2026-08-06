@@ -189,6 +189,7 @@ fn describe_setting_a_new_description_leaves_every_other_byte_of_the_record_unch
 /// `export` before its `description:` line is inspected, matching
 /// `db_authoring.rs`'s own export-then-read pattern.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn backend_db_describe_updates_the_description_field_and_round_trips_on_export() {
     let docs = temp_dir("db-set");
     let (db_path, db_url) = temp_sqlite_url("db-set");

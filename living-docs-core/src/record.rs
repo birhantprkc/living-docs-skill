@@ -603,6 +603,7 @@ mod tests {
         assert!(extracted.tags.is_empty());
     }
 
+    #[allow(clippy::too_many_lines)]
     fn numbered_record() -> ExtractedRecord {
         ExtractedRecord {
             doc_type: "ADR".to_owned(),

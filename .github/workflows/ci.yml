@@ -4,7 +4,8 @@ name: CI
 # image (Dockerfile.dev, matching cli/rust-toolchain.toml), then `make check` builds
 # the release binary and runs the Living Docs invariant + mermaid checks against the
 # example corpus plus the hostile fixtures, on every push and PR. A formatting issue,
-# lint warning, failing test, or invariant violation fails the build.
+# lint warning, failing test, invariant violation, or file-size ratchet violation fails
+# the build.
 
 on:
   push:
@@ -22,6 +23,9 @@ jobs:
 
       - name: Version consistency (VERSION ↔ every SKILL.md)
         run: ./scripts/check-version.sh
+
+      - name: File-size ratchet (300-line cap + grandfather baseline)
+        run: ./scripts/check-file-size.sh
 
       - name: cargo fmt --check (cli/, pinned Rust 1.96.0 via Dockerfile.dev)
         run: make cli-fmt

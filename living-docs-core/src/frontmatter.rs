@@ -100,14 +100,20 @@ pub(crate) fn scalar_to_string(value: &Value) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static NEXT_TEMP_DOC_ID: AtomicU64 = AtomicU64::new(0);
 
     fn write_temp_doc(contents: &str) -> std::path::PathBuf {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("living-docs-fm-test-{nanos}.md"));
+        let pid = std::process::id();
+        let unique_id = NEXT_TEMP_DOC_ID.fetch_add(1, Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("living-docs-fm-test-{pid}-{nanos}-{unique_id}.md"));
         fs::write(&path, contents).unwrap();
         path
     }

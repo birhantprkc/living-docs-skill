@@ -225,6 +225,7 @@ fn index_uses_a_minimal_title_preamble_on_a_fresh_file() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_prd_and_bdr_split_active_above_superseded_like_adr() {
     let docs = temp_dir("prd-bdr-split");
     write_record(&docs, "prd", "0001-draft.md", "Draft Feature", "Draft");
@@ -294,6 +295,7 @@ fn index_prd_and_bdr_split_active_above_superseded_like_adr() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_issue_splits_open_above_closed_with_case_insensitive_done() {
     let docs = temp_dir("issue-split");
     write_record(&docs, "issues", "0001-brewing.md", "Brewing Issue", "open");
@@ -340,6 +342,7 @@ fn index_issue_splits_open_above_closed_with_case_insensitive_done() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_migrates_a_legacy_done_open_issues_index_to_open_closed() {
     let docs = temp_dir("issue-migration");
     let issue_dir = docs.join("issues");
@@ -474,6 +477,7 @@ fn index_without_a_type_leaves_a_check_clean_bundle_check_clean() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_with_visibility_filter_lists_only_matching_visibility_records() {
     let docs = temp_dir("visibility-filter");
     write_record_with_visibility(
@@ -516,6 +520,7 @@ fn index_with_visibility_filter_lists_only_matching_visibility_records() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_without_visibility_flag_lists_every_record_regardless_of_visibility() {
     let docs = temp_dir("visibility-unset");
     write_record_with_visibility(
@@ -558,6 +563,7 @@ fn index_without_visibility_flag_lists_every_record_regardless_of_visibility() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_visibility_private_filter_includes_absent_visibility_records() {
     let docs = temp_dir("visibility-default-deny");
     write_record_with_visibility(
@@ -610,6 +616,7 @@ fn write_raw(docs: &Path, dir: &str, filename: &str, contents: &str) {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn index_migrates_a_hand_maintained_table_format_index_into_the_canonical_bullet_listing() {
     let docs = temp_dir("table-migration");
     let adr_dir = docs.join("adr");
@@ -743,6 +750,7 @@ fn run_new(docs: &Path, doc_type: &str, title: &str) -> Output {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn supersede_wires_status_and_both_links_bidirectionally() {
     let docs = temp_dir("supersede-bidirectional");
     assert!(run_new(&docs, "adr", "Old Decision").status.success());
