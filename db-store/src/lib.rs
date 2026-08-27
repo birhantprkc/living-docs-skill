@@ -1384,7 +1384,7 @@ async fn load_record<C: ConnectionTrait>(
         superseded_by,
         tags: record_tags,
         status: model.status,
-        owner: None,
+        owner: model.owner,
         frontmatter_tail,
     }))
 }

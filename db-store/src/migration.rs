@@ -5,6 +5,8 @@
 use sea_orm::DbBackend;
 use sea_orm_migration::prelude::*;
 
+mod add_owner;
+
 /// The crate's migration source, applied in order by [`crate::migrate`].
 pub struct Migrator;
 
@@ -18,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(AddRecordRevision),
             Box::new(AddRecordDeletedAt),
             Box::new(CreateSyncMeta),
+            Box::new(add_owner::AddRecordOwner),
         ]
     }
 }
@@ -607,6 +610,7 @@ enum Records {
     Status,
     Revision,
     DeletedAt,
+    Owner,
 }
 
 #[derive(DeriveIden)]

@@ -35,6 +35,7 @@ pub(super) async fn insert_record<C: ConnectionTrait>(
         description: ActiveValue::Set(extracted.description),
         body: ActiveValue::Set(extracted.body),
         status: ActiveValue::Set(extracted.status),
+        owner: ActiveValue::Set(extracted.owner),
         ..Default::default()
     }
     .insert(conn)
@@ -80,6 +81,7 @@ pub(super) async fn insert_record_row<C: ConnectionTrait>(
         description: ActiveValue::Set(extracted.description.clone()),
         body: ActiveValue::Set(extracted.body.clone()),
         status: ActiveValue::Set(extracted.status.clone()),
+        owner: ActiveValue::Set(extracted.owner.clone()),
         ..Default::default()
     }
     .insert(conn)
@@ -102,6 +104,7 @@ async fn update_record_row<C: ConnectionTrait>(
         description: ActiveValue::Set(extracted.description.clone()),
         body: ActiveValue::Set(extracted.body.clone()),
         status: ActiveValue::Set(extracted.status.clone()),
+        owner: ActiveValue::Set(extracted.owner.clone()),
         ..Default::default()
     };
     let updated = model.update(conn).await?;
@@ -124,6 +127,7 @@ pub(super) async fn update_record_row_with_revision<C: ConnectionTrait>(
         description: ActiveValue::Set(extracted.description.clone()),
         body: ActiveValue::Set(extracted.body.clone()),
         status: ActiveValue::Set(extracted.status.clone()),
+        owner: ActiveValue::Set(extracted.owner.clone()),
         revision: ActiveValue::Set(new_revision),
         ..Default::default()
     };

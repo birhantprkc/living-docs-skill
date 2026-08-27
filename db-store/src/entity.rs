@@ -54,7 +54,8 @@ pub mod records {
     /// workspace's `sea-orm` dependency does not enable, so introducing it
     /// would mean a Cargo.toml/Cargo.lock change outside this column's
     /// scope — `i64` mirrors the same crate-local-primitive precedent
-    /// `revision` already sets on this struct.
+    /// `revision` already sets on this struct. `owner` is the frontmatter
+    /// `owner:` value, `None` when the doc carries no such key.
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "records")]
     pub struct Model {
@@ -70,6 +71,7 @@ pub mod records {
         pub description: String,
         pub body: String,
         pub status: Option<String>,
+        pub owner: Option<String>,
         pub revision: i64,
         pub deleted_at: Option<i64>,
     }
