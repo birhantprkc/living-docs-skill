@@ -49,7 +49,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0041 — make cli-install fetches the released binary and install.sh resolves the latest release by default](0041-make-cli-install-fetches-the-released-binary-and-install-sh-resolves-the-latest-release-by-default.md) - Accepted
 * [0042 — Projection staleness contract: a sync_meta fingerprint row, checked by search against the records tree](0042-projection-staleness-contract-a-sync-meta-fingerprint-row-checked-by-search-against-the-records-tree.md) - Accepted
 * [0043 — Owner is a CLI-owned frontmatter field with a warn-then-error ratchet on ADR and BDR](0043-owner-is-a-cli-owned-frontmatter-field-with-a-warn-then-error-ratchet-on-adr-and-bdr.md) - Accepted
-* [0044 — Moved-source review queue: check emits a warn-level finding when a linked record is superseded or demoted](0044-moved-source-review-queue-check-emits-a-warn-level-finding-when-a-linked-record-is-superseded-or-demoted.md) - Proposed
+* [0044 — Moved-source review queue: check emits a warn-level finding when a linked record is superseded or demoted](0044-moved-source-review-queue-check-emits-a-warn-level-finding-when-a-linked-record-is-superseded-or-demoted.md) - Accepted
 
 ## Superseded
 

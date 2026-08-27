@@ -2,7 +2,7 @@
 type: Issue
 title: "Provenance review queue: check flags records whose referenced source was superseded or changed status"
 description: check flags records whose linked source was superseded or left Accepted status, producing a human review queue
-status: open
+status: closed
 timestamp: 2026-08-27T19:04:19Z
 ---
 

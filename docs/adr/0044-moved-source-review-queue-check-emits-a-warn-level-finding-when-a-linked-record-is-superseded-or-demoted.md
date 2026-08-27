@@ -2,7 +2,7 @@
 type: ADR
 title: "Moved-source review queue: check emits a warn-level finding when a linked record is superseded or demoted"
 description: check gains a warn-level MOVED-SOURCE finding when a linked record is superseded or demoted, cleared by linking the successor; the tool builds the review queue, humans judge it
-status: Proposed
+status: Accepted
 timestamp: 2026-08-27T19:11:04Z
 ---
 
