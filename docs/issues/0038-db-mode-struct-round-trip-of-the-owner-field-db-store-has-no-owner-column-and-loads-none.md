@@ -2,7 +2,7 @@
 type: Issue
 title: "db-mode struct round-trip of the owner field: db-store has no owner column and loads None"
 description: add a typed owner column to db-store so db-mode loads and exports the owner field instead of None; struct-level gap left by the owner-field slice
-status: open
+status: closed
 timestamp: 2026-08-27T21:04:13Z
 ---
 
