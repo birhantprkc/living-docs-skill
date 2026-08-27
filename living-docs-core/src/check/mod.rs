@@ -17,6 +17,7 @@ pub(crate) mod canonical;
 mod graph;
 pub(crate) mod links;
 mod mermaid;
+mod moved_source;
 mod records;
 mod seal;
 mod size;
@@ -86,6 +87,7 @@ fn run_all_checks(
     graph::check_reachability(bundle, &root_index, &all_md, reporter);
     links::check_links(store, bundle, &all_md, reporter);
     records::check_supersede_chain(store, &all_md, reporter);
+    moved_source::check_moved_source(store, bundle, &all_md, reporter);
     records::check_owner_requirement(store, &all_md, require_owner, reporter);
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
 

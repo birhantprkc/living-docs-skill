@@ -24,7 +24,7 @@ pub(crate) fn has_frontmatter(contents: &str) -> bool {
 /// `raw_scalar_line` fallback, so an invalid-YAML plain scalar the lenient
 /// `crate::frontmatter::read_scalar_from_str` would recover instead reports
 /// as absent here.
-fn frontmatter_scalar(contents: &str, key: &str) -> Option<String> {
+pub(crate) fn frontmatter_scalar(contents: &str, key: &str) -> Option<String> {
     read_scalar_strict(frontmatter_block(contents)?, key)
 }
 
@@ -191,11 +191,20 @@ fn report_missing_owner(f: &Path, contents: &str, require_owner: bool, reporter:
 }
 
 fn sibling_record_exists(dir: &Path, sb: &str, all_md: &[PathBuf]) -> bool {
-    let bare = dir.join(format!("{sb}.md"));
-    let prefix = format!("{sb}-");
-    all_md
-        .iter()
-        .any(|p| p.parent() == Some(dir) && (p == &bare || file_name_str(p).starts_with(&prefix)))
+    all_md.iter().any(|p| record_id_matches(dir, p, sb))
+}
+
+/// True when `path` is `dir`'s bare `<id>.md` or a `<id>-*.md` sibling —
+/// the two forms a record id may resolve to inside one directory. Shared by
+/// the supersede-chain sibling lookup and the moved-source successor-link
+/// clearing rule, so both read the same identity rule.
+pub(crate) fn record_id_matches(dir: &Path, path: &Path, id: &str) -> bool {
+    if path.parent() != Some(dir) {
+        return false;
+    }
+    let bare = dir.join(format!("{id}.md"));
+    let prefix = format!("{id}-");
+    path == bare || file_name_str(path).starts_with(&prefix)
 }
 
 #[cfg(test)]
