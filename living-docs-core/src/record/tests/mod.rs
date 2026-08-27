@@ -4,7 +4,11 @@ mod canonical;
 mod extract;
 mod owner;
 
-#[allow(clippy::too_many_lines)]
+/// Builds a scalar `frontmatter_tail` entry from a key and value.
+fn tail(key: &str, value: &str) -> (String, TailValue) {
+    (key.to_owned(), TailValue::Scalar(value.to_owned()))
+}
+
 fn numbered_record() -> ExtractedRecord {
     ExtractedRecord {
         doc_type: "ADR".to_owned(),
@@ -20,22 +24,10 @@ fn numbered_record() -> ExtractedRecord {
         status: Some("Accepted".to_owned()),
         owner: Some("carol".to_owned()),
         frontmatter_tail: vec![
-            (
-                "labels".to_owned(),
-                TailValue::Scalar("important".to_owned()),
-            ),
-            (
-                "blocked_by".to_owned(),
-                TailValue::Scalar("0002".to_owned()),
-            ),
-            (
-                "tracker".to_owned(),
-                TailValue::Scalar("JIRA-42".to_owned()),
-            ),
-            (
-                "timestamp".to_owned(),
-                TailValue::Scalar("2026-07-17T00:00:00Z".to_owned()),
-            ),
+            tail("labels", "important"),
+            tail("blocked_by", "0002"),
+            tail("tracker", "JIRA-42"),
+            tail("timestamp", "2026-07-17T00:00:00Z"),
         ],
     }
 }
@@ -87,10 +79,7 @@ fn issue_record_with_list_valued_tail() -> ExtractedRecord {
                 ]),
             ),
             ("blocked_by".to_owned(), TailValue::Sequence(Vec::new())),
-            (
-                "timestamp".to_owned(),
-                TailValue::Scalar("2026-07-16T00:00:00Z".to_owned()),
-            ),
+            tail("timestamp", "2026-07-16T00:00:00Z"),
         ],
     }
 }

@@ -17,6 +17,5 @@
 2 living-docs-core/src/pii/contextual.rs
 1 living-docs-core/src/pii/europe.rs
 1 living-docs-core/src/pii/tier3.rs
-1 living-docs-core/src/record.rs
 1 web/src/create.rs
 5 web/tests/http.rs
