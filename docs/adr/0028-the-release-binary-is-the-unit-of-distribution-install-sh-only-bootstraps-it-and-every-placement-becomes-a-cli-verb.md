@@ -30,6 +30,7 @@ and `check-version.sh` exist to prevent, reappearing one level up.
 
 The way out is already in the repository, applied once and stopped.
 [ADR 0014](/adr/0014-the-cli-serves-skill-content-from-an-embedded-corpus-harness-skill-md-files-are-slim-stubs.md)
+(superseded by [ADR 0017](/adr/0017-skill-md-stubs-are-pure-routers-the-spine-and-all-detail-move-to-cli-topics.md))
 embedded the skills corpus in the binary. [ADR 0023](/adr/0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md)
 used that to make `living-docs hooks install` materialize hook scripts from the embedded
 copy into a target project, with no working tree involved anywhere. The binary is already a
