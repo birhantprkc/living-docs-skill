@@ -1,39 +1,11 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::time::{SystemTime, UNIX_EPOCH};
 
-fn living_docs() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_living-docs"))
-}
-
-fn run_check(bundle: &Path) -> Output {
-    living_docs()
-        .args(["check", bundle.to_str().unwrap()])
-        .output()
-        .expect("failed to run living-docs check")
-}
-
-fn stdout_of(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).to_string()
-}
+mod common;
+use common::{living_docs, run_check, stdout_of, write};
 
 fn temp_bundle(label: &str) -> PathBuf {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let dir = std::env::temp_dir()
-        .join(format!("living-docs-size-test-{label}-{nanos}"))
-        .join("docs");
-    fs::create_dir_all(&dir).unwrap();
-    dir
-}
-
-fn write(bundle: &Path, rel: &str, contents: &str) {
-    let path = bundle.join(rel);
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, contents).unwrap();
+    common::temp_bundle("size", label)
 }
 
 fn adr_with_body_lines(body_lines: usize) -> String {
@@ -42,6 +14,13 @@ fn adr_with_body_lines(body_lines: usize) -> String {
         .collect::<Vec<_>>()
         .join("\n");
     format!("---\ntype: ADR\ntitle: Doc\ndescription: A minimal record.\n---\n{body}\n")
+}
+
+fn assert_no_size_note(bundle: &Path) {
+    let output = run_check(bundle);
+    assert_eq!(output.status.code(), Some(0));
+    assert!(!stdout_of(&output).contains("SIZE"));
+    let _ = fs::remove_dir_all(bundle.parent().unwrap());
 }
 
 fn indexed_bundle_with(label: &str, record: &str) -> PathBuf {
@@ -78,12 +57,7 @@ fn an_over_target_record_gets_a_size_advisory_naming_both_numbers_and_still_exit
 fn a_record_at_exactly_the_advisory_threshold_gets_no_size_note() {
     let bundle = indexed_bundle_with("at-threshold", &adr_with_body_lines(120));
 
-    let output = run_check(&bundle);
-
-    assert_eq!(output.status.code(), Some(0));
-    assert!(!stdout_of(&output).contains("SIZE"));
-
-    let _ = fs::remove_dir_all(bundle.parent().unwrap());
+    assert_no_size_note(&bundle);
 }
 
 #[test]
@@ -111,12 +85,7 @@ fn research_is_exempt_from_the_size_advisory() {
         ),
     );
 
-    let output = run_check(&bundle);
-
-    assert_eq!(output.status.code(), Some(0));
-    assert!(!stdout_of(&output).contains("SIZE"));
-
-    let _ = fs::remove_dir_all(bundle.parent().unwrap());
+    assert_no_size_note(&bundle);
 }
 
 #[test]

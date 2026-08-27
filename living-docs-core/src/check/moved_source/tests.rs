@@ -102,6 +102,61 @@ fn clears_when_the_dependent_itself_is_closed() {
 }
 
 #[test]
+fn clears_when_the_dependent_issue_is_done() {
+    let reporter = run_over(vec![
+        (
+            "/bundle/issues/0001-a.md",
+            "---\ntype: Issue\nstatus: done\n---\n\n[b](./0002-b.md)\n",
+        ),
+        (
+            "/bundle/issues/0002-b.md",
+            "---\ntype: Issue\nstatus: Deprecated\n---\n# B\n",
+        ),
+    ]);
+
+    assert!(advisory_messages(&reporter).is_empty());
+}
+
+#[test]
+fn clears_when_the_resolved_successor_is_the_dependent_record_itself() {
+    let reporter = run_over(vec![
+        (
+            "/bundle/adr/0016-atlas.md",
+            "---\ntype: ADR\nstatus: Accepted\nsupersedes: 0006\n---\n\n[the old approach](./0006-web-read-only.md)\n",
+        ),
+        (
+            "/bundle/adr/0006-web-read-only.md",
+            "---\ntype: ADR\nstatus: Superseded\nsuperseded_by: 0016\n---\n# Web read-only\n",
+        ),
+    ]);
+
+    assert!(advisory_messages(&reporter).is_empty());
+}
+
+#[test]
+fn keeps_firing_when_an_open_dependent_links_a_superseded_record_with_a_distinct_successor() {
+    let reporter = run_over(vec![
+        (
+            "/bundle/adr/0001-a.md",
+            "---\ntype: ADR\nstatus: Accepted\n---\n\n[b](./0002-b.md)\n",
+        ),
+        (
+            "/bundle/adr/0002-b.md",
+            "---\ntype: ADR\nstatus: Superseded\nsuperseded_by: 0003\n---\n# B\n",
+        ),
+        (
+            "/bundle/adr/0003-c.md",
+            "---\ntype: ADR\nstatus: Accepted\n---\n# C\n",
+        ),
+    ]);
+
+    let messages = advisory_messages(&reporter);
+    assert_eq!(messages.len(), 1);
+    assert!(messages[0].contains("MOVED-SOURCE"));
+    assert!(messages[0].contains("superseded by 0003"));
+}
+
+#[test]
 fn never_flags_accepted_proposed_or_open_targets_or_non_record_links() {
     let reporter = run_over(vec![
         (

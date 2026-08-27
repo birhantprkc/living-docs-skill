@@ -5,12 +5,15 @@
 //! reuse `check::records::frontmatter_scalar`.
 //!
 //! The finding clears when the dependent's body links the successor
-//! anywhere, or when the dependent itself is Superseded or closed — no new
-//! annotation syntax, the acknowledgment IS the updated link.
+//! anywhere, when the resolved successor IS the dependent record itself, or
+//! when the dependent's own status is terminal — Superseded for every type,
+//! plus whatever else its doc type's registry row names as terminal — no
+//! new annotation syntax, the acknowledgment IS the updated link.
 
 use super::links::{link_destinations, resolve_destination};
 use super::records::{frontmatter_scalar, is_reserved, record_id_matches};
 use super::{file_name_str, Reporter};
+use crate::doc_type;
 use crate::store::DocStore;
 use std::path::{Path, PathBuf};
 
@@ -74,7 +77,9 @@ fn check_target(
     }
     let successor = superseded_by(&status, &target_contents);
     if let Some(id) = &successor {
-        if dependent_links_successor(dependent, dependent_contents, bundle, target, id) {
+        if dependent_is_successor(dependent, target, id)
+            || dependent_links_successor(dependent, dependent_contents, bundle, target, id)
+        {
             return;
         }
     }
@@ -85,9 +90,37 @@ fn check_target(
 }
 
 fn is_closed_dependent(contents: &str) -> bool {
-    frontmatter_scalar(contents, "status")
-        .map(|status| matches!(status.to_lowercase().as_str(), "superseded" | "closed"))
-        .unwrap_or(false)
+    let Some(status) = frontmatter_scalar(contents, "status") else {
+        return false;
+    };
+    status.eq_ignore_ascii_case("superseded") || is_terminal_for_type(contents, &status)
+}
+
+/// Whether `status` is one of the calling record's own doc type's terminal
+/// statuses, per the registry row's `terminal_statuses`. An unregistered or
+/// missing `type` resolves to `false` rather than guessing.
+fn is_terminal_for_type(contents: &str, status: &str) -> bool {
+    let Some(type_value) = frontmatter_scalar(contents, "type") else {
+        return false;
+    };
+    let Some(spec) = doc_type::spec_for_frontmatter(&type_value) else {
+        return false;
+    };
+    spec.terminal_statuses
+        .iter()
+        .any(|terminal| terminal.eq_ignore_ascii_case(status))
+}
+
+/// True when `successor_id` — the moved source's `superseded_by` value —
+/// resolves, inside the source's own directory, to the dependent record
+/// itself: a record that links its own predecessor has already
+/// acknowledged the move by existing, so no further link update can clear
+/// the finding.
+fn dependent_is_successor(dependent: &Path, source: &Path, successor_id: &str) -> bool {
+    let Some(dir) = source.parent() else {
+        return false;
+    };
+    record_id_matches(dir, dependent, successor_id)
 }
 
 fn is_moved_status(status: &str) -> bool {

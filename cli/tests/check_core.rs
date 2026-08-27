@@ -1,50 +1,13 @@
 use living_docs_core::doc_type::{self, Identity};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::process::Output;
 
-fn living_docs() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_living-docs"))
-}
-
-fn run_check(bundle: &Path) -> Output {
-    living_docs()
-        .args(["check", bundle.to_str().unwrap()])
-        .output()
-        .expect("failed to run living-docs check")
-}
-
-fn stdout_of(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).to_string()
-}
-
-/// Fixtures live under `skills/living-docs/tests/fixtures` relative to the repo
-/// root; `CARGO_MANIFEST_DIR` anchors this at compile time regardless of the
-/// working directory `cargo test` is invoked from.
-fn fixture(name: &str) -> PathBuf {
-    PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/.."))
-        .join("skills/living-docs/tests/fixtures")
-        .join(name)
-        .join("docs")
-}
+mod common;
+use common::{fixture, living_docs, run_check, stdout_of, write};
 
 fn temp_bundle(label: &str) -> PathBuf {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let dir = std::env::temp_dir()
-        .join(format!("living-docs-check-test-{label}-{nanos}"))
-        .join("docs");
-    fs::create_dir_all(&dir).unwrap();
-    dir
-}
-
-fn write(bundle: &Path, rel: &str, contents: &str) {
-    let path = bundle.join(rel);
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, contents).unwrap();
+    common::temp_bundle("check", label)
 }
 
 fn run_fmt(bundle: &Path) -> Output {
@@ -54,30 +17,25 @@ fn run_fmt(bundle: &Path) -> Output {
         .expect("failed to run living-docs fmt")
 }
 
-fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
+fn run_authoring_verb(verb: &str, docs_dir: &Path, doc_type: &str, title: &str) -> Output {
     living_docs()
         .args([
             "--docs-dir",
             docs_dir.to_str().unwrap(),
-            "new",
+            verb,
             doc_type,
             title,
         ])
         .output()
-        .expect("failed to run living-docs new")
+        .unwrap_or_else(|_| panic!("failed to run living-docs {verb}"))
+}
+
+fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
+    run_authoring_verb("new", docs_dir, doc_type, title)
 }
 
 fn run_brief(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
-    living_docs()
-        .args([
-            "--docs-dir",
-            docs_dir.to_str().unwrap(),
-            "brief",
-            doc_type,
-            title,
-        ])
-        .output()
-        .expect("failed to run living-docs brief")
+    run_authoring_verb("brief", docs_dir, doc_type, title)
 }
 
 fn singleton_token() -> &'static str {

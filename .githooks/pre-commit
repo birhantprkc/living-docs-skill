@@ -25,4 +25,4 @@ if [ -z "$BIN" ]; then
   exit 0
 fi
 
-exec "$BIN" check "$ROOT/$BUNDLE"
+exec "$BIN" check --require-owner "$ROOT/$BUNDLE"

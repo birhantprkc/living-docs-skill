@@ -1,39 +1,25 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::time::{SystemTime, UNIX_EPOCH};
 
-fn living_docs() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_living-docs"))
-}
-
-fn run_check(bundle: &Path) -> Output {
-    living_docs()
-        .args(["check", bundle.to_str().unwrap()])
-        .output()
-        .expect("failed to run living-docs check")
-}
-
-fn stdout_of(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).to_string()
-}
+mod common;
+use common::{run_check, stdout_of, write};
 
 fn temp_bundle(label: &str) -> PathBuf {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let dir = std::env::temp_dir()
-        .join(format!("living-docs-moved-source-test-{label}-{nanos}"))
-        .join("docs");
-    fs::create_dir_all(&dir).unwrap();
-    dir
+    common::temp_bundle("moved-source", label)
 }
 
-fn write(bundle: &Path, rel: &str, contents: &str) {
-    let path = bundle.join(rel);
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, contents).unwrap();
+fn assert_clean(bundle: &Path) {
+    let output = run_check(bundle);
+    let stdout = stdout_of(&output);
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "expected clean, got:\n{stdout}"
+    );
+    assert!(!stdout.contains("MOVED-SOURCE"), "got:\n{stdout}");
+
+    let _ = fs::remove_dir_all(bundle);
 }
 
 fn write_moved_source_tree(bundle: &Path, dependent_body: &str) {
@@ -86,17 +72,47 @@ fn linking_the_successor_clears_the_moved_source_finding() {
     let bundle = temp_bundle("cleared");
     write_moved_source_tree(&bundle, "[b](./b.md) [c](./c.md)");
 
-    let output = run_check(&bundle);
-    let stdout = stdout_of(&output);
+    assert_clean(&bundle);
+}
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "expected clean, got:\n{stdout}"
+#[test]
+fn a_done_issue_linking_a_superseded_record_is_clean() {
+    let bundle = temp_bundle("done-issue");
+    write(&bundle, "index.md", "# Index\n\n- [A](a.md)\n- [B](b.md)\n");
+    write(
+        &bundle,
+        "a.md",
+        "---\ntype: Issue\ntitle: A\ndescription: Dependent record.\nstatus: done\n---\n# A\n\n[b](./b.md)\n",
     );
-    assert!(!stdout.contains("MOVED-SOURCE"), "got:\n{stdout}");
+    write(
+        &bundle,
+        "b.md",
+        "---\ntype: Issue\ntitle: B\ndescription: Moved source.\nstatus: Deprecated\n---\n# B\n",
+    );
 
-    let _ = fs::remove_dir_all(&bundle);
+    assert_clean(&bundle);
+}
+
+#[test]
+fn a_record_linking_its_own_predecessor_is_clean() {
+    let bundle = temp_bundle("self-successor");
+    write(
+        &bundle,
+        "index.md",
+        "# Index\n\n- [New](new.md)\n- [Old](old.md)\n",
+    );
+    write(
+        &bundle,
+        "new.md",
+        "---\ntype: ADR\ntitle: New\ndescription: Supersedes Old.\nstatus: Accepted\nsupersedes: old\n---\n# New\n\n[old](./old.md)\n",
+    );
+    write(
+        &bundle,
+        "old.md",
+        "---\ntype: ADR\ntitle: Old\ndescription: Superseded by New.\nstatus: Superseded\nsuperseded_by: new\n---\n# Old\n",
+    );
+
+    assert_clean(&bundle);
 }
 
 #[test]
