@@ -2,7 +2,7 @@
 type: Issue
 title: Owner field in record frontmatter, required for ADR and BDR by check
 description: add a CLI-owned owner frontmatter field, required on ADR and BDR by check, because unowned decision records drift
-status: open
+status: closed
 timestamp: 2026-08-27T19:04:22Z
 ---
 
