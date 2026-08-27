@@ -35,6 +35,13 @@ pub fn run_mermaid_only(paths: &[PathBuf]) -> ExitCode {
 }
 
 pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
+    run_require_owner(store, bundle, false)
+}
+
+/// `check --require-owner`: promotes a missing `owner` on a doctype whose
+/// registry row requires it from an advisory to an invariant violation.
+/// Every other invariant behaves exactly as [`run`].
+pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
     if !bundle.is_dir() {
         eprintln!(
             "living-docs check: bundle root not found: {}",
@@ -50,7 +57,7 @@ pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
     println!();
 
     let mut reporter = Reporter::new();
-    let doc_count = run_all_checks(store, bundle, &mut reporter);
+    let doc_count = run_all_checks(store, bundle, &mut reporter, require_owner);
 
     reporter.finish(doc_count)
 }
@@ -61,7 +68,12 @@ pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
 /// returns the raw list, for a caller like `db_store::DbDocStore::write_checked`
 /// that gates a write on the same invariants without printing anything).
 /// Returns the number of docs `store` enumerated under `bundle`.
-fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) -> usize {
+fn run_all_checks(
+    store: &dyn DocStore,
+    bundle: &Path,
+    reporter: &mut Reporter,
+    require_owner: bool,
+) -> usize {
     let all_md = store.list(bundle).unwrap_or_default();
     let root_index = bundle.join("index.md");
 
@@ -74,6 +86,7 @@ fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) 
     graph::check_reachability(bundle, &root_index, &all_md, reporter);
     links::check_links(store, bundle, &all_md, reporter);
     records::check_supersede_chain(store, &all_md, reporter);
+    records::check_owner_requirement(store, &all_md, require_owner, reporter);
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
 
     mermaid::check_bundle(&all_md, reporter);
@@ -91,7 +104,7 @@ fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) 
 /// stdout report.
 pub fn check_violations(store: &dyn DocStore, bundle: &Path) -> Vec<(String, String)> {
     let mut reporter = Reporter::new();
-    run_all_checks(store, bundle, &mut reporter);
+    run_all_checks(store, bundle, &mut reporter, false);
     reporter.into_violations()
 }
 

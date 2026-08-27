@@ -6,6 +6,7 @@
 //! both invariants validate whichever backend `check::run` is given.
 
 use super::{file_name_str, Reporter};
+use crate::doc_type;
 use crate::frontmatter::{frontmatter_block, read_scalar_strict};
 use crate::store::DocStore;
 use std::path::{Path, PathBuf};
@@ -144,6 +145,51 @@ fn check_supersede_target(f: &Path, contents: &str, all_md: &[PathBuf], reporter
     }
 }
 
+/// A record whose doctype registry row sets `requires_owner` and whose
+/// frontmatter carries no `owner:` value is a finding: an advisory by
+/// default, or an invariant violation under `require_owner`. The
+/// requirement is read from each record's own resolved
+/// [`doc_type::DocTypeSpec`], never a hardcoded type list, so a doctype
+/// change here needs no edit at this call site.
+pub(crate) fn check_owner_requirement(
+    store: &dyn DocStore,
+    all_md: &[PathBuf],
+    require_owner: bool,
+    reporter: &mut Reporter,
+) {
+    for f in all_md {
+        if is_reserved(&file_name_str(f)) {
+            continue;
+        }
+        let Ok(contents) = store.read(f) else {
+            continue;
+        };
+        if !has_frontmatter(&contents) {
+            continue;
+        }
+        report_missing_owner(f, &contents, require_owner, reporter);
+    }
+}
+
+fn report_missing_owner(f: &Path, contents: &str, require_owner: bool, reporter: &mut Reporter) {
+    let Some(doc_type) = frontmatter_scalar(contents, "type") else {
+        return;
+    };
+    let Some(spec) = doc_type::spec_for_frontmatter(&doc_type) else {
+        return;
+    };
+    if !spec.requires_owner || frontmatter_scalar(contents, "owner").is_some() {
+        return;
+    }
+
+    let message = format!("{} record has no owner", spec.frontmatter);
+    if require_owner {
+        reporter.report(f, message);
+    } else {
+        reporter.advise(f, message);
+    }
+}
+
 fn sibling_record_exists(dir: &Path, sb: &str, all_md: &[PathBuf]) -> bool {
     let bare = dir.join(format!("{sb}.md"));
     let prefix = format!("{sb}-");
@@ -153,228 +199,4 @@ fn sibling_record_exists(dir: &Path, sb: &str, all_md: &[PathBuf]) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_support::MapStore;
-    use std::collections::BTreeMap;
-    use std::process::ExitCode;
-
-    #[test]
-    fn is_reserved_matches_index_and_log_only() {
-        assert!(is_reserved("index.md"));
-        assert!(is_reserved("log.md"));
-        assert!(!is_reserved("foo.md"));
-    }
-
-    #[test]
-    fn sibling_record_exists_matches_dash_prefixed_and_bare_forms() {
-        let dir = Path::new("docs/adr");
-        let all_md = vec![dir.join("0007-old.md"), dir.join("0042.md")];
-
-        assert!(sibling_record_exists(dir, "0007", &all_md));
-        assert!(!sibling_record_exists(dir, "9999", &all_md));
-        assert!(sibling_record_exists(dir, "0042", &all_md));
-    }
-
-    #[test]
-    fn sibling_record_exists_ignores_matches_outside_the_directory() {
-        let dir = Path::new("docs/adr");
-        let all_md = vec![Path::new("docs/bdr").join("0007-old.md")];
-
-        assert!(!sibling_record_exists(dir, "0007", &all_md));
-    }
-
-    fn exit_code_is_success(code: ExitCode) -> bool {
-        format!("{code:?}") == format!("{:?}", ExitCode::SUCCESS)
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_accepts_content_the_store_serves_with_no_disk_backing() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "---\ntype: ADR\n---\n# Title\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        assert!(exit_code_is_success(reporter.finish(1)));
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_reports_content_the_store_serves_as_missing_frontmatter() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "# No frontmatter\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        assert!(!exit_code_is_success(reporter.finish(1)));
-    }
-
-    #[test]
-    fn check_supersede_chain_reports_a_target_absent_from_all_md() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-old.md"),
-            "---\ntype: ADR\nstatus: Superseded\nsuperseded_by: 0002\n---\n# Old\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-old.md")];
-        let mut reporter = Reporter::new();
-
-        check_supersede_chain(&store, &all_md, &mut reporter);
-
-        assert!(!exit_code_is_success(reporter.finish(1)));
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_accepts_a_valid_visibility_value() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "---\ntype: ADR\nvisibility: public\n---\n# Title\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        assert!(exit_code_is_success(reporter.finish(1)));
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_reports_a_misspelled_visibility_value() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "---\ntype: ADR\nvisibility: pubic\n---\n# Title\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        let code = reporter.finish(1);
-        assert!(!exit_code_is_success(code));
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_reports_the_offending_value_and_allowed_domain() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "---\ntype: ADR\nvisibility: pubic\n---\n# Title\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        let messages: Vec<&str> = reporter
-            .violations
-            .iter()
-            .map(|(_, message)| message.as_str())
-            .collect();
-        assert!(messages
-            .iter()
-            .any(|message| message.contains("invalid visibility 'pubic'")));
-        assert!(messages
-            .iter()
-            .any(|message| message
-                .contains("allowed: private|public|showcase; absent means private")));
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_treats_absent_visibility_as_silent_pass() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "---\ntype: ADR\n---\n# Title\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        assert!(exit_code_is_success(reporter.finish(1)));
-    }
-
-    #[test]
-    fn check_frontmatter_and_format_treats_absent_visibility_as_silent_pass_on_an_untyped_doc() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-title.md"),
-            "---\ntitle: No type here\n---\n# Title\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![PathBuf::from("/bundle/adr/0001-title.md")];
-        let root_index = PathBuf::from("/bundle/index.md");
-        let mut reporter = Reporter::new();
-
-        check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
-
-        let messages: Vec<&str> = reporter
-            .violations
-            .iter()
-            .map(|(_, message)| message.as_str())
-            .collect();
-        assert!(messages
-            .iter()
-            .any(|message| message.contains("non-empty 'type'")));
-        assert!(!messages
-            .iter()
-            .any(|message| message.contains("visibility")));
-    }
-
-    #[test]
-    fn is_valid_visibility_accepts_exactly_the_domain_values() {
-        assert!(is_valid_visibility("private"));
-        assert!(is_valid_visibility("public"));
-        assert!(is_valid_visibility("showcase"));
-        assert!(!is_valid_visibility("Public"));
-        assert!(!is_valid_visibility("pubic"));
-        assert!(!is_valid_visibility(""));
-    }
-
-    #[test]
-    fn check_supersede_chain_passes_when_the_target_is_present_in_all_md() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001-old.md"),
-            "---\ntype: ADR\nstatus: Superseded\nsuperseded_by: 0002\n---\n# Old\n".to_string(),
-        );
-        files.insert(
-            PathBuf::from("/bundle/adr/0002-new.md"),
-            "---\ntype: ADR\nstatus: Accepted\n---\n# New\n".to_string(),
-        );
-        let store = MapStore { files };
-        let all_md = vec![
-            PathBuf::from("/bundle/adr/0001-old.md"),
-            PathBuf::from("/bundle/adr/0002-new.md"),
-        ];
-        let mut reporter = Reporter::new();
-
-        check_supersede_chain(&store, &all_md, &mut reporter);
-
-        assert!(exit_code_is_success(reporter.finish(2)));
-    }
-}
+mod tests;

@@ -6,7 +6,8 @@ use crate::doc_type::{self, Identity};
 use crate::paths;
 use crate::store::DocStore;
 pub(crate) use fill::{
-    fill_frontmatter, fill_frontmatter_description, fill_frontmatter_kind, fill_frontmatter_title,
+    fill_frontmatter, fill_frontmatter_description, fill_frontmatter_kind, fill_frontmatter_owner,
+    fill_frontmatter_title,
 };
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -24,6 +25,10 @@ pub struct NewOptions<'a> {
     pub description: Option<&'a str>,
     pub kind: Option<&'a str>,
     pub sections_json: Option<&'a str>,
+    /// Seeds the frontmatter `owner:` field with this value, inserted in its
+    /// canonical position immediately after `description:`. `None` leaves
+    /// the record with no `owner:` field at all.
+    pub owner: Option<&'a str>,
 }
 
 pub const BODY_ONLY_INSTRUCTION: &str = "Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`.";
@@ -71,6 +76,7 @@ fn plan_at(
     let filled = fill_frontmatter(spec.template, spec.frontmatter, timestamp);
     let filled = fill_frontmatter_title(&filled, title);
     let filled = fill_frontmatter_description(&filled, opts.description);
+    let filled = fill_frontmatter_owner(&filled, opts.owner);
     let filled = fill_frontmatter_kind(&filled, spec, opts.kind)?;
     let filled = match opts.sections_json {
         Some(payload) => {

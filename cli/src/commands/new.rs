@@ -35,6 +35,7 @@ pub(crate) struct NewArgs<'a> {
     pub(crate) description: Option<&'a str>,
     pub(crate) kind: Option<&'a str>,
     pub(crate) json: Option<&'a str>,
+    pub(crate) owner: Option<&'a str>,
 }
 
 pub(crate) fn run_new(
@@ -53,6 +54,7 @@ pub(crate) fn run_new(
         description: args.description,
         kind: args.kind,
         sections_json: payload.as_deref(),
+        owner: args.owner,
     };
     match backend {
         Backend::Fs => match build_backend_store(backend, engine, docs_dir) {

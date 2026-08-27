@@ -1384,6 +1384,7 @@ async fn load_record<C: ConnectionTrait>(
         superseded_by,
         tags: record_tags,
         status: model.status,
+        owner: None,
         frontmatter_tail,
     }))
 }
@@ -1393,8 +1394,7 @@ const SUPERSEDE_RELATION_KIND: &str = "supersede";
 /// `record_id`'s `supersedes` edge (this record is the relation's source),
 /// resolved to the target record's zero-padded `NNNN` number — the same raw
 /// form [`crate::record::extract_record`] parses from frontmatter (ADR 0007
-/// decision 3). `None` when no such edge exists, or the target carries no
-/// `number`.
+/// decision 3). `None` when no such edge exists, or the target carries no `number`.
 async fn resolve_supersedes<C: ConnectionTrait>(
     conn: &C,
     record_id: i32,
