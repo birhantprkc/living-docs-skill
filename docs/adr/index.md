@@ -47,6 +47,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0039 — CLI-produced records carry an ephemeral HMAC provenance seal that check verifies](0039-cli-produced-records-carry-an-ephemeral-hmac-provenance-seal-that-check-verifies.md) - Proposed
 * [0040 — migrate --apply is a CLI-front transaction over the mechanical subset](0040-migrate-apply-is-a-cli-front-transaction-over-the-mechanical-subset.md) - Proposed
 * [0041 — make cli-install fetches the released binary and install.sh resolves the latest release by default](0041-make-cli-install-fetches-the-released-binary-and-install-sh-resolves-the-latest-release-by-default.md) - Accepted
+* [0042 — Projection staleness contract: a sync_meta fingerprint row, checked by search against the records tree](0042-projection-staleness-contract-a-sync-meta-fingerprint-row-checked-by-search-against-the-records-tree.md) - Proposed
 
 ## Superseded
 
