@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at_ref": "068a188c2b399577d38b40036f9bdfa3ea7e2926",
+  "captured_at_ref": "b25d612c7a811c84fd899eac0a4138c38e60e14e",
   "findings": [
     {
       "check": "hadolint",
@@ -17,7 +17,7 @@
       "line": 4,
       "message": "duplicate block (25 lines) shared with skills/living-docs/hooks/pre-commit",
       "severity": "error",
-      "identity": "7c3d4e7293670e9b"
+      "identity": "4776ab4c0085f9e8"
     },
     {
       "check": "jscpd",
@@ -104,17 +104,8 @@
       "check": "jscpd",
       "rule": "duplication",
       "file": "cli/tests/brief.rs",
-      "line": 2,
-      "message": "duplicate block (29 lines) shared with cli/tests/check_size.rs",
-      "severity": "error",
-      "identity": "1aa820ec6f72b55d"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/brief.rs",
       "line": 11,
-      "message": "duplicate block (6 lines) shared with cli/tests/check_core.rs",
+      "message": "duplicate block (6 lines) shared with cli/tests/fmt.rs",
       "severity": "error",
       "identity": "24200f777e401782"
     },
@@ -168,15 +159,6 @@
       "rule": "duplication",
       "file": "cli/tests/brief.rs",
       "line": 2,
-      "message": "duplicate block (39 lines) shared with cli/tests/check_links.rs",
-      "severity": "error",
-      "identity": "9a5a47ad1e4fc44e"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/brief.rs",
-      "line": 2,
       "message": "duplicate block (15 lines) shared with cli/tests/db_authoring.rs",
       "severity": "error",
       "identity": "b3bfaea2b132752b"
@@ -194,17 +176,8 @@
       "check": "jscpd",
       "rule": "duplication",
       "file": "cli/tests/brief.rs",
-      "line": 2,
-      "message": "duplicate block (16 lines) shared with cli/tests/check_moved_source.rs",
-      "severity": "error",
-      "identity": "d6d6bbcec00941ab"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/brief.rs",
       "line": 1,
-      "message": "duplicate block (11 lines) shared with cli/tests/check_core.rs",
+      "message": "duplicate block (11 lines) shared with cli/tests/scorecard.rs",
       "severity": "error",
       "identity": "fab05d2d046c45be"
     },
@@ -212,25 +185,7 @@
       "check": "jscpd",
       "rule": "duplication",
       "file": "cli/tests/check_core.rs",
-      "line": 29,
-      "message": "duplicate block (10 lines) shared with cli/tests/check_moved_source.rs",
-      "severity": "error",
-      "identity": "6263790f84a42e13"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/check_core.rs",
-      "line": 38,
-      "message": "duplicate block (11 lines) shared with cli/tests/check_links.rs",
-      "severity": "error",
-      "identity": "6b6e5b8526261d80"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/check_core.rs",
-      "line": 98,
+      "line": 56,
       "message": "duplicate block (7 lines) shared with cli/tests/check_core.rs",
       "severity": "error",
       "identity": "a2ea790ce599ab8f"
@@ -238,29 +193,11 @@
     {
       "check": "jscpd",
       "rule": "duplication",
-      "file": "cli/tests/check_core.rs",
-      "line": 38,
-      "message": "duplicate block (13 lines) shared with cli/tests/check_moved_source.rs",
-      "severity": "error",
-      "identity": "d7fa793ba940ac5c"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/check_core.rs",
-      "line": 44,
-      "message": "duplicate block (7 lines) shared with cli/tests/scorecard.rs",
-      "severity": "error",
-      "identity": "fa21dca79d8d65cb"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
       "file": "cli/tests/check_links.rs",
-      "line": 147,
-      "message": "duplicate block (15 lines) shared with cli/tests/check_links.rs",
+      "line": 11,
+      "message": "duplicate block (10 lines) shared with cli/tests/check_moved_source.rs",
       "severity": "error",
-      "identity": "e3fc05fd1f65bfc3"
+      "identity": "fc3b14a72d995201"
     },
     {
       "check": "jscpd",
@@ -279,24 +216,6 @@
       "message": "duplicate block (12 lines) shared with cli/tests/skill.rs",
       "severity": "error",
       "identity": "8c71abb87223e509"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/check_moved_source.rs",
-      "line": 14,
-      "message": "duplicate block (14 lines) shared with cli/tests/fmt.rs",
-      "severity": "error",
-      "identity": "92c427b28a154ef5"
-    },
-    {
-      "check": "jscpd",
-      "rule": "duplication",
-      "file": "cli/tests/check_size.rs",
-      "line": 79,
-      "message": "duplicate block (12 lines) shared with cli/tests/check_size.rs",
-      "severity": "error",
-      "identity": "7cb8c524899184b3"
     },
     {
       "check": "jscpd",
@@ -432,6 +351,24 @@
       "message": "duplicate block (11 lines) shared with cli/tests/owner.rs",
       "severity": "error",
       "identity": "ca07f1d434db16f1"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "cli/tests/fmt.rs",
+      "line": 33,
+      "message": "duplicate block (7 lines) shared with cli/tests/scorecard.rs",
+      "severity": "error",
+      "identity": "0cc73df4b0ad60a6"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "cli/tests/fmt.rs",
+      "line": 18,
+      "message": "duplicate block (10 lines) shared with cli/tests/scorecard.rs",
+      "severity": "error",
+      "identity": "f4464f832f443501"
     },
     {
       "check": "jscpd",
@@ -1085,6 +1022,15 @@
       "check": "jscpd",
       "rule": "duplication",
       "file": "db-store/tests/authoring.rs",
+      "line": 112,
+      "message": "duplicate block (14 lines) shared with db-store/tests/parity_owner.rs",
+      "severity": "error",
+      "identity": "5ad7ca411649af60"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "db-store/tests/authoring.rs",
       "line": 171,
       "message": "duplicate block (8 lines) shared with db-store/tests/ingestion.rs",
       "severity": "error",
@@ -1301,6 +1247,15 @@
       "check": "jscpd",
       "rule": "duplication",
       "file": "db-store/tests/parity.rs",
+      "line": 122,
+      "message": "duplicate block (12 lines) shared with db-store/tests/parity_owner.rs",
+      "severity": "error",
+      "identity": "2365ab007a941205"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "db-store/tests/parity.rs",
       "line": 228,
       "message": "duplicate block (7 lines) shared with db-store/tests/parity.rs",
       "severity": "error",
@@ -1310,10 +1265,28 @@
       "check": "jscpd",
       "rule": "duplication",
       "file": "db-store/tests/parity.rs",
+      "line": 173,
+      "message": "duplicate block (16 lines) shared with db-store/tests/parity_owner.rs",
+      "severity": "error",
+      "identity": "4d9acc3fdd3a507a"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "db-store/tests/parity.rs",
       "line": 153,
       "message": "duplicate block (11 lines) shared with living-docs-core/src/record/tests/mod.rs",
       "severity": "error",
       "identity": "8bbcc2b16fc19610"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "db-store/tests/parity.rs",
+      "line": 190,
+      "message": "duplicate block (6 lines) shared with db-store/tests/parity_owner.rs",
+      "severity": "error",
+      "identity": "8fb09877f043575d"
     },
     {
       "check": "jscpd",
@@ -1332,6 +1305,24 @@
       "message": "duplicate block (7 lines) shared with db-store/tests/parity.rs",
       "severity": "error",
       "identity": "d62aff869c97fcc1"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "db-store/tests/parity_owner.rs",
+      "line": 94,
+      "message": "duplicate block (9 lines) shared with db-store/tests/parity_owner.rs",
+      "severity": "error",
+      "identity": "cf27bc1f4d5f5a08"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "db-store/tests/parity_owner.rs",
+      "line": 96,
+      "message": "duplicate block (8 lines) shared with db-store/tests/parity_owner.rs",
+      "severity": "error",
+      "identity": "d410920c81dd8cf5"
     },
     {
       "check": "jscpd",
@@ -1485,6 +1476,15 @@
       "message": "duplicate block (6 lines) shared with living-docs-core/src/check/traceability/tests.rs",
       "severity": "error",
       "identity": "45d58a9f45ace393"
+    },
+    {
+      "check": "jscpd",
+      "rule": "duplication",
+      "file": "living-docs-core/src/check/moved_source/tests.rs",
+      "line": 27,
+      "message": "duplicate block (20 lines) shared with living-docs-core/src/check/moved_source/tests.rs",
+      "severity": "error",
+      "identity": "c93ff911a4c8cf1c"
     },
     {
       "check": "jscpd",
