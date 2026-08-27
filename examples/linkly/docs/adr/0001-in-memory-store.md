@@ -2,6 +2,7 @@
 type: ADR
 title: In-memory store for minted links
 description: Store links in a process-local map for the first prototype.
+owner: Linkly Maintainers
 status: Superseded
 superseded_by: 0002
 tags: [storage]
