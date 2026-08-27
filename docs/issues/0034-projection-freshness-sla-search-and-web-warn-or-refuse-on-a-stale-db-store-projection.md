@@ -2,7 +2,7 @@
 type: Issue
 title: "Projection freshness SLA: search and web warn or refuse on a stale db-store projection"
 description: search and web must warn or refuse when the db-store projection is behind the records tree, keyed to the last successful sync
-status: open
+status: closed
 timestamp: 2026-08-27T19:04:16Z
 ---
 
