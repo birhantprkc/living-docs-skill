@@ -118,26 +118,7 @@ fn a_record_linking_its_own_predecessor_is_clean() {
 #[test]
 fn a_broken_link_alongside_a_moved_source_candidate_keeps_its_own_error_class_and_exit_code() {
     let bundle = temp_bundle("broken");
-    write(
-        &bundle,
-        "index.md",
-        "# Index\n\n- [A](a.md)\n- [B](b.md)\n- [C](c.md)\n",
-    );
-    write(
-        &bundle,
-        "a.md",
-        "---\ntype: Reference\ntitle: A\ndescription: Dependent record.\n---\n# A\n\n[b](./b.md)\n[missing](./no-such.md)\n",
-    );
-    write(
-        &bundle,
-        "b.md",
-        "---\ntype: Reference\ntitle: B\ndescription: Moved source.\nstatus: Superseded\nsuperseded_by: c\n---\n# B\n",
-    );
-    write(
-        &bundle,
-        "c.md",
-        "---\ntype: Reference\ntitle: C\ndescription: Successor.\n---\n# C\n",
-    );
+    write_moved_source_tree(&bundle, "[b](./b.md)\n[missing](./no-such.md)");
 
     let output = run_check(&bundle);
     let stdout = stdout_of(&output);
