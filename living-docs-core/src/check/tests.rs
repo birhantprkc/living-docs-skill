@@ -196,3 +196,56 @@ fn run_reports_a_supersede_target_the_store_omits_even_though_a_same_named_file_
 
     assert_ne!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
 }
+
+/// `check` warns on an ADR without `owner` but stays exit-zero by default,
+/// so the existing corpus (which carries no `owner` values yet) never
+/// breaks CI.
+#[test]
+fn run_stays_exit_zero_on_an_adr_missing_owner_by_default() {
+    let bundle = ScratchBundle::new("owner-warn-default");
+    let mut files = BTreeMap::new();
+    files.insert(
+        bundle.root.join("adr").join("0001-doc.md"),
+        "---\ntype: ADR\ntitle: Doc\ndescription: \"\"\n---\n\n# Doc\n\nBody.\n".to_string(),
+    );
+    let store = MapStore { files };
+
+    let code = run(&store, &bundle.root);
+
+    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+}
+
+/// `check --require-owner` promotes the same missing-`owner` finding to an
+/// invariant violation.
+#[test]
+fn run_require_owner_fails_on_an_adr_missing_owner() {
+    let bundle = ScratchBundle::new("owner-require");
+    let mut files = BTreeMap::new();
+    files.insert(
+        bundle.root.join("adr").join("0001-doc.md"),
+        "---\ntype: ADR\ntitle: Doc\ndescription: \"\"\n---\n\n# Doc\n\nBody.\n".to_string(),
+    );
+    let store = MapStore { files };
+
+    let code = run_require_owner(&store, &bundle.root, true);
+
+    assert_ne!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+}
+
+/// A non-ADR/BDR type (e.g. Issue) missing `owner` never produces a finding,
+/// even under `--require-owner`.
+#[test]
+fn run_require_owner_never_flags_a_type_that_does_not_require_owner() {
+    let bundle = ScratchBundle::new("owner-not-required");
+    let mut files = BTreeMap::new();
+    files.insert(
+        bundle.root.join("adr").join("0001-doc.md"),
+        "---\ntype: Issue\ntitle: Doc\ndescription: \"\"\nstatus: open\n---\n\n# Doc\n\nBody.\n"
+            .to_string(),
+    );
+    let store = MapStore { files };
+
+    let code = run_require_owner(&store, &bundle.root, true);
+
+    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+}

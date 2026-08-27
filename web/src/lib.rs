@@ -1,16 +1,12 @@
 //! Library surface shared between the `living-docs-web` binary and its
-//! integration tests (ADR 0006, issue 0003 slices S3a-S3b; three-pane shell
-//! ADR 0015, issue 0008 slices S2-S4; Atlas's authoring create route ADR
-//! 0016, issue 0010 slice 3): the read-only axum router, its `GET /` search
-//! handler, its `GET /record/{*path}` record handler (metadata panel fed by
-//! `db_store::record_meta`, S3), its `GET /style.css` stylesheet route, the
-//! Cmd+K palette's `GET /palette.js` static script plus its `GET /palette`
-//! fragment endpoint (S4) reusing the same async `db_store` search path as
-//! `GET /`, and — mounted only when the caller supplies an
-//! [`AuthoringConfig`] — `GET /new`/`POST /new`, which commits through
-//! `db_store::DbDocStore::write_checked` via [`tokio::task::spawn_blocking`],
-//! and `POST /delete/{*path}`, which soft-deletes through
-//! `db_store::DbDocStore::delete_checked` (ADR 0018, issue 0013 slice B).
+//! integration tests: the read-only axum router, its `GET /` search handler
+//! (staleness-flagged, see [`staleness_for`]), its `GET /record/{*path}`
+//! record handler, its `GET /style.css` stylesheet route, the Cmd+K
+//! palette's `GET /palette.js`/`GET /palette` endpoints, and — mounted only
+//! when the caller supplies an [`AuthoringConfig`] — the `/new`/`/edit`/
+//! `/supersede`/`/delete` authoring routes, which commit through
+//! `db_store::DbDocStore`'s checked write methods via
+//! [`tokio::task::spawn_blocking`].
 
 mod create;
 pub mod views;
@@ -23,7 +19,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum::Router;
 use db_store::{NavEntry, ProjectView, RecordMeta, RecordView, SearchHit};
-use maud::Markup;
+use maud::{html, Markup};
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
@@ -39,11 +35,11 @@ pub struct SearchParams {
     project: Option<String>,
 }
 
-/// The web front's authoring configuration (ADR 0016, issue 0010 slice 3):
-/// the SQLite/FTS5 read-model's connection URL and the docs bundle root a
-/// `db_store::DbDocStore` opens against inside `POST /new`'s handler.
-/// Constructed by the binary only for `--backend db`; its absence is what
-/// keeps `/new` unregistered in file-mode (see [`build_router`]).
+/// The web front's authoring configuration: the SQLite/FTS5 read-model's
+/// connection URL and the docs bundle root a `db_store::DbDocStore` opens
+/// against inside the authoring handlers, and [`staleness_for`] recomputes
+/// a fresh fingerprint from. Constructed by the binary only for
+/// `--backend db`; its absence keeps `/new` unregistered in file-mode.
 #[derive(Clone)]
 pub struct AuthoringConfig {
     pub db_url: String,
@@ -52,8 +48,9 @@ pub struct AuthoringConfig {
 
 /// The axum router's shared state: the read-model connection every route
 /// uses, plus the optional [`AuthoringConfig`] that gates whether `/new` is
-/// registered at all. A single `Clone` struct because axum's `State`
-/// extractor requires one state type per router.
+/// registered and whether [`staleness_for`] has a docs root to check
+/// against. A single `Clone` struct because axum's `State` extractor
+/// requires one state type per router.
 #[derive(Clone)]
 struct AppState {
     conn: DatabaseConnection,
@@ -62,13 +59,10 @@ struct AppState {
 
 /// Builds the router backed by `conn`. Always exposes the read-only
 /// `GET /`, `GET /record/{*path}`, `GET /style.css`, `GET /palette.js`, and
-/// `GET /palette` routes; additionally mounts `GET /new`/`POST /new`,
-/// `GET /edit/{*path}`/`POST /edit/{*path}`, `POST /supersede/{*path}`, and
-/// `POST /delete/{*path}` only when `authoring` is `Some` — in file-mode
-/// (`authoring: None`) a request to any of them 404s the same way any
-/// unknown path does, since the routes are never registered rather than
-/// being refused at runtime (ADR 0016, issue 0010 slice 3; issue 0011;
-/// issue 0012; ADR 0018, issue 0013 slice B).
+/// `GET /palette` routes; additionally mounts the `/new`/`/edit`/
+/// `/supersede`/`/delete` authoring routes only when `authoring` is `Some`
+/// — in file-mode a request to any of them 404s like any unknown path,
+/// since the routes are never registered rather than refused at runtime.
 pub fn build_router(conn: DatabaseConnection, authoring: Option<AuthoringConfig>) -> Router {
     let mut router = Router::new()
         .route("/", get(search_handler))
@@ -112,19 +106,58 @@ async fn palette_handler(
 }
 
 async fn search_handler(
-    State(AppState { conn, .. }): State<AppState>,
+    State(state): State<AppState>,
     Query(params): Query<SearchParams>,
 ) -> Markup {
     let query = params.q.filter(|value| !value.trim().is_empty());
     let project = params.project.filter(|value| !value.trim().is_empty());
     let hits = match &query {
-        Some(term) => search_or_log(&conn, term, project.as_deref()).await,
+        Some(term) => search_or_log(&state.conn, term, project.as_deref()).await,
         None => Vec::new(),
     };
-    let projects = list_projects_or_log(&conn).await;
-    let nav = nav_entries_or_log(&conn).await;
+    let projects = list_projects_or_log(&state.conn).await;
+    let nav = nav_entries_or_log(&state.conn).await;
+    let stale = staleness_for(&state, project.as_deref()).await;
     let main = views::search_page(query.as_deref(), project.as_deref(), &projects, &hits);
+    let main = with_staleness_banner(stale, main);
     views::shell("living-docs search", &nav, None, main, None)
+}
+
+/// `false` whenever [`AppState::authoring`] is configured: db-mode authoring
+/// writes commit straight to the projection, so it is canonical there and
+/// carries no staleness to report. Otherwise `true` when
+/// `project`'s (`"default"` when unset) `sync_meta` row, or its recorded
+/// `root_path`, is missing, or no longer matches a fresh
+/// [`living_docs_core::fingerprint`] of that root.
+async fn staleness_for(state: &AppState, project: Option<&str>) -> bool {
+    if state.authoring.is_some() {
+        return false;
+    }
+    let project_slug = project.unwrap_or("default");
+    let Ok(Some(meta)) = db_store::sync_meta::sync_meta(&state.conn, project_slug).await else {
+        return true;
+    };
+    let Ok(Some(root_path)) = db_store::project_root_path(&state.conn, project_slug).await else {
+        return true;
+    };
+    match living_docs_core::fingerprint::tree_fingerprint(&root_path) {
+        Ok(fingerprint) => fingerprint != meta.tree_fingerprint,
+        Err(_) => true,
+    }
+}
+
+/// Prepends a visible staleness marker above `main` when `stale`; returns
+/// `main` unchanged otherwise.
+fn with_staleness_banner(stale: bool, main: Markup) -> Markup {
+    if !stale {
+        return main;
+    }
+    html! {
+        div class="staleness-banner" {
+            "Search results may be stale — run `living-docs db sync`."
+        }
+        (main)
+    }
 }
 
 async fn search_or_log(
@@ -175,21 +208,16 @@ async fn record_handler(State(state): State<AppState>, Path(path): Path<String>)
     .await
 }
 
-/// A supersede confirm form submission's render state: the number the caller
-/// last typed into the `new` field (empty for a fresh `GET`) and, when the
-/// submission was just rejected, the error to show above the form —
-/// [`record_page_response`]'s one varying input between [`record_handler`]'s
-/// plain page and [`supersede_error_response`]'s re-render.
+/// A supersede confirm form submission's render state: the number last
+/// typed into the `new` field and, when just rejected, the error to show.
 #[derive(Default)]
 struct SupersedeSubmission<'a> {
     value: &'a str,
     error: Option<&'a str>,
 }
 
-/// A delete confirm form submission's render state: the error to show above
-/// the form when the submission was just rejected — mirrors
-/// [`SupersedeSubmission`] minus a `value` field, since the delete form
-/// submits no data of its own.
+/// A delete confirm form submission's render state, mirroring
+/// [`SupersedeSubmission`] minus its `value` field.
 #[derive(Default)]
 struct DeleteSubmission<'a> {
     error: Option<&'a str>,
@@ -197,13 +225,11 @@ struct DeleteSubmission<'a> {
 
 /// Renders `path`'s full record page — body, metadata panel, and (in
 /// db-mode authoring) the Edit link, the supersede confirm form, and the
-/// delete confirm form — the shared render [`record_handler`]'s plain `GET`,
-/// [`supersede_error_response`]'s rejected-submission re-render, and
-/// [`delete_handler`]'s rejected-submission re-render all need, so no call
-/// site duplicates this lookup-and-render sequence. 404s the same way
-/// [`not_found_response`] does when no record exists at `path`. The delete
-/// form is never shown for a record that is already soft-deleted, or when
-/// no record/meta was found at all (ADR 0018, issue 0013 slice B).
+/// delete confirm form — the shared render every rejected-submission
+/// re-render also uses, so no call site duplicates this lookup-and-render
+/// sequence. 404s like [`not_found_response`] when no record exists at
+/// `path`. The delete form is never shown for an already soft-deleted
+/// record, or when no record/meta was found at all.
 async fn record_page_response(
     state: &AppState,
     path: &str,
@@ -241,10 +267,8 @@ async fn record_page_response(
 }
 
 /// `/delete/{path}`, when authoring is configured AND `meta` shows a record
-/// that is not already soft-deleted — `None` when authoring is unconfigured,
-/// when no meta was found at all, or when `deleted_at` is already set
-/// (ADR 0018, issue 0013 slice B: a delete form is never shown for a record
-/// that is already deleted).
+/// that is not already soft-deleted — `None` when authoring is
+/// unconfigured, no meta was found, or `deleted_at` is already set.
 fn delete_href_for(state: &AppState, path: &str, meta: Option<&RecordMeta>) -> Option<String> {
     state.authoring.as_ref()?;
     let is_deleted = meta.is_none_or(|meta| meta.deleted_at.is_some());
@@ -311,10 +335,9 @@ fn yaml_double_quoted(value: &str) -> String {
     escaped
 }
 
-/// `target_path` (docs-root-joined) rendered relative to `docs_root` —
-/// mirrors `db_store::DbDocStore`'s own private `relative_path` so a
-/// freshly created record's redirect target matches exactly what
-/// `GET /record/{*path}` will read it back at.
+/// `target_path` (docs-root-joined) rendered relative to `docs_root`, so a
+/// freshly created record's redirect target matches what
+/// `GET /record/{*path}` reads it back at.
 pub(crate) fn relative_record_path(
     docs_root: &std::path::Path,
     target_path: &std::path::Path,
@@ -339,11 +362,9 @@ pub(crate) async fn create_form_response(
 }
 
 /// `GET /edit/{*path}`'s handler, mounted only when [`AuthoringConfig`] is
-/// `Some` (see [`build_router`]): loads the record's current content and
-/// `revision` via [`db_store::DbDocStore::read_with_revision`] inside
-/// [`tokio::task::spawn_blocking`] and pre-fills [`views::edit_form`] with
-/// them. 404s the same way [`record_handler`] does when no record exists at
-/// `path`.
+/// `Some`: loads the record's current content and `revision`, pre-fills
+/// [`views::edit_form`] with them, and 404s like [`record_handler`] when no
+/// record exists at `path`.
 async fn edit_form_handler(State(state): State<AppState>, Path(path): Path<String>) -> Response {
     let authoring = state
         .authoring
@@ -374,11 +395,9 @@ pub struct EditForm {
 }
 
 /// Every way `POST /edit/{*path}`'s handler can fail to commit an edit:
-/// opening the store itself failed (folds together with a `Plan`-shaped
-/// failure the way [`create::CreateError::Plan`] does), or
+/// opening the store itself failed, or
 /// [`db_store::DbDocStore::update_checked`]'s own
-/// [`db_store::WriteCheckedError`] — most commonly a stale `base_revision`
-/// or a failing `check`.
+/// [`db_store::WriteCheckedError`].
 #[derive(Debug)]
 enum EditError {
     Open(String),
@@ -394,28 +413,19 @@ impl std::fmt::Display for EditError {
     }
 }
 
-/// Normalizes `value`'s line endings to bare `\n`: real browsers submit
-/// `<textarea>` content with CRLF (`\r\n`) per the HTML forms spec
-/// regardless of what the DOM value holds, and living-docs-core's
-/// frontmatter parser splits on bare `\n`, so a stray `\r` left on the
-/// `type:`/closing-fence line breaks the match. Collapses `\r\n` first, then
-/// any lone remaining `\r`, so both CRLF and old-style CR-only input land on
-/// the same LF-only content [`db_store::DbDocStore::update_checked`] checks.
+/// Normalizes `value`'s line endings to bare `\n`: browsers submit
+/// `<textarea>` content with CRLF, but living-docs-core's frontmatter
+/// parser splits on bare `\n`, so a stray `\r` breaks the match.
 fn normalize_line_endings(value: &str) -> String {
     value.replace("\r\n", "\n").replace('\r', "\n")
 }
 
 /// `POST /edit/{*path}`'s handler, mounted only when [`AuthoringConfig`] is
-/// `Some` (see [`build_router`]) — the `.expect` below is therefore always
-/// satisfied. Runs [`db_store::DbDocStore::update_checked`] inside
-/// [`tokio::task::spawn_blocking`], exactly like [`create_handler`]. On
-/// success, redirects (`303 See Other`) to the record's page; on a stale
+/// `Some`. On success, redirects to the record's page; on a stale
 /// `base_revision`, re-renders [`views::edit_form`] with the CURRENT server
-/// content and revision plus the conflict message — never the user's
-/// rejected submission, since ADR 0016 rejects any merge/diff resolution;
-/// on any other [`EditError`], re-renders with the user's OWN submitted
-/// content and `base_revision` preserved so they can fix and resubmit. A
-/// panicked blocking task becomes a `500`.
+/// content, never the user's rejected submission; on any other
+/// [`EditError`], re-renders with the user's own submitted content
+/// preserved so they can fix and resubmit.
 async fn edit_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
@@ -525,11 +535,8 @@ async fn edit_error_response(
 }
 
 /// Re-fetches `path`'s CURRENT server content and revision and re-renders
-/// [`views::edit_form`] with them plus `message` — the stale-revision
-/// branch of [`edit_error_response`], kept separate to hold that function to
-/// a flat sequence of steps. Falls back to [`not_found_response`] in the
-/// (pathological) case the record was deleted between the rejected edit and
-/// this re-read.
+/// [`views::edit_form`] with them plus `message`. Falls back to
+/// [`not_found_response`] if the record was deleted since the rejected edit.
 async fn stale_edit_response(
     state: &AppState,
     authoring: &AuthoringConfig,
@@ -570,11 +577,9 @@ pub struct SupersedeForm {
 }
 
 /// Every way `POST /supersede/{*path}`'s handler can fail to commit: reading
-/// the current record or deriving its number failed (folds together with a
-/// `Plan`-shaped failure the way [`create::CreateError::Plan`]/[`EditError::Open`]
-/// do), or [`db_store::DbDocStore::supersede_checked`]'s own
-/// [`db_store::SupersedeCheckedError`] — most commonly an unresolvable
-/// target number or a failing `check`.
+/// the current record or deriving its number failed, or
+/// [`db_store::DbDocStore::supersede_checked`]'s own
+/// [`db_store::SupersedeCheckedError`].
 #[derive(Debug)]
 enum SupersedeError {
     Open(String),
@@ -591,16 +596,9 @@ impl std::fmt::Display for SupersedeError {
 }
 
 /// `POST /supersede/{*path}`'s handler, mounted only when
-/// [`AuthoringConfig`] is `Some` (see [`build_router`]) — the `.expect`
-/// below is therefore always satisfied. Runs
-/// [`db_store::DbDocStore::supersede_checked`] inside
-/// [`tokio::task::spawn_blocking`], exactly like [`create_handler`]/
-/// [`edit_handler`]. On success, redirects (`303 See Other`) to `path`'s own
-/// record page (issue 0012: the old record stays the page the browser lands
-/// on, mirroring the CLI's own two-argument shape where `old` is the
-/// caller's frame of reference); on a [`SupersedeError`], re-renders `path`'s
-/// record page with the error visible and the submitted `new` value
-/// preserved in the form. A panicked blocking task becomes a `500`.
+/// [`AuthoringConfig`] is `Some`. On success, redirects to `path`'s own
+/// record page; on a [`SupersedeError`], re-renders `path`'s record page
+/// with the error visible and the submitted `new` value preserved.
 async fn supersede_handler(
     State(state): State<AppState>,
     Path(path): Path<String>,
@@ -687,11 +685,9 @@ fn record_number(path: &str, content: &str) -> Option<String> {
 }
 
 /// Every way `POST /delete/{*path}`'s handler can fail to commit: opening
-/// the store itself failed (folds together with an `Open`-shaped failure
-/// the way [`SupersedeError::Open`] does), or
+/// the store itself failed, or
 /// [`db_store::DbDocStore::delete_checked`]'s own
-/// [`db_store::DeleteCheckedError`] — most commonly an ineligible doc type
-/// or a record another record still refers to.
+/// [`db_store::DeleteCheckedError`].
 #[derive(Debug)]
 enum DeleteError {
     Open(String),
@@ -708,16 +704,10 @@ impl std::fmt::Display for DeleteError {
 }
 
 /// `POST /delete/{*path}`'s handler, mounted only when [`AuthoringConfig`]
-/// is `Some` (see [`build_router`]) — the `.expect` below is therefore
-/// always satisfied. The delete form submits no fields, so unlike the other
-/// authoring handlers this one takes no `axum::Form` extractor. Runs
-/// [`db_store::DbDocStore::delete_checked`] inside
-/// [`tokio::task::spawn_blocking`], exactly like [`supersede_handler`]. On
-/// success, redirects (`303 See Other`) to `path`'s own record page — ADR
-/// 0018 keeps a soft-deleted record viewable, so the page the browser lands
-/// on is unchanged from every other write handler's own success path; on a
-/// [`DeleteError`], re-renders `path`'s record page with the error visible.
-/// A panicked blocking task becomes a `500`.
+/// is `Some`. The delete form submits no fields, so unlike the other
+/// authoring handlers this one takes no `axum::Form` extractor. On success,
+/// redirects to `path`'s own record page (a soft-deleted record stays
+/// viewable); on a [`DeleteError`], re-renders it with the error visible.
 async fn delete_handler(State(state): State<AppState>, Path(path): Path<String>) -> Response {
     let authoring = state
         .authoring
@@ -801,82 +791,4 @@ fn render_markdown(body: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const TEMPLATE: &str = "---\ntype: ADR\ntitle: <Short decision title>\ndescription: <One sentence.>\nstatus: Proposed            # Proposed | Accepted\ntimestamp: <ISO 8601 datetime>\n---\n\n# NNNN. <Short decision title>\n\nBody.\n";
-
-    #[test]
-    fn fill_title_replaces_only_the_frontmatter_title_line() {
-        let filled = create::fill_title(TEMPLATE, "New Feature");
-
-        assert!(filled.contains("title: \"New Feature\"\n"));
-        assert!(filled.contains("# NNNN. <Short decision title>"));
-        assert!(filled.contains("description: <One sentence.>"));
-    }
-
-    #[test]
-    fn fill_title_preserves_a_trailing_guidance_comment() {
-        let template = "---\ntitle: <placeholder>          # Fill this in\n---\nBody.\n";
-
-        let filled = create::fill_title(template, "My Title");
-
-        assert!(filled.contains("title: \"My Title\""));
-        assert!(filled.contains("# Fill this in"));
-    }
-
-    #[test]
-    fn fill_title_leaves_content_unchanged_without_a_closing_frontmatter_fence() {
-        let no_fence = "title: <placeholder>\nBody with no frontmatter fence.\n";
-
-        assert_eq!(create::fill_title(no_fence, "My Title"), no_fence);
-    }
-
-    #[test]
-    fn fill_title_escapes_a_colon_and_a_double_quote_so_the_frontmatter_stays_valid_yaml() {
-        let filled = create::fill_title(TEMPLATE, "Weird: \"Title\"");
-
-        assert!(filled.contains("title: \"Weird: \\\"Title\\\"\"\n"));
-    }
-
-    #[test]
-    fn relative_record_path_strips_the_docs_root_prefix() {
-        let docs_root = std::path::Path::new("/bundle/docs");
-        let target = docs_root.join("adr").join("0002-new-feature.md");
-
-        assert_eq!(
-            relative_record_path(docs_root, &target),
-            "adr/0002-new-feature.md"
-        );
-    }
-
-    #[test]
-    fn normalize_line_endings_collapses_crlf_to_lf() {
-        let crlf = "---\r\ntype: ADR\r\ntitle: \"X\"\r\n---\r\n\r\nBody.\r\n";
-
-        let normalized = normalize_line_endings(crlf);
-
-        assert_eq!(normalized, "---\ntype: ADR\ntitle: \"X\"\n---\n\nBody.\n");
-        assert!(!normalized.contains('\r'));
-    }
-
-    #[test]
-    fn normalize_line_endings_collapses_lone_cr_and_leaves_lf_only_content_unchanged() {
-        assert_eq!(normalize_line_endings("a\rb\nc"), "a\nb\nc");
-        assert_eq!(
-            normalize_line_endings("already\nlf\nonly\n"),
-            "already\nlf\nonly\n"
-        );
-    }
-
-    #[test]
-    fn create_error_display_surfaces_the_plan_message_and_the_write_error() {
-        let plan_error = create::CreateError::Plan("adr/0002-taken.md already exists".to_owned());
-        assert_eq!(plan_error.to_string(), "adr/0002-taken.md already exists");
-
-        let write_error = create::CreateError::Write(db_store::WriteCheckedError::AlreadyExists(
-            "adr/0002-taken.md".to_owned(),
-        ));
-        assert_eq!(write_error.to_string(), "adr/0002-taken.md already exists");
-    }
-}
+mod tests;

@@ -2,6 +2,7 @@
 type: ADR
 title: SQLite store for minted links
 description: Persist links in a single-file SQLite database so they survive restarts.
+owner: Linkly Maintainers
 status: Accepted
 supersedes: 0001
 tags: [storage]

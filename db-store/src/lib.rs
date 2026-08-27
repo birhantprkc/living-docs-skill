@@ -1,10 +1,7 @@
 //! `db-store`: the SQLite/FTS5 derived read-model adapter (ADR 0004, issue
-//! 0002). Slice S2a landed the schema foundation (connect + migrate). Slice
-//! S2b adds the idempotent full-rebuild `sync`, ranked FTS5 `search`, and the
-//! `SearchIndex` port implementation. CLI wiring lands in S2c. Slice 0006-B
-//! adds the canonical [`serialize`] module and [`DbDocStore`]'s read side.
-//! Slice 0006-C2 adds [`DbDocStore::write`] (ADR 0007), completing the
-//! `DocStore` port.
+//! 0002): schema + migrate, the full-rebuild `sync`, ranked FTS5 `search`,
+//! the `SearchIndex`/`DocStore` port implementations, and [`sync_meta`],
+//! which reads the projection-staleness row `sync` writes on success.
 
 pub mod entity;
 pub mod migration;
@@ -12,6 +9,7 @@ pub mod record;
 pub mod search;
 pub mod serialize;
 pub mod sync;
+pub mod sync_meta;
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -36,21 +34,17 @@ pub use record::{ExtractedRecord, SearchHit};
 pub use search::{search, search_in_project};
 pub use sync::{sync, sync_project};
 
-/// A single record's title and markdown source body, looked up by its
-/// bundle-relative path (ADR 0006, issue 0003 slice S3b).
+/// A single record's title and markdown source body, looked up by its bundle-relative path.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecordView {
     pub title: String,
     pub body: String,
 }
 
-/// Looks up the record at `path`, spanning every project. Returns `None`
-/// when no record exists at that path. `path` is now unique only within a
-/// project (`UNIQUE(project_id, path)`, ADR 0005 issue 0005 slice 0005-A),
-/// so once a second project exists this can match an arbitrary one of
-/// several same-path records; callers that know their project should use
-/// [`record_by_path_in_project`] instead. Kept unscoped for the web front,
-/// which is not project-aware until issue 0005 slice 0005-C.
+/// Looks up the record at `path`, spanning every project — `None` when none
+/// exists. `path` is unique only within a project, so with more than one
+/// project this can match an arbitrary same-path record; callers that know
+/// their project should use [`record_by_path_in_project`] instead.
 pub async fn record_by_path(conn: &DatabaseConnection, path: &str) -> Result<Option<RecordView>> {
     let record = Records::find()
         .filter(Column::Path.eq(path))
@@ -59,9 +53,8 @@ pub async fn record_by_path(conn: &DatabaseConnection, path: &str) -> Result<Opt
     Ok(record.map(record_to_view))
 }
 
-/// Looks up the record at `path` within `project_id` only. Returns `None`
-/// when no record exists at that path in that project (ADR 0005, issue
-/// 0005 slice 0005-B).
+/// Looks up the record at `path` within `project_id` only — `None` when
+/// none exists at that path in that project.
 pub async fn record_by_path_in_project(
     conn: &DatabaseConnection,
     project_id: i32,
@@ -82,18 +75,16 @@ fn record_to_view(model: entity::Model) -> RecordView {
     }
 }
 
-/// A single project's slug and display name, as listed for the web front's
-/// project filter (ADR 0005, issue 0005 slice 0005-C2).
+/// A single project's slug and display name, as listed for the web front's project filter.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProjectView {
     pub slug: String,
     pub name: String,
 }
 
-/// Lists every project, ordered by name, for the web front's project filter
-/// (ADR 0005, issue 0005 slice 0005-C2). Built entirely from the SeaORM
-/// query builder so it runs unchanged on both the sqlite and postgres
-/// backends (lesson 3696: no raw per-engine SQL here).
+/// Lists every project, ordered by name, for the web front's project
+/// filter. Built entirely from the SeaORM query builder so it runs
+/// unchanged on both the sqlite and postgres backends.
 pub async fn list_projects(conn: &DatabaseConnection) -> Result<Vec<ProjectView>> {
     let projects = Projects::find()
         .order_by_asc(ProjectColumn::Name)
@@ -109,9 +100,23 @@ fn project_to_view(model: entity::projects::Model) -> ProjectView {
     }
 }
 
-/// One record's nav-tree entry: enough to group and order the web three-pane
-/// shell's sidebar by doc type without a second lookup (issue 0008, ADR
-/// 0015, S1).
+/// `project_slug`'s recorded `root_path`, set by [`sync_project`] on first
+/// sync — the fs tree a [`sync_meta`] staleness check recomputes against.
+pub async fn project_root_path(
+    conn: &DatabaseConnection,
+    project_slug: &str,
+) -> Result<Option<PathBuf>> {
+    let project = Projects::find()
+        .filter(ProjectColumn::Slug.eq(project_slug))
+        .one(conn)
+        .await?;
+    Ok(project
+        .and_then(|project| project.root_path)
+        .map(PathBuf::from))
+}
+
+/// One record's nav-tree entry: enough to group and order the web
+/// three-pane shell's sidebar by doc type without a second lookup.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NavEntry {
     pub doc_type: String,
@@ -132,13 +137,10 @@ struct NavRow {
 }
 
 /// Lists every distinct record path, spanning every project, ordered by
-/// `doc_type` then `number` then `path` — the order the web three-pane
-/// shell's nav tree groups and renders by (issue 0008, ADR 0015, S1). The
-/// web front's nav links are path-addressed with no project dimension
-/// (`/record/<path>`, issue 0005), so two projects synced from identical
-/// bundles must collapse to one [`NavEntry`] per distinct `path` here —
-/// project-scoped nav is an explicitly deferred follow-up (issue 0008, ADR
-/// 0015, S2 browser-gate finding).
+/// `doc_type` then `number` then `path` — the order the web nav tree
+/// groups and renders by. Two projects synced from identical bundles
+/// collapse to one [`NavEntry`] per distinct `path` here; project-scoped
+/// nav is a deferred follow-up.
 pub async fn records_by_type(conn: &DatabaseConnection) -> Result<Vec<NavEntry>> {
     let rows = Records::find()
         .filter(Column::DeletedAt.is_null())
@@ -194,10 +196,8 @@ pub struct RecordMeta {
     pub deleted_at: Option<i64>,
 }
 
-/// Looks up `path`'s metadata, spanning every project like [`record_by_path`]
-/// (kept unscoped for the web front, which is not project-aware until issue
-/// 0005 slice 0005-C). Returns `None` when no record exists at that path,
-/// never an error.
+/// Looks up `path`'s metadata, spanning every project like
+/// [`record_by_path`] — `None` when no record exists at that path.
 pub async fn record_meta(conn: &DatabaseConnection, path: &str) -> Result<Option<RecordMeta>> {
     let Some(model) = Records::find()
         .filter(Column::Path.eq(path))
@@ -1384,6 +1384,7 @@ async fn load_record<C: ConnectionTrait>(
         superseded_by,
         tags: record_tags,
         status: model.status,
+        owner: model.owner,
         frontmatter_tail,
     }))
 }
@@ -1393,8 +1394,7 @@ const SUPERSEDE_RELATION_KIND: &str = "supersede";
 /// `record_id`'s `supersedes` edge (this record is the relation's source),
 /// resolved to the target record's zero-padded `NNNN` number — the same raw
 /// form [`crate::record::extract_record`] parses from frontmatter (ADR 0007
-/// decision 3). `None` when no such edge exists, or the target carries no
-/// `number`.
+/// decision 3). `None` when no such edge exists, or the target carries no `number`.
 async fn resolve_supersedes<C: ConnectionTrait>(
     conn: &C,
     record_id: i32,

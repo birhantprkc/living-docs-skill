@@ -2,6 +2,7 @@
 type: ADR
 title: Canonical frontmatter check is scoped to CLI-owned type directories
 description: Apply the ADR 0020 category fix to the ADR 0019 canonical round-trip check — it flags non-canonical frontmatter only for records directly inside the four CLI-owned type directories, leaving hand-authored docs (research, bundle-root notes) free-form.
+owner: Evaldo Klock
 status: Accepted
 tags: [check, cli, enforcement, frontmatter]
 timestamp: 2026-07-29T01:57:27Z

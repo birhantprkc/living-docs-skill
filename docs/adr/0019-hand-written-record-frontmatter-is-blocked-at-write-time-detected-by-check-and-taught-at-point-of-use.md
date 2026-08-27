@@ -2,6 +2,7 @@
 type: ADR
 title: Hand-written record frontmatter is blocked at write time, detected by check, and taught at point of use
 description: Enforce the CLI-owns-the-mechanics rule with three deterministic layers instead of advisory prose — a write-time hook, a canonical round-trip check, and point-of-use teaching.
+owner: Evaldo Klock
 status: Superseded
 superseded_by: 0020
 tags: [check, cli, enforcement, frontmatter, hooks]

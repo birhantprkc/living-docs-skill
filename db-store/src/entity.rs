@@ -54,7 +54,8 @@ pub mod records {
     /// workspace's `sea-orm` dependency does not enable, so introducing it
     /// would mean a Cargo.toml/Cargo.lock change outside this column's
     /// scope — `i64` mirrors the same crate-local-primitive precedent
-    /// `revision` already sets on this struct.
+    /// `revision` already sets on this struct. `owner` is the frontmatter
+    /// `owner:` value, `None` when the doc carries no such key.
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
     #[sea_orm(table_name = "records")]
     pub struct Model {
@@ -70,6 +71,7 @@ pub mod records {
         pub description: String,
         pub body: String,
         pub status: Option<String>,
+        pub owner: Option<String>,
         pub revision: i64,
         pub deleted_at: Option<i64>,
     }
@@ -159,6 +161,28 @@ pub mod record_tags {
         pub record_id: i32,
         #[sea_orm(primary_key, auto_increment = false)]
         pub tag_id: i32,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+pub mod sync_meta {
+    use sea_orm::entity::prelude::*;
+
+    /// The projection-staleness contract's single row per project: the UTC
+    /// Unix-seconds timestamp of the last successful `sync` and the hex
+    /// SHA-256 fingerprint of the records tree at that moment. Written only
+    /// as `sync`'s last step; a failed sync never writes or updates it.
+    #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+    #[sea_orm(table_name = "sync_meta")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub project_id: i32,
+        pub last_sync_completed_at: i64,
+        pub tree_fingerprint: String,
     }
 
     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

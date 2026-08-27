@@ -2,6 +2,7 @@
 type: ADR
 title: make cli-install fetches the released binary and install.sh resolves the latest release by default
 description: <One sentence — the decision and its scope.>
+owner: Evaldo Klock
 status: Accepted
 timestamp: 2026-08-14T13:49:32Z
 ---

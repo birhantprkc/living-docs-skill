@@ -1,5 +1,5 @@
 use crate::commands::new::{
-    fill_frontmatter, fill_frontmatter_description, fill_frontmatter_title,
+    fill_frontmatter, fill_frontmatter_description, fill_frontmatter_owner, fill_frontmatter_title,
 };
 use crate::record::format_scalar;
 
@@ -167,6 +167,57 @@ fn fill_frontmatter_description_inserts_the_line_when_the_frontmatter_lacks_it()
     assert!(filled.contains("type: ADR\n"));
     assert!(filled.contains("status: Proposed\n"));
     assert!(filled.contains("# Body\n"));
+}
+
+#[test]
+fn fill_frontmatter_owner_inserts_immediately_after_description() {
+    let template = "---\ntype: ADR\ndescription: <One sentence — the decision and its scope.>\nstatus: Proposed\n---\n\n# Body\n";
+    let filled = fill_frontmatter_owner(template, Some("alice"));
+
+    let description_index = filled.find("description:").unwrap();
+    let owner_index = filled.find("owner: alice").unwrap();
+    let status_index = filled.find("status:").unwrap();
+    assert!(description_index < owner_index && owner_index < status_index);
+}
+
+#[test]
+fn fill_frontmatter_owner_quotes_exactly_as_the_canonical_serializer_would() {
+    let template = "---\ntype: ADR\ndescription: <One sentence — the decision and its scope.>\nstatus: Proposed\n---\n\n# Body\n";
+    let filled = fill_frontmatter_owner(template, Some("Caching: A Deep Dive"));
+
+    assert!(filled.contains(&format!(
+        "owner: {}\n",
+        format_scalar("Caching: A Deep Dive")
+    )));
+}
+
+#[test]
+fn fill_frontmatter_owner_leaves_the_body_untouched() {
+    let template = "---\ntype: Issue\ndescription: <One sentence>\n---\n\n## <Issue title>\n\n<intro guidance>\n";
+    let filled = fill_frontmatter_owner(template, Some("bob"));
+
+    assert!(filled.contains("## <Issue title>"));
+    assert!(filled.contains("<intro guidance>"));
+}
+
+#[test]
+fn fill_frontmatter_owner_without_a_closing_fence_returns_the_content_unchanged() {
+    let content = "no frontmatter here\n";
+    assert_eq!(fill_frontmatter_owner(content, Some("alice")), content);
+}
+
+#[test]
+fn fill_frontmatter_owner_is_a_no_op_when_none_is_given() {
+    let template =
+        "---\ntype: ADR\ndescription: <One sentence — the decision and its scope.>\n---\n\n# Body\n";
+    assert_eq!(fill_frontmatter_owner(template, None), template);
+    assert!(!fill_frontmatter_owner(template, None).contains("owner:"));
+}
+
+#[test]
+fn fill_frontmatter_owner_is_a_no_op_when_the_frontmatter_has_no_description_line() {
+    let template = "---\ntype: ADR\nstatus: Proposed\n---\n\n# Body\n";
+    assert_eq!(fill_frontmatter_owner(template, Some("alice")), template);
 }
 
 mod kind {

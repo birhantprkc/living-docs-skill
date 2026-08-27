@@ -1,11 +1,11 @@
-//! Schema migrations for the multi-project read-model, branched per backend
-//! (ADR 0004, issue 0002 slice S2a; ParadeDB branch issue 0004 slice
-//! 0004-B; multi-project schema issue 0005 slice 0005-A): SQLite gets the
-//! `records_fts` FTS5 external-content virtual table, Postgres gets a
-//! `pg_search` `records_bm25` BM25 index.
+//! Schema migrations for the multi-project read-model, branched per backend:
+//! SQLite gets the `records_fts` FTS5 external-content virtual table,
+//! Postgres gets a `pg_search` `records_bm25` BM25 index.
 
 use sea_orm::DbBackend;
 use sea_orm_migration::prelude::*;
+
+mod add_owner;
 
 /// The crate's migration source, applied in order by [`crate::migrate`].
 pub struct Migrator;
@@ -19,6 +19,8 @@ impl MigratorTrait for Migrator {
             Box::new(AddRecordStatus),
             Box::new(AddRecordRevision),
             Box::new(AddRecordDeletedAt),
+            Box::new(CreateSyncMeta),
+            Box::new(add_owner::AddRecordOwner),
         ]
     }
 }
@@ -34,34 +36,19 @@ impl MigrationName for CreateRecords {
 #[async_trait::async_trait]
 impl MigrationTrait for CreateRecords {
     #[allow(clippy::too_many_lines)]
+    #[rustfmt::skip]
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .create_table(
                 Table::create()
                     .table(Records::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Records::Id)
-                            .integer()
-                            .not_null()
-                            .auto_increment()
-                            .primary_key(),
-                    )
+                    .col(ColumnDef::new(Records::Id).integer().not_null().auto_increment().primary_key())
                     .col(ColumnDef::new(Records::Path).text().not_null().unique_key())
-                    .col(
-                        ColumnDef::new(Records::DocType)
-                            .text()
-                            .not_null()
-                            .default(""),
-                    )
+                    .col(ColumnDef::new(Records::DocType).text().not_null().default(""))
                     .col(ColumnDef::new(Records::Identity).text())
                     .col(ColumnDef::new(Records::Title).text().not_null().default(""))
-                    .col(
-                        ColumnDef::new(Records::Description)
-                            .text()
-                            .not_null()
-                            .default(""),
-                    )
+                    .col(ColumnDef::new(Records::Description).text().not_null().default(""))
                     .col(ColumnDef::new(Records::Body).text().not_null().default(""))
                     .to_owned(),
             )
@@ -78,13 +65,9 @@ impl MigrationTrait for CreateRecords {
     }
 }
 
-/// Recreates `records` with a `project_id` foreign key into a new `projects`
-/// root table, replacing the old global-unique `path` with
-/// `UNIQUE(project_id, path)`, and adds the `relations`/`tags`/`record_tags`
-/// tables with foreign-key constraints (ADR 0005, issue 0005 slice 0005-A).
-/// The `records` recreation is destructive by design: the table is a derived
-/// read-model, rebuilt in full by [`crate::sync::sync`], so there is no data
-/// to preserve across the shape change.
+/// Recreates `records` with a `project_id` foreign key into `projects` and
+/// adds `relations`/`tags`/`record_tags`. Destructive: rebuilt in full by
+/// [`crate::sync::sync`].
 struct CreateMultiProjectSchema;
 
 impl MigrationName for CreateMultiProjectSchema {
@@ -129,12 +112,9 @@ impl MigrationTrait for CreateMultiProjectSchema {
     }
 }
 
-/// Replaces `records.identity` with typed `number`/`concept_id` columns
-/// plus a non-null `identity_kind` discriminator, and adds the ordered
-/// `frontmatter_fields` EAV tail table (ADR 0007, issue 0006 slice 0006-A).
-/// Like [`CreateMultiProjectSchema`], the `records` recreation is
-/// destructive by design: the table is a derived read-model, rebuilt in
-/// full by [`crate::sync::sync`].
+/// Replaces `records.identity` with typed `number`/`concept_id` columns and
+/// an `identity_kind` discriminator, adding the `frontmatter_fields` EAV
+/// tail table. Destructive, like [`CreateMultiProjectSchema`].
 struct CreateAuthoringSchema;
 
 impl MigrationName for CreateAuthoringSchema {
@@ -168,47 +148,25 @@ impl MigrationTrait for CreateAuthoringSchema {
     }
 }
 
-/// Creates `records` with the typed `number`/`concept_id`/`identity_kind`
-/// identity columns in place of the single polymorphic `identity` column,
-/// keeping the same `project_id` foreign key and `UNIQUE(project_id, path)`
-/// index as [`create_records_table`].
+/// Creates `records` with typed identity columns, mirroring the foreign key
+/// and `UNIQUE(project_id, path)` index of [`create_records_table`].
 #[allow(clippy::too_many_lines)]
+#[rustfmt::skip]
 async fn create_authoring_records_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
             Table::create()
                 .table(Records::Table)
                 .if_not_exists()
-                .col(
-                    ColumnDef::new(Records::Id)
-                        .integer()
-                        .not_null()
-                        .auto_increment()
-                        .primary_key(),
-                )
+                .col(ColumnDef::new(Records::Id).integer().not_null().auto_increment().primary_key())
                 .col(ColumnDef::new(Records::ProjectId).integer().not_null())
                 .col(ColumnDef::new(Records::Path).text().not_null())
-                .col(
-                    ColumnDef::new(Records::DocType)
-                        .text()
-                        .not_null()
-                        .default(""),
-                )
+                .col(ColumnDef::new(Records::DocType).text().not_null().default(""))
                 .col(ColumnDef::new(Records::Number).integer())
                 .col(ColumnDef::new(Records::ConceptId).text())
-                .col(
-                    ColumnDef::new(Records::IdentityKind)
-                        .text()
-                        .not_null()
-                        .default(""),
-                )
+                .col(ColumnDef::new(Records::IdentityKind).text().not_null().default(""))
                 .col(ColumnDef::new(Records::Title).text().not_null().default(""))
-                .col(
-                    ColumnDef::new(Records::Description)
-                        .text()
-                        .not_null()
-                        .default(""),
-                )
+                .col(ColumnDef::new(Records::Description).text().not_null().default(""))
                 .col(ColumnDef::new(Records::Body).text().not_null().default(""))
                 .foreign_key(
                     ForeignKey::create()
@@ -233,13 +191,8 @@ async fn create_authoring_records_table(manager: &SchemaManager<'_>) -> Result<(
         .await
 }
 
-/// Adds a nullable `status` column to `records`, extracted from the
-/// frontmatter `status:` key the same way `title`/`description` already are
-/// (issue 0008, ADR 0015, S1). `records` is a derived read-model rebuilt in
-/// full by [`crate::sync::sync`], but this column arrives as a genuine
-/// additive migration — never by editing [`CreateAuthoringSchema`] — so a
-/// database that has already applied earlier migrations only gains the
-/// column, it is not recreated.
+/// Adds a nullable `status` column to `records`: additive, so an
+/// already-migrated database only gains the column.
 struct AddRecordStatus;
 
 impl MigrationName for AddRecordStatus {
@@ -273,14 +226,8 @@ impl MigrationTrait for AddRecordStatus {
     }
 }
 
-/// Adds a non-null `revision` column to `records`, defaulted to `1` for
-/// every existing row, as the optimistic-concurrency counter Atlas's
-/// authoring write path checks against (ADR 0016, issue 0010 S1). Like
-/// [`AddRecordStatus`], this is a genuine additive migration — never by
-/// editing [`CreateAuthoringSchema`] — so a database that has already
-/// applied earlier migrations only gains the column, it is not recreated.
-/// The counter's bump-on-write logic lands in issue 0010 slice 2; this
-/// migration only adds the column and its default.
+/// Adds a non-null `revision` column, defaulted to `1`, as the
+/// optimistic-concurrency counter Atlas's write path checks against.
 struct AddRecordRevision;
 
 impl MigrationName for AddRecordRevision {
@@ -319,17 +266,9 @@ impl MigrationTrait for AddRecordRevision {
     }
 }
 
-/// Adds a nullable `deleted_at` column to `records`, `NULL` for every
-/// existing row — `NULL` means "not deleted" (ADR 0018, issue 0013 slice A).
-/// Stored as Unix-epoch seconds (`big_integer`) rather than a native
-/// timestamp column: see [`crate::entity::records::Model::deleted_at`]'s
-/// docblock for why. Like [`AddRecordStatus`]/[`AddRecordRevision`], this is a
-/// genuine additive migration — never by editing [`CreateAuthoringSchema`]
-/// — so a database that has already applied earlier migrations only gains
-/// the column, it is not recreated. The query-path filters that exclude a
-/// soft-deleted record from the nav tree, search, and the snapshot every
-/// write goes through land alongside `crate::DbDocStore::delete_checked` in
-/// this same slice.
+/// Adds a nullable `deleted_at` column; `NULL` means "not deleted". Stored
+/// as Unix-epoch seconds — see
+/// [`crate::entity::records::Model::deleted_at`] for why.
 struct AddRecordDeletedAt;
 
 impl MigrationName for AddRecordDeletedAt {
@@ -363,35 +302,69 @@ impl MigrationTrait for AddRecordDeletedAt {
     }
 }
 
-/// Creates the ordered EAV frontmatter tail: one row per non-typed
-/// frontmatter key, scoped to its record via `record_id` and cascaded on
-/// the record's delete so a record's tail never outlives it.
+/// Creates `sync_meta`: `sync` writes its single row per project as the
+/// last step of a successful run.
+struct CreateSyncMeta;
+
+impl MigrationName for CreateSyncMeta {
+    fn name(&self) -> &str {
+        "m20260827_000007_create_sync_meta"
+    }
+}
+
+#[async_trait::async_trait]
+impl MigrationTrait for CreateSyncMeta {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .create_table(
+                Table::create()
+                    .table(SyncMeta::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(SyncMeta::ProjectId)
+                            .integer()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(SyncMeta::LastSyncCompletedAt)
+                            .big_integer()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(SyncMeta::TreeFingerprint).text().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_sync_meta_project")
+                            .from(SyncMeta::Table, SyncMeta::ProjectId)
+                            .to(Projects::Table, Projects::Id),
+                    )
+                    .to_owned(),
+            )
+            .await
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(SyncMeta::Table).to_owned())
+            .await
+    }
+}
+
+/// Creates the ordered EAV frontmatter tail, cascaded on the record's delete
+/// so a record's tail never outlives it.
 #[allow(clippy::too_many_lines)]
+#[rustfmt::skip]
 async fn create_frontmatter_fields_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
             Table::create()
                 .table(FrontmatterFields::Table)
                 .if_not_exists()
-                .col(
-                    ColumnDef::new(FrontmatterFields::Id)
-                        .integer()
-                        .not_null()
-                        .auto_increment()
-                        .primary_key(),
-                )
-                .col(
-                    ColumnDef::new(FrontmatterFields::RecordId)
-                        .integer()
-                        .not_null(),
-                )
+                .col(ColumnDef::new(FrontmatterFields::Id).integer().not_null().auto_increment().primary_key())
+                .col(ColumnDef::new(FrontmatterFields::RecordId).integer().not_null())
                 .col(ColumnDef::new(FrontmatterFields::Key).text().not_null())
                 .col(ColumnDef::new(FrontmatterFields::Value).text().not_null())
-                .col(
-                    ColumnDef::new(FrontmatterFields::Ordinal)
-                        .integer()
-                        .not_null(),
-                )
+                .col(ColumnDef::new(FrontmatterFields::Ordinal).integer().not_null())
                 .foreign_key(
                     ForeignKey::create()
                         .name("fk_frontmatter_fields_record")
@@ -404,25 +377,15 @@ async fn create_frontmatter_fields_table(manager: &SchemaManager<'_>) -> Result<
         .await
 }
 
+#[rustfmt::skip]
 async fn create_projects_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
             Table::create()
                 .table(Projects::Table)
                 .if_not_exists()
-                .col(
-                    ColumnDef::new(Projects::Id)
-                        .integer()
-                        .not_null()
-                        .auto_increment()
-                        .primary_key(),
-                )
-                .col(
-                    ColumnDef::new(Projects::Slug)
-                        .text()
-                        .not_null()
-                        .unique_key(),
-                )
+                .col(ColumnDef::new(Projects::Id).integer().not_null().auto_increment().primary_key())
+                .col(ColumnDef::new(Projects::Slug).text().not_null().unique_key())
                 .col(ColumnDef::new(Projects::Name).text().not_null().default(""))
                 .col(ColumnDef::new(Projects::RootPath).text())
                 .to_owned(),
@@ -430,39 +393,23 @@ async fn create_projects_table(manager: &SchemaManager<'_>) -> Result<(), DbErr>
         .await
 }
 
-/// Creates `records` with a `project_id` foreign key into `projects` and a
-/// `UNIQUE(project_id, path)` index, replacing the single-project global
-/// unique on `path`.
+/// Creates `records` with a `project_id` foreign key and a
+/// `UNIQUE(project_id, path)` index, replacing the global unique on `path`.
 #[allow(clippy::too_many_lines)]
+#[rustfmt::skip]
 async fn create_records_table(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .create_table(
             Table::create()
                 .table(Records::Table)
                 .if_not_exists()
-                .col(
-                    ColumnDef::new(Records::Id)
-                        .integer()
-                        .not_null()
-                        .auto_increment()
-                        .primary_key(),
-                )
+                .col(ColumnDef::new(Records::Id).integer().not_null().auto_increment().primary_key())
                 .col(ColumnDef::new(Records::ProjectId).integer().not_null())
                 .col(ColumnDef::new(Records::Path).text().not_null())
-                .col(
-                    ColumnDef::new(Records::DocType)
-                        .text()
-                        .not_null()
-                        .default(""),
-                )
+                .col(ColumnDef::new(Records::DocType).text().not_null().default(""))
                 .col(ColumnDef::new(Records::Identity).text())
                 .col(ColumnDef::new(Records::Title).text().not_null().default(""))
-                .col(
-                    ColumnDef::new(Records::Description)
-                        .text()
-                        .not_null()
-                        .default(""),
-                )
+                .col(ColumnDef::new(Records::Description).text().not_null().default(""))
                 .col(ColumnDef::new(Records::Body).text().not_null().default(""))
                 .foreign_key(
                     ForeignKey::create()
@@ -597,9 +544,8 @@ async fn create_record_tags_table(manager: &SchemaManager<'_>) -> Result<(), DbE
         .await
 }
 
-/// Creates the backend-native full-text index over `records`: an FTS5
-/// external-content virtual table on SQLite, a `pg_search` BM25 index on
-/// Postgres.
+/// Creates the backend-native full-text index: FTS5 on SQLite, `pg_search`
+/// BM25 on Postgres.
 async fn create_search_index(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     let connection = manager.get_connection();
     match manager.get_database_backend() {
@@ -642,8 +588,7 @@ async fn drop_search_index(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     }
 }
 
-/// The error returned when a migration runs against a backend this crate
-/// does not support (only SQLite and Postgres are compiled in).
+/// Returned when a migration runs against an uncompiled backend.
 fn unsupported_backend_err() -> DbErr {
     DbErr::Custom("db-store only supports the sqlite and postgres backends".to_owned())
 }
@@ -665,6 +610,7 @@ enum Records {
     Status,
     Revision,
     DeletedAt,
+    Owner,
 }
 
 #[derive(DeriveIden)]
@@ -709,4 +655,12 @@ enum RecordTags {
     Table,
     RecordId,
     TagId,
+}
+
+#[derive(DeriveIden)]
+enum SyncMeta {
+    Table,
+    ProjectId,
+    LastSyncCompletedAt,
+    TreeFingerprint,
 }

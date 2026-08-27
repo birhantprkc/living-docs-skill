@@ -57,6 +57,17 @@ pub struct DocTypeSpec {
     /// `living-docs supersede`, which also wires the
     /// `supersedes`/`superseded_by` links.
     pub status_vocabulary: &'static [&'static str],
+    /// Whether `check` treats a missing `owner:` frontmatter value on this
+    /// type's records as a finding. A finding is a warning by default and an
+    /// invariant violation under `check --require-owner`; a type with
+    /// `requires_owner: false` never produces the finding either way.
+    pub requires_owner: bool,
+    /// The values, case-insensitive, that mark a record of this type as
+    /// closed for good — consulted by the moved-source clearing rule to
+    /// decide whether a dependent record still needs to react to a linked
+    /// record's status change. `Superseded` reaches every type through
+    /// `supersede` and never needs to be listed here.
+    pub terminal_statuses: &'static [&'static str],
 }
 
 const ADR: DocTypeSpec = DocTypeSpec {
@@ -69,6 +80,8 @@ const ADR: DocTypeSpec = DocTypeSpec {
     web_creatable: true,
     body_size: BodySize::Targeted,
     status_vocabulary: &["Proposed", "Accepted", "Deprecated"],
+    requires_owner: true,
+    terminal_statuses: &["Deprecated"],
 };
 
 const BDR: DocTypeSpec = DocTypeSpec {
@@ -81,6 +94,8 @@ const BDR: DocTypeSpec = DocTypeSpec {
     web_creatable: true,
     body_size: BodySize::Targeted,
     status_vocabulary: &["Draft", "Accepted", "Implemented"],
+    requires_owner: true,
+    terminal_statuses: &[],
 };
 
 const PRD: DocTypeSpec = DocTypeSpec {
@@ -93,6 +108,8 @@ const PRD: DocTypeSpec = DocTypeSpec {
     web_creatable: true,
     body_size: BodySize::Targeted,
     status_vocabulary: &["Draft", "Accepted", "Implemented"],
+    requires_owner: false,
+    terminal_statuses: &[],
 };
 
 const ISSUE: DocTypeSpec = DocTypeSpec {
@@ -105,6 +122,8 @@ const ISSUE: DocTypeSpec = DocTypeSpec {
     web_creatable: true,
     body_size: BodySize::Targeted,
     status_vocabulary: &["open", "in-progress", "closed"],
+    requires_owner: false,
+    terminal_statuses: &["closed", "done"],
 };
 
 const RESEARCH: DocTypeSpec = DocTypeSpec {
@@ -117,6 +136,8 @@ const RESEARCH: DocTypeSpec = DocTypeSpec {
     web_creatable: true,
     body_size: BodySize::Exempt,
     status_vocabulary: &["Draft", "Accepted"],
+    requires_owner: false,
+    terminal_statuses: &[],
 };
 
 /// The closed `kind` vocabulary for architecture views, in the C4/arc42
@@ -152,6 +173,8 @@ const VIEW: DocTypeSpec = DocTypeSpec {
     web_creatable: false,
     body_size: BodySize::Targeted,
     status_vocabulary: &[],
+    requires_owner: false,
+    terminal_statuses: &[],
 };
 
 /// `index_heading`/`index_partition` are inert for a singleton — it has no
@@ -173,6 +196,8 @@ const CONSTITUTION: DocTypeSpec = DocTypeSpec {
     web_creatable: true,
     body_size: BodySize::Exempt,
     status_vocabulary: &[],
+    requires_owner: false,
+    terminal_statuses: &[],
 };
 
 /// The sole enumeration of the doc-type taxonomy. Every consumer derives

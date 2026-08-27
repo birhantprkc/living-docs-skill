@@ -105,6 +105,39 @@ pub(crate) fn fill_frontmatter_description(content: &str, description: Option<&s
     .unwrap_or_else(|| content.to_string())
 }
 
+/// Fills the frontmatter `owner:` field with `owner`, quoted via
+/// [`format_scalar`], inserted immediately after the `description:` line —
+/// its canonical position, matching
+/// [`crate::record::to_canonical_markdown`]'s fixed field order, so a fresh
+/// scaffold's frontmatter is already a canonical-check fixed point exactly
+/// as [`fill_frontmatter_description`] achieves for `description:` itself.
+/// A `None` `owner` is a deliberate no-op: `content` returns unchanged and
+/// the record carries no `owner:` field at all.
+pub(crate) fn fill_frontmatter_owner(content: &str, owner: Option<&str>) -> String {
+    let Some(owner) = owner else {
+        return content.to_string();
+    };
+
+    insert_line_after_description(content, &format!("owner: {}", format_scalar(owner)))
+        .unwrap_or_else(|| content.to_string())
+}
+
+/// Inserts `line` right after the frontmatter block's `description:` line,
+/// `None` when the block has no closing fence or no `description:` line to
+/// anchor on.
+fn insert_line_after_description(content: &str, line: &str) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let close = frontmatter_close_index(&lines)?;
+    let description_offset = lines[1..close]
+        .iter()
+        .position(|candidate| candidate.starts_with("description:"))?;
+    let insert_at = description_offset + 2;
+
+    let mut updated: Vec<String> = lines.iter().map(|&l| l.to_string()).collect();
+    updated.insert(insert_at, line.to_string());
+    Some(updated.join("\n") + "\n")
+}
+
 fn fill_frontmatter_line(
     line: &str,
     type_value: &str,

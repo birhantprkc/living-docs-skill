@@ -2,6 +2,7 @@
 type: ADR
 title: The knowledge graph is a typed bi-temporal edge set in the existing relational store
 description: The knowledge graph is typed bi-temporal edges widening the existing relations table in SQLite/ParadeDB — no graph engine, no probabilistic layer; queries are depth-bounded recursive CTEs.
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-05T20:18:36Z
 ---

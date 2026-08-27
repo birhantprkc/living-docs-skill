@@ -22,6 +22,7 @@ fn main() -> ExitCode {
             description,
             kind,
             json,
+            owner,
         } => commands::new::run_new(
             cli.backend,
             cli.engine,
@@ -32,6 +33,7 @@ fn main() -> ExitCode {
                 description: description.as_deref(),
                 kind: kind.as_deref(),
                 json: json.as_deref(),
+                owner: owner.as_deref(),
             },
         ),
         Command::Brief {
@@ -72,12 +74,20 @@ fn main() -> ExitCode {
             &number,
             &description,
         ),
+        Command::Owner { number, value } => {
+            commands::owner::run_owner(cli.backend, cli.engine, &cli.docs_dir, &number, &value)
+        }
         Command::Check {
             paths,
             mermaid_only,
+            ..
         } if mermaid_only => check::run_mermaid_only(&paths),
-        Command::Check { paths, .. } => {
-            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths)
+        Command::Check {
+            paths,
+            require_owner,
+            ..
+        } => {
+            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths, require_owner)
         }
         Command::Fmt { paths } => commands::fmt::run_fmt(&cli.docs_dir, paths),
         Command::Migrate { paths, apply } => {
@@ -101,8 +111,13 @@ fn main() -> ExitCode {
         Command::Db {
             cmd: DbCmd::Sync { project },
         } => commands::db::run_db_sync(&cli.docs_dir, cli.engine, project),
-        Command::Search { query, project } => {
-            commands::search::run_search(&query, cli.engine, project)
+        Command::Search {
+            query,
+            project,
+            strict,
+        } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
+        Command::Scorecard { json } => {
+            commands::scorecard::run_scorecard(cli.backend, cli.engine, &cli.docs_dir, json)
         }
         Command::Skill {
             action:

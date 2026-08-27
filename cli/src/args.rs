@@ -60,6 +60,12 @@ pub(crate) enum Command {
         /// reads a file. One call authors the whole record.
         #[arg(long)]
         json: Option<String>,
+        /// Seeds the frontmatter `owner:` field with this value — a
+        /// free-form name or email, inserted in canonical position
+        /// immediately after `description:`. Never validated against an
+        /// identity directory.
+        #[arg(long)]
+        owner: Option<String>,
     },
     /// `new` plus deterministic pre-fill (issue 0008): frontmatter title,
     /// numbered title heading, a trail comment, and every judgment section
@@ -114,6 +120,17 @@ pub(crate) enum Command {
         number: String,
         description: String,
     },
+    /// Sets a record's `owner:` frontmatter field directly — the CLI-owned
+    /// counterpart to hand-editing it, reusing the same record-resolution
+    /// and frontmatter-mutation helpers `status`/`describe` use. Any string
+    /// is accepted (a name or an email); the tool never validates it
+    /// against an identity directory. `number` accepts a bare `NNNN` or a
+    /// type-qualified `TYPE/NNNN` reference (e.g. `adr/0028`), required
+    /// when the same number exists in more than one doc-type directory.
+    Owner {
+        number: String,
+        value: String,
+    },
     Next {
         doc_type: String,
     },
@@ -127,6 +144,10 @@ pub(crate) enum Command {
         /// Validate only ```mermaid``` fences over `paths`, skipping every other invariant.
         #[arg(long)]
         mermaid_only: bool,
+        /// Promotes a missing `owner` on a doctype whose registry row
+        /// requires it (ADR, BDR) from a warning to an invariant violation.
+        #[arg(long)]
+        require_owner: bool,
     },
     /// Canonicalizes every concept record's frontmatter in place — the
     /// remediation verb for `check`'s canonical-frontmatter invariant (ADR
@@ -192,6 +213,19 @@ pub(crate) enum Command {
         /// 0005, issue 0005 slice 0005-C1).
         #[arg(long)]
         project: Option<String>,
+        /// Refuse with a nonzero exit and no results when the projection is
+        /// behind the records tree, instead of the default stderr warning.
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Read-only doc-readiness scorecard: reruns `check`'s passes and grades
+    /// the fixed Trusted/Contextual/Traceable/Governed attribute table,
+    /// printing a table or (with `--json`) a deterministic JSON payload.
+    /// Never mutates the tree and always exits zero — the grades never gate.
+    Scorecard {
+        /// Emits deterministic JSON instead of the human-readable table.
+        #[arg(long)]
+        json: bool,
     },
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full

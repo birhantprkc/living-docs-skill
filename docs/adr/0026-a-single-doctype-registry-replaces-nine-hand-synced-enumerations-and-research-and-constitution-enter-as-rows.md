@@ -2,6 +2,7 @@
 type: ADR
 title: A single DocType registry replaces nine hand-synced enumerations, and research and constitution enter as rows
 description: One compile-time DocTypeSpec table becomes the sole enumeration of the doc-type taxonomy, so the nine sites that hand-synced it derive instead, and `research` and `constitution` are added as rows.
+owner: Evaldo Klock
 status: Accepted
 timestamp: 2026-07-29T23:49:51Z
 ---

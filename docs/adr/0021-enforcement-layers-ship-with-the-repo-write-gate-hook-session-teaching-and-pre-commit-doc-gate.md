@@ -2,6 +2,7 @@
 type: ADR
 title: "Enforcement layers ship with the repo: write-gate hook, session teaching, and pre-commit doc-gate"
 description: Ship the ADR 0019 enforcement layers inside this repository — a versioned write-gate hook in the skill bundle wired via .claude/settings.json, a SessionStart hook that injects the body-only rule at t=0, and a pre-commit doc-gate — instead of depending on an externally installed enforcer plugin.
+owner: Evaldo Klock
 status: Accepted
 tags: [check, cli, enforcement, hooks, tokens]
 timestamp: 2026-07-29T01:51:15Z

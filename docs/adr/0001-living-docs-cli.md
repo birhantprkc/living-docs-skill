@@ -2,6 +2,7 @@
 type: ADR
 title: A living-docs CLI that owns the deterministic layer of doc authoring
 description: Introduce a `living-docs` CLI that mechanizes the non-judgment parts of authoring a doc — scaffolding, number allocation, index regeneration, supersede wiring, and conformance checking — leaving rationale prose to the authoring model. The `check` subcommand doubles as the doc-gate that makes a future cheap-model rendering split safe.
+owner: Evaldo Klock
 status: Accepted
 tags: [authoring-cost, cli, determinism, doc-gate, tooling]
 timestamp: 2026-07-14T00:00:00Z

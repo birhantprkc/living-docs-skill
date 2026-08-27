@@ -2,6 +2,7 @@
 type: ADR
 title: Requirement IDs are PRD-scoped EARS statements and check traces BDR coverage
 description: PRD requirements carry stable FR-N/NFR-N IDs written in EARS patterns; a deterministic check rule traces each ID of a non-Draft PRD to a BDR that links the PRD and cites the ID — advisory at Accepted, violation at Implemented.
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-14T07:37:50Z
 ---

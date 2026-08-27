@@ -12,7 +12,9 @@ timestamp: 2026-07-20T14:45:52Z
 ## Problem / Motivation
 
 Living Docs today is authored through the CLI and read through a **read-only** web view
-(ADR [/adr/0006-web-read-only-axum.md](/adr/0006-web-read-only-axum.md)). Two pains follow
+(ADR [/adr/0006-web-read-only-axum.md](/adr/0006-web-read-only-axum.md), superseded by
+[/adr/0016-atlas-makes-the-web-a-db-mode-authoring-front-superseding-web-read-only.md](/adr/0016-atlas-makes-the-web-a-db-mode-authoring-front-superseding-web-read-only.md)).
+Two pains follow
 from that shape as the practice spreads across projects:
 
 1. **Knowledge is siloed per repo and reachable only two ways** — the CLI or raw markdown.

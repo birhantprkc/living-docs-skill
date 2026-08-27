@@ -17,6 +17,7 @@ pub(crate) mod canonical;
 mod graph;
 pub(crate) mod links;
 mod mermaid;
+mod moved_source;
 mod records;
 mod seal;
 mod size;
@@ -35,6 +36,13 @@ pub fn run_mermaid_only(paths: &[PathBuf]) -> ExitCode {
 }
 
 pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
+    run_require_owner(store, bundle, false)
+}
+
+/// `check --require-owner`: promotes a missing `owner` on a doctype whose
+/// registry row requires it from an advisory to an invariant violation.
+/// Every other invariant behaves exactly as [`run`].
+pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
     if !bundle.is_dir() {
         eprintln!(
             "living-docs check: bundle root not found: {}",
@@ -50,7 +58,7 @@ pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
     println!();
 
     let mut reporter = Reporter::new();
-    let doc_count = run_all_checks(store, bundle, &mut reporter);
+    let doc_count = run_all_checks(store, bundle, &mut reporter, require_owner);
 
     reporter.finish(doc_count)
 }
@@ -61,7 +69,12 @@ pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
 /// returns the raw list, for a caller like `db_store::DbDocStore::write_checked`
 /// that gates a write on the same invariants without printing anything).
 /// Returns the number of docs `store` enumerated under `bundle`.
-fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) -> usize {
+fn run_all_checks(
+    store: &dyn DocStore,
+    bundle: &Path,
+    reporter: &mut Reporter,
+    require_owner: bool,
+) -> usize {
     let all_md = store.list(bundle).unwrap_or_default();
     let root_index = bundle.join("index.md");
 
@@ -74,6 +87,8 @@ fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) 
     graph::check_reachability(bundle, &root_index, &all_md, reporter);
     links::check_links(store, bundle, &all_md, reporter);
     records::check_supersede_chain(store, &all_md, reporter);
+    moved_source::check_moved_source(store, bundle, &all_md, reporter);
+    records::check_owner_requirement(store, &all_md, require_owner, reporter);
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
 
     mermaid::check_bundle(&all_md, reporter);
@@ -91,8 +106,68 @@ fn run_all_checks(store: &dyn DocStore, bundle: &Path, reporter: &mut Reporter) 
 /// stdout report.
 pub fn check_violations(store: &dyn DocStore, bundle: &Path) -> Vec<(String, String)> {
     let mut reporter = Reporter::new();
-    run_all_checks(store, bundle, &mut reporter);
+    run_all_checks(store, bundle, &mut reporter, false);
     reporter.into_violations()
+}
+
+/// One check finding: the record's display path paired with the finding's
+/// message.
+pub type Finding = (String, String);
+
+/// Every violation and advisory [`run`] would print, without the printing
+/// or the [`ExitCode`] — the read-only aggregation surface a summarizing
+/// verb (e.g. `scorecard`) runs its own classification over. [`run`] and
+/// [`run_require_owner`] keep their own output and exit code unchanged;
+/// this is an additive view over the same [`run_all_checks`] pass.
+pub struct Findings {
+    pub violations: Vec<Finding>,
+    pub advisories: Vec<Finding>,
+}
+
+/// Runs every invariant [`run`] validates and returns the full finding set,
+/// printing nothing.
+pub fn findings(store: &dyn DocStore, bundle: &Path) -> Findings {
+    let mut reporter = Reporter::new();
+    run_all_checks(store, bundle, &mut reporter, false);
+    let (violations, advisories) = reporter.into_findings();
+    Findings {
+        violations,
+        advisories,
+    }
+}
+
+/// Owner coverage over the records whose doctype registry row requires an
+/// owner, as `(owned, required)`. `None` when no record under `bundle`
+/// requires one — there is nothing to grade a ratio over.
+pub fn owner_coverage(store: &dyn DocStore, bundle: &Path) -> Option<(usize, usize)> {
+    let all_md = store.list(bundle).unwrap_or_default();
+    let (mut owned, mut required) = (0usize, 0usize);
+    for f in &all_md {
+        count_owner_coverage(store, f, &mut owned, &mut required);
+    }
+    (required > 0).then_some((owned, required))
+}
+
+fn count_owner_coverage(store: &dyn DocStore, f: &Path, owned: &mut usize, required: &mut usize) {
+    if records::is_reserved(&file_name_str(f)) {
+        return;
+    }
+    let Ok(contents) = store.read(f) else {
+        return;
+    };
+    let Some(doc_type) = records::frontmatter_scalar(&contents, "type") else {
+        return;
+    };
+    let Some(spec) = doc_type::spec_for_frontmatter(&doc_type) else {
+        return;
+    };
+    if !spec.requires_owner {
+        return;
+    }
+    *required += 1;
+    if records::frontmatter_scalar(&contents, "owner").is_some() {
+        *owned += 1;
+    }
 }
 
 pub(crate) fn file_name_str(path: &Path) -> String {
@@ -169,6 +244,10 @@ impl Reporter {
 
     fn into_violations(self) -> Vec<(String, String)> {
         self.violations
+    }
+
+    fn into_findings(self) -> (Vec<Finding>, Vec<Finding>) {
+        (self.violations, self.advisories)
     }
 
     fn finish(self, doc_count: usize) -> ExitCode {

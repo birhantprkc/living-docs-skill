@@ -2,6 +2,7 @@
 type: ADR
 title: Releases are born draft and earn publication by passing the asset gate
 description: The release workflow creates every release as a draft and the asset gate promotes it only after verifying all ten assets, so an incomplete release is never published even for a moment.
+owner: Evaldo Klock
 status: Accepted
 supersedes: 0024
 timestamp: 2026-07-29T18:49:15Z
