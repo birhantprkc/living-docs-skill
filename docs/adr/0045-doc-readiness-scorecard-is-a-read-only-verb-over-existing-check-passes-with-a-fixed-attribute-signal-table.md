@@ -2,7 +2,7 @@
 type: ADR
 title: Doc-readiness scorecard is a read-only verb over existing check passes with a fixed attribute-signal table
 description: scorecard is a read-only verb over existing check passes with a fixed attribute-signal table; grades per attribute, overall grade is the minimum, never gates
-status: Proposed
+status: Accepted
 timestamp: 2026-08-27T21:25:24Z
 ---
 

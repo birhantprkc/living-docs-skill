@@ -2,7 +2,7 @@
 type: Issue
 title: "Doc-readiness scorecard: a check subreport that grades a docs tree from human-era to agent-ready"
 description: a deterministic per-attribute scorecard that grades a docs tree from human-era to agent-ready, so investment goes to the weakest row
-status: open
+status: closed
 timestamp: 2026-08-27T19:04:25Z
 ---
 
