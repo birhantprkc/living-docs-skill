@@ -2,6 +2,7 @@
 type: ADR
 title: Uniform brace markers for body placeholders
 description: Body placeholders in the 6 registered doc-type templates move from prose-punctuated angle brackets to bare {{NAME}} tokens, closing issue 0022's programmatic-edit fragility.
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-03T16:46:20Z
 ---

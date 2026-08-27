@@ -2,6 +2,7 @@
 type: ADR
 title: Owner is a CLI-owned frontmatter field with a warn-then-error ratchet on ADR and BDR
 description: owner enters the doctype registry as an optional CLI-owned frontmatter field, warn-then-error required on ADR and BDR via check --require-owner
+owner: Evaldo Klock
 status: Accepted
 timestamp: 2026-08-27T19:10:25Z
 ---

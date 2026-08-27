@@ -2,6 +2,7 @@
 type: ADR
 title: Migration is a deterministic advisor verb plus skill-guided judgment
 description: living-docs migrate scans a bundle (or its absence) and prints an ordered adaptation plan split into RUN steps (mechanical CLI commands) and AUTHOR steps (judgment the authoring model owns); the tool never edits records itself, and rules/migration.md governs the judgment half.
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-14T08:12:23Z
 ---

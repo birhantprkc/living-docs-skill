@@ -2,6 +2,7 @@
 type: ADR
 title: Extract a hexagonal living-docs-core inside a Cargo workspace
 description: Restructure the standalone `cli/` crate into a Cargo workspace whose `living-docs-core` holds the domain plus storage/search ports, leaving the CLI a thin front — so a database backend and a web front can reuse one domain without model drift.
+owner: Evaldo Klock
 status: Accepted
 tags: [architecture, core, hexagonal, okf, ports, workspace]
 timestamp: 2026-07-16T00:00:00Z

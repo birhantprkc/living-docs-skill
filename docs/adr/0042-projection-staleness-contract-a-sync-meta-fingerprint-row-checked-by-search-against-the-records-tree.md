@@ -2,6 +2,7 @@
 type: ADR
 title: "Projection staleness contract: a sync_meta fingerprint row, checked by search against the records tree"
 description: the projection stores a sync_meta fingerprint row written on successful sync; search compares it against the records tree and warns or refuses when stale
+owner: Evaldo Klock
 status: Accepted
 timestamp: 2026-08-27T19:07:17Z
 ---

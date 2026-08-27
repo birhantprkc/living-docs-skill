@@ -2,6 +2,7 @@
 type: ADR
 title: CLI-produced records carry an ephemeral HMAC provenance seal that check verifies
 description: "An fs-mode write decorator seals every CLI-written record's CLI-owned frontmatter into a ledger under .git/living-docs/ keyed by a per-clone secret; check verifies seals when the key exists (fail-open otherwise), so records created or owned-key-edited outside the CLI fail the gate with a re-issue instruction. Friction, not cryptography: with shell access no local secret is unforgeable, and the ADR says so."
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-14T08:21:07Z
 ---

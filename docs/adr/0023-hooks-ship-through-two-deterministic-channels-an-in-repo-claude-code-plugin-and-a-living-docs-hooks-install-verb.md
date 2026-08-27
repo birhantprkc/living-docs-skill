@@ -2,6 +2,7 @@
 type: ADR
 title: "Hooks ship through two deterministic channels: an in-repo Claude Code plugin and a living-docs hooks install verb"
 description: Distribute the ADR 0021 enforcement layers to consumer projects through two deterministic channels — an in-repo Claude Code plugin whose hooks resolve via CLAUDE_PLUGIN_ROOT, and a `living-docs hooks install` verb that materializes the same scripts from the embedded corpus for every other harness — leaving install.sh a skill-stub copier.
+owner: Evaldo Klock
 status: Accepted
 tags: [cli, distribution, enforcement, hooks, plugin]
 timestamp: 2026-07-29T12:43:28Z

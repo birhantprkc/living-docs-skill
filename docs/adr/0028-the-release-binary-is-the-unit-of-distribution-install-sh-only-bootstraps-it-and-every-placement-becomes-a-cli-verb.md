@@ -2,6 +2,7 @@
 type: ADR
 title: "The release binary is the unit of distribution: install.sh only bootstraps it and every placement becomes a CLI verb"
 description: Installation collapses to one artifact — the released binary — fetched by a bootstrap script whose only job is that, with every harness and hook placement served from the binary's embedded corpus as a CLI verb.
+owner: Evaldo Klock
 status: Accepted
 timestamp: 2026-07-30T22:33:04Z
 ---

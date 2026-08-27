@@ -2,6 +2,7 @@
 type: ADR
 title: New consumers are fronts in the workspace, never new repos, until a deploy-cadence or ownership trigger fires
 description: Every new consumer (API, MCP, frontend) is a front inside the Cargo workspace over living-docs-core; crates.io publication serves external consumers; a repo split waits for a deploy-cadence or ownership trigger.
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-05T20:33:40Z
 ---

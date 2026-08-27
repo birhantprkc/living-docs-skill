@@ -2,6 +2,7 @@
 type: ADR
 title: Doc-code lineage is declared, not inferred
 description: Every doc-code lineage fact is a declared event (trailer, covers glob, FQN anchor, explicit rename re-declaration) — the tool never infers links heuristically; staleness fails loud at the gate.
+owner: Evaldo Klock
 status: Proposed
 timestamp: 2026-08-05T20:18:36Z
 ---

@@ -2,6 +2,7 @@
 type: ADR
 title: "A release is atomic: a missing binary asset fails the workflow and demotes the release to a draft"
 description: A release job that publishes an incomplete asset set fails loudly and demotes the release to a draft, so install.sh never sees a half-published tag.
+owner: Evaldo Klock
 status: Superseded
 superseded_by: 0025
 timestamp: 2026-07-29T16:08:56Z

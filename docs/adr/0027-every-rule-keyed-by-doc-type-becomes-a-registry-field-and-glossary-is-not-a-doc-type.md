@@ -2,6 +2,7 @@
 type: ADR
 title: Every rule keyed by doc type becomes a registry field, and glossary is not a doc type
 description: A row is a doc type the tool creates, numbers or places; a field is any rule it applies once the type is known — so the body-size rule moves into DocTypeSpec and glossary stays out.
+owner: Evaldo Klock
 status: Accepted
 timestamp: 2026-07-30T20:19:45Z
 ---
