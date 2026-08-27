@@ -116,6 +116,9 @@ fn main() -> ExitCode {
             project,
             strict,
         } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
+        Command::Scorecard { json } => {
+            commands::scorecard::run_scorecard(cli.backend, cli.engine, &cli.docs_dir, json)
+        }
         Command::Skill {
             action:
                 Some(SkillCmd::Install {

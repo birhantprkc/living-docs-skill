@@ -218,6 +218,15 @@ pub(crate) enum Command {
         #[arg(long)]
         strict: bool,
     },
+    /// Read-only doc-readiness scorecard: reruns `check`'s passes and grades
+    /// the fixed Trusted/Contextual/Traceable/Governed attribute table,
+    /// printing a table or (with `--json`) a deterministic JSON payload.
+    /// Never mutates the tree and always exits zero — the grades never gate.
+    Scorecard {
+        /// Emits deterministic JSON instead of the human-readable table.
+        #[arg(long)]
+        json: bool,
+    },
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
     /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR
