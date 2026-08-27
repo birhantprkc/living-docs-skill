@@ -25,6 +25,7 @@ one slice per fresh context, starting from the skeleton.
 * [0035 — Provenance review queue: check flags records whose referenced source was superseded or changed status](0035-provenance-review-queue-check-flags-records-whose-referenced-source-was-superseded-or-changed-status.md) - open
 * [0036 — Owner field in record frontmatter, required for ADR and BDR by check](0036-owner-field-in-record-frontmatter-required-for-adr-and-bdr-by-check.md) - open
 * [0037 — Doc-readiness scorecard: a check subreport that grades a docs tree from human-era to agent-ready](0037-doc-readiness-scorecard-a-check-subreport-that-grades-a-docs-tree-from-human-era-to-agent-ready.md) - open
+* [0038 — db-mode struct round-trip of the owner field: db-store has no owner column and loads None](0038-db-mode-struct-round-trip-of-the-owner-field-db-store-has-no-owner-column-and-loads-none.md) - open
 
 ## Closed
 
