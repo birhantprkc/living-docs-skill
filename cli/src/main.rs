@@ -101,9 +101,11 @@ fn main() -> ExitCode {
         Command::Db {
             cmd: DbCmd::Sync { project },
         } => commands::db::run_db_sync(&cli.docs_dir, cli.engine, project),
-        Command::Search { query, project } => {
-            commands::search::run_search(&query, cli.engine, project)
-        }
+        Command::Search {
+            query,
+            project,
+            strict,
+        } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
         Command::Skill {
             action:
                 Some(SkillCmd::Install {

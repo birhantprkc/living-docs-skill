@@ -192,6 +192,10 @@ pub(crate) enum Command {
         /// 0005, issue 0005 slice 0005-C1).
         #[arg(long)]
         project: Option<String>,
+        /// Refuse with a nonzero exit and no results when the projection is
+        /// behind the records tree, instead of the default stderr warning.
+        #[arg(long)]
+        strict: bool,
     },
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full

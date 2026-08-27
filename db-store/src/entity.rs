@@ -167,4 +167,26 @@ pub mod record_tags {
     impl ActiveModelBehavior for ActiveModel {}
 }
 
+pub mod sync_meta {
+    use sea_orm::entity::prelude::*;
+
+    /// The projection-staleness contract's single row per project: the UTC
+    /// Unix-seconds timestamp of the last successful `sync` and the hex
+    /// SHA-256 fingerprint of the records tree at that moment. Written only
+    /// as `sync`'s last step; a failed sync never writes or updates it.
+    #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+    #[sea_orm(table_name = "sync_meta")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub project_id: i32,
+        pub last_sync_completed_at: i64,
+        pub tree_fingerprint: String,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
 pub use records::{ActiveModel, Column, Entity, Model, Relation};

@@ -82,8 +82,23 @@ pub async fn sync_project(
     tags::insert_tags(&txn, project_id, &inserted).await?;
 
     rebuild_search_index(&txn).await?;
+    write_sync_meta(&txn, project_id, bundle).await?;
     txn.commit().await?;
     Ok(count)
+}
+
+/// Recomputes the records-tree fingerprint and upserts `project_id`'s
+/// `sync_meta` row — always the last write inside `sync_project`'s
+/// transaction, so a failed sync never leaves a row behind describing an
+/// incomplete run.
+async fn write_sync_meta<C: ConnectionTrait>(
+    conn: &C,
+    project_id: i32,
+    bundle: &Path,
+) -> Result<()> {
+    let fingerprint =
+        living_docs_core::fingerprint::tree_fingerprint(bundle).map_err(io_err_to_db_err)?;
+    crate::sync_meta::upsert(conn, project_id, &fingerprint).await
 }
 
 /// A single record just inserted this sync run, carrying the frontmatter
