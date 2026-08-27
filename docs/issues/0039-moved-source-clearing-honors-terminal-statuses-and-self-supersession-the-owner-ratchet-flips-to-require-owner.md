@@ -3,7 +3,7 @@ type: Issue
 title: moved-source clearing honors terminal statuses and self-supersession; the owner ratchet flips to require-owner
 description: fix the two moved-source false-positive classes (done-status dependents and dependent-is-successor) and promote check to --require-owner in the pre-commit hook and CI make check
 owner: Evaldo Klock
-status: open
+status: closed
 timestamp: 2026-08-27T22:00:48Z
 ---
 

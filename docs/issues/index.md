@@ -22,7 +22,6 @@ one slice per fresh context, starting from the skeleton.
 * [0031 — Bundle identity variant plus the artifact registry row and new artifact scaffolds a directory bundle with README](0031-bundle-identity-variant-plus-the-artifact-registry-row-and-new-artifact-scaffolds-a-directory-bundle-with-readme.md) - open
 * [0032 — check validates the artifact file manifest: missing listed file fails, unlisted orphan file warns](0032-check-validates-the-artifact-file-manifest-missing-listed-file-fails-unlisted-orphan-file-warns.md) - open
 * [0033 — index renders the Artifacts partition and the db-store projection indexes the artifact README body](0033-index-renders-the-artifacts-partition-and-the-db-store-projection-indexes-the-artifact-readme-body.md) - open
-* [0039 — moved-source clearing honors terminal statuses and self-supersession; the owner ratchet flips to require-owner](0039-moved-source-clearing-honors-terminal-statuses-and-self-supersession-the-owner-ratchet-flips-to-require-owner.md) - open
 
 ## Closed
 
@@ -50,3 +49,4 @@ one slice per fresh context, starting from the skeleton.
 * [0036 — Owner field in record frontmatter, required for ADR and BDR by check](0036-owner-field-in-record-frontmatter-required-for-adr-and-bdr-by-check.md) - closed
 * [0037 — Doc-readiness scorecard: a check subreport that grades a docs tree from human-era to agent-ready](0037-doc-readiness-scorecard-a-check-subreport-that-grades-a-docs-tree-from-human-era-to-agent-ready.md) - closed
 * [0038 — db-mode struct round-trip of the owner field: db-store has no owner column and loads None](0038-db-mode-struct-round-trip-of-the-owner-field-db-store-has-no-owner-column-and-loads-none.md) - closed
+* [0039 — moved-source clearing honors terminal statuses and self-supersession; the owner ratchet flips to require-owner](0039-moved-source-clearing-honors-terminal-statuses-and-self-supersession-the-owner-ratchet-flips-to-require-owner.md) - closed
