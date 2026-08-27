@@ -48,6 +48,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0040 — migrate --apply is a CLI-front transaction over the mechanical subset](0040-migrate-apply-is-a-cli-front-transaction-over-the-mechanical-subset.md) - Proposed
 * [0041 — make cli-install fetches the released binary and install.sh resolves the latest release by default](0041-make-cli-install-fetches-the-released-binary-and-install-sh-resolves-the-latest-release-by-default.md) - Accepted
 * [0042 — Projection staleness contract: a sync_meta fingerprint row, checked by search against the records tree](0042-projection-staleness-contract-a-sync-meta-fingerprint-row-checked-by-search-against-the-records-tree.md) - Proposed
+* [0043 — Owner is a CLI-owned frontmatter field with a warn-then-error ratchet on ADR and BDR](0043-owner-is-a-cli-owned-frontmatter-field-with-a-warn-then-error-ratchet-on-adr-and-bdr.md) - Proposed
 
 ## Superseded
 
