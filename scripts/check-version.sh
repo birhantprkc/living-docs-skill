@@ -26,14 +26,30 @@ check() { # check <label> <actual>
 	fi
 }
 
+# A skill that vendors an upstream spec (reference/SPEC.md next to its SKILL.md) tracks that
+# spec's own version, not the repo release — otherwise every release mislabels the spec.
+spec_version_for() { # spec_version_for <SKILL.md path> -> prints the vendored spec's declared version, empty when there is none
+	local skill_md="$1" spec="$1"
+	spec="$(dirname "$skill_md")/reference/SPEC.md"
+	[[ -e "$spec" ]] || return 0
+	sed -nE 's/^\*\*Version[[:space:]]+([^[:space:]]+).*/\1/p' "$spec" | head -1
+}
+
+check_spec() { # check_spec <label> <actual> <spec-version>
+	if [[ "$2" != "$3" ]]; then
+		printf 'MISMATCH: %-40s = %-10s (expected %s from reference/SPEC.md)\n' "$1" "'$2'" "'$3'"
+		fail=1
+	fi
+}
+
 # Detection is deliberately looser than extraction: a file must be caught as "declares a
 # version" even when its key is malformed (e.g. a stray space before the colon), so that
 # case fails loudly below instead of extraction's strict anchor silently missing it and the
 # file being read as if it declared no version at all.
-check_versioned_class() { # check_versioned_class <required|optional> <file>...
-	local requirement="$1"
-	shift
-	local f rel v
+check_versioned_class() { # check_versioned_class <required|optional> <spec-aware|plain> <file>...
+	local requirement="$1" mode="$2"
+	shift 2
+	local f rel v spec_v
 	for f in "$@"; do
 		rel="${f#"$root"/}"
 		if ! grep -qE '^[[:space:]]*version[[:space:]]*:' "$f"; then
@@ -46,7 +62,13 @@ check_versioned_class() { # check_versioned_class <required|optional> <file>...
 			fail=1
 			continue
 		fi
-		check "$rel" "$v"
+		spec_v=""
+		[[ "$mode" == spec-aware ]] && spec_v="$(spec_version_for "$f")"
+		if [[ -n "$spec_v" ]]; then
+			check_spec "$rel" "$v" "$spec_v"
+		else
+			check "$rel" "$v"
+		fi
 	done
 }
 
@@ -83,7 +105,7 @@ if [[ ! -e "${skill_mds[0]}" ]]; then
 	echo "ERROR: no skills/*/SKILL.md files found" >&2
 	exit 1
 fi
-check_versioned_class required "${skill_mds[@]}"
+check_versioned_class required spec-aware "${skill_mds[@]}"
 
 plugin_json="$root/.claude-plugin/plugin.json"
 plugin_v="$(grep -E '"version":' "$plugin_json" | head -1 | sed -E 's/.*"version":[[:space:]]*"([^"]+)".*/\1/')"
@@ -94,14 +116,14 @@ if [[ ! -e "${instruction_mds[0]}" ]]; then
 	echo "ERROR: no .github/instructions/*.md files found" >&2
 	exit 1
 fi
-check_versioned_class optional "${instruction_mds[@]}"
+check_versioned_class optional plain "${instruction_mds[@]}"
 
 cursor_rule_mdcs=("$root"/.cursor/rules/*.mdc)
 if [[ ! -e "${cursor_rule_mdcs[0]}" ]]; then
 	echo "ERROR: no .cursor/rules/*.mdc files found" >&2
 	exit 1
 fi
-check_versioned_class optional "${cursor_rule_mdcs[@]}"
+check_versioned_class optional plain "${cursor_rule_mdcs[@]}"
 
 if [[ "$fail" -ne 0 ]]; then
 	echo "Version check FAILED."

@@ -50,3 +50,4 @@ one slice per fresh context, starting from the skeleton.
 * [0037 — Doc-readiness scorecard: a check subreport that grades a docs tree from human-era to agent-ready](0037-doc-readiness-scorecard-a-check-subreport-that-grades-a-docs-tree-from-human-era-to-agent-ready.md) - closed
 * [0038 — db-mode struct round-trip of the owner field: db-store has no owner column and loads None](0038-db-mode-struct-round-trip-of-the-owner-field-db-store-has-no-owner-column-and-loads-none.md) - closed
 * [0039 — moved-source clearing honors terminal statuses and self-supersession; the owner ratchet flips to require-owner](0039-moved-source-clearing-honors-terminal-statuses-and-self-supersession-the-owner-ratchet-flips-to-require-owner.md) - closed
+* [0040 — the okf skill version tracks the vendored spec version, not the repo release](0040-the-okf-skill-version-tracks-the-vendored-spec-version-not-the-repo-release.md) - closed
