@@ -74,6 +74,17 @@ set_all_versions() { # set_all_versions <dir> <version>
   write_frontmatter "$dir/.cursor/rules/foo.mdc" "version: \"$version\""
 }
 
+write_spec_skill() { # write_spec_skill <dir> <skill-md-version> -> a skill dir vendoring reference/SPEC.md at 0.1
+  local dir="$1" version="$2"
+  write_frontmatter "$dir/skills/spec-skill/SKILL.md" "version: \"$version\""
+  mkdir -p "$dir/skills/spec-skill/reference"
+  {
+    echo "# Fixture Spec"
+    echo
+    echo "**Version 0.1 — Draft**"
+  } >"$dir/skills/spec-skill/reference/SPEC.md"
+}
+
 new_repo() { # new_repo <name> -> prints the path to a consistent baseline repo at 0.9.0
   local dir="$TMP/$1"
   mkdir -p "$dir/scripts" "$dir/skills/foo" "$dir/.claude-plugin" \
@@ -220,6 +231,27 @@ write_cargo_dep_before_package "$repo" "0.9.0" "0.0.1"
 invoke "$repo"
 assert_exit    "13-exit-0"     0
 assert_out_has "13-version-ok" "Version OK"
+
+echo "case 14: vendored-spec skill at its spec version, rest at repo version"
+repo="$(new_repo case14)"
+write_spec_skill "$repo" "0.1"
+invoke "$repo"
+assert_exit    "14-exit-0"     0
+assert_out_has "14-version-ok" "Version OK"
+
+echo "case 15: vendored-spec skill drifted from its spec version"
+repo="$(new_repo case15)"
+write_spec_skill "$repo" "0.0.9"
+invoke "$repo"
+assert_exit    "15-exit-1"        1
+assert_out_has "15-names-file"    "skills/spec-skill/SKILL.md"
+assert_out_has "15-names-spec"    "reference/SPEC.md"
+
+echo "case 16: vendored-spec skill pinned to the repo version instead of the spec version"
+repo="$(new_repo case16)"
+write_spec_skill "$repo" "0.9.0"
+invoke "$repo"
+assert_exit "16-exit-1" 1
 
 echo
 if ((fail == 0)); then
