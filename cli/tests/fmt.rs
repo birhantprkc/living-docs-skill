@@ -73,11 +73,38 @@ fn fmt_rewrites_a_non_canonical_record_preserving_body_and_author_owned_values()
     let _ = fs::remove_dir_all(&bundle);
 }
 
+const WRAPPED_RECORD: &str = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\nstatus: Accepted\ntags: [caching, performance]\n---\n\n# Quokka Caching\n\nAdopt an aggressive quokka\ncaching strategy for the\nread-heavy endpoints.\n\n- First step\n  runs the warm-up\n  before traffic shifts.\n- Second step\n\n```\nfn example() {\n    call_site();\n}\n```\n\n| Endpoint | Cache |\n| -------- | ----- |\n| /reads   | warm  |\n\n<!-- reviewer note\nspans two lines -->\n";
+
+const WRAPPED_RECORD_REFLOWED: &str = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\nstatus: Accepted\ntags: [caching, performance]\n---\n\n# Quokka Caching\n\nAdopt an aggressive quokka caching strategy for the read-heavy endpoints.\n\n- First step runs the warm-up before traffic shifts.\n- Second step\n\n```\nfn example() {\n    call_site();\n}\n```\n\n| Endpoint | Cache |\n| -------- | ----- |\n| /reads   | warm  |\n\n<!-- reviewer note\nspans two lines -->\n";
+
+#[test]
+fn fmt_unwraps_a_hard_wrapped_paragraph_and_leaves_code_tables_and_comments_untouched() {
+    let bundle = temp_bundle("reflow");
+    write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
+    write(&bundle, "adr/0001-doc.md", WRAPPED_RECORD);
+
+    let output = run_fmt(&bundle);
+    let stdout = stdout_of(&output);
+
+    assert!(output.status.success(), "stderr: {:?}", output.stderr);
+    assert!(
+        stdout.contains("0001-doc.md"),
+        "expected the rewritten path in stdout, got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("1 record(s) rewritten."),
+        "expected the summary count, got:\n{stdout}"
+    );
+    assert_eq!(read(&bundle, "adr/0001-doc.md"), WRAPPED_RECORD_REFLOWED);
+
+    let _ = fs::remove_dir_all(&bundle);
+}
+
 #[test]
 fn fmt_is_idempotent_a_second_run_reports_zero_changes_and_bytes_are_identical() {
     let bundle = temp_bundle("idempotent");
     write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
-    write(&bundle, "adr/0001-doc.md", NON_CANONICAL_RECORD);
+    write(&bundle, "adr/0001-doc.md", WRAPPED_RECORD);
 
     let first = run_fmt(&bundle);
     assert!(first.status.success(), "stderr: {:?}", first.stderr);
