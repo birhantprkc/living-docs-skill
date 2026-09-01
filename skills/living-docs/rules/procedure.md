@@ -17,7 +17,10 @@ the CLI's job; the judgment prose (the "why") is yours to write directly in the 
 - **Write the body prose directly.** The CLI must never author rationale, so there is no
   paragraph-editing verb — editing the body is a normal edit, not a process error. What *is* a
   process error is hand-numbering a doc, hand-writing frontmatter, hand-maintaining an index row,
-  or hand-wiring `supersedes`/`superseded_by` when `supersede` does it deterministically.
+  or hand-wiring `supersedes`/`superseded_by` when `supersede` does it deterministically. Write
+  each paragraph as ONE line — never hard-wrap prose at a fixed column; the reading surface
+  soft-wraps. `living-docs fmt` unwraps hard-wrapped paragraphs (ADR 0046), so a wrapped body is
+  a `fmt` diff, not a style choice.
 - **Provenance is sealed (ADR 0039).** After `living-docs seal init`, every CLI write seals the
   record's CLI-owned frontmatter into `.git/living-docs/`; `check` then fails any record created
   or owned-key-edited outside the CLI — including shell edits the Write-tool hook never sees.
