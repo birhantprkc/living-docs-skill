@@ -64,7 +64,7 @@ Draft the issue as `docs/issues/drafts/NNNN-slug.md` first, linked from the draf
 
 ### 6. No comments in code
 
-Self-documenting names, small single-purpose functions, and extracted variables replace comments. A comment is permitted only for a constraint the code cannot express — a non-obvious external contract, a deliberate workaround with its reason. Never comment to narrate what the code does, restate history, or address a reviewer. No commented-out code.
+Self-documenting names, small single-purpose functions, and extracted variables replace comments. A comment is permitted only for a constraint the code cannot express — a non-obvious external contract, a deliberate workaround with its reason. Never comment to narrate what the code does, restate history, or address a reviewer. No commented-out code. Never reference a project doc artifact from a docblock or comment - no ADR, PRD, BDR, issue, constitution article, research note, or delivery-slice name or number (for example `see ADR 0046` or `slice R2`); doc numbers change when records are superseded, so the reference rots - state the invariant itself and let the docs carry the numbering. External specification identifiers (an RFC, a CVE) are stable and remain allowed.
 
 ### 7. All internal artifacts in English
 
