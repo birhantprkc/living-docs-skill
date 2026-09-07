@@ -68,6 +68,7 @@ fn list_prints_every_embedded_skill_and_the_adr_topic() {
     assert!(stdout.contains("okf-knowledge-format"), "got:\n{stdout}");
     assert!(stdout.contains("research-artifacts"), "got:\n{stdout}");
     assert!(stdout.contains("adr"), "got:\n{stdout}");
+    assert!(stdout.contains("code-comment-hygiene"), "got:\n{stdout}");
 }
 
 /// ADR 0019, AC ac-s4-3: the `living-docs` SKILL.md stub carries the exact
@@ -117,6 +118,17 @@ fn topic_adr_prints_the_conventions_and_the_template_header() {
         stdout.contains("templates/adr.md"),
         "expected the template header, got:\n{stdout}"
     );
+}
+
+#[test]
+fn topic_code_comment_hygiene_prints_the_new_rule_and_no_template_header() {
+    let output = run_skill(&["living-docs", "--topic", "code-comment-hygiene", "--plain"]);
+    let stdout = stdout_of(&output);
+    let rule = "must never name or number a documentation artifact";
+    let ok = stdout.contains("rules/code-comment-hygiene.md")
+        && stdout.contains(rule)
+        && !stdout.contains("templates/code-comment-hygiene.md");
+    assert!(ok, "got:\n{stdout}");
 }
 
 #[test]
