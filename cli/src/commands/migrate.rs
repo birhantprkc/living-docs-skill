@@ -87,7 +87,7 @@ fn run_mechanical(
     if !succeeded(commands::index::run(store, bundle, None, None)) {
         return Err("`index` failed".to_string());
     }
-    if !succeeded(commands::fmt::run(store, bundle)) {
+    if !succeeded(commands::fmt::run(store, bundle, false)) {
         return Err("`fmt` failed".to_string());
     }
     let after = check::check_violations(store, bundle).len();

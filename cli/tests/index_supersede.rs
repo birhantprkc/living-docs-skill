@@ -3,6 +3,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod common;
+use common::new_two_adrs_and_supersede;
+
 fn living_docs() -> Command {
     Command::new(env!("CARGO_BIN_EXE_living-docs"))
 }
@@ -753,15 +756,7 @@ fn run_new(docs: &Path, doc_type: &str, title: &str) -> Output {
 #[allow(clippy::too_many_lines)]
 fn supersede_wires_status_and_both_links_bidirectionally() {
     let docs = temp_dir("supersede-bidirectional");
-    assert!(run_new(&docs, "adr", "Old Decision").status.success());
-    assert!(run_new(&docs, "adr", "New Decision").status.success());
-
-    let output = run_supersede(&docs, "0001", "0002");
-    assert!(
-        output.status.success(),
-        "stderr: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    new_two_adrs_and_supersede(&docs);
 
     let old_contents = fs::read_to_string(docs.join("adr/0001-old-decision.md")).unwrap();
     let new_contents = fs::read_to_string(docs.join("adr/0002-new-decision.md")).unwrap();

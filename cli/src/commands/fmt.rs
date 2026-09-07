@@ -10,8 +10,9 @@ use std::process::ExitCode;
 /// reuses [`check_bundle`]'s `[BUNDLE_ROOT]` resolution (a positional path
 /// wins; otherwise `--docs-dir`) against a fixed [`fs_store::FsStore`], the
 /// same way [`crate::commands::leak_gate::run_leak_gate`] always inspects a
-/// materialized filesystem bundle regardless of `--backend`.
-pub(crate) fn run_fmt(docs_dir: &Path, paths: Vec<PathBuf>) -> ExitCode {
-    let bundle = check_bundle(Backend::Fs, docs_dir, paths);
-    living_docs_core::commands::fmt::run(&fs_store::FsStore::new(), &bundle)
+/// materialized filesystem bundle regardless of `--backend`. `check_only`
+/// threads straight through to the core `run` dry-run path.
+pub(crate) fn run_fmt(docs_dir: &Path, paths: Vec<PathBuf>, check_only: bool) -> ExitCode {
+    let target = check_bundle(Backend::Fs, docs_dir, paths);
+    living_docs_core::commands::fmt::run(&fs_store::FsStore::new(), &target, check_only)
 }

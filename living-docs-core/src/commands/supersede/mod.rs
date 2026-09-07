@@ -1,5 +1,7 @@
 use crate::doc_type::{self, Identity};
+use crate::frontmatter::frontmatter_block;
 use crate::paths;
+use crate::record::{extract_record, to_canonical_markdown};
 use crate::store::DocStore;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -153,11 +155,16 @@ fn matches_record_prefix(path: &Path, prefix: &str) -> bool {
 /// leading frontmatter block in order via [`apply_frontmatter_field`] — a
 /// targeted line edit (reusing S2's approach, `new.rs`'s
 /// `replace_targeted_value`) rather than a serde round-trip, so comments and
-/// the body survive untouched — then writes the result back once. Templates
-/// ship most supersede keys as an empty line to fill; when a key is absent
-/// entirely (e.g. BDR/PRD templates have no `supersedes` line), it is
-/// inserted at the end of the frontmatter block instead. Shared with
-/// `status.rs` (lesson 3717: no duplicated frontmatter-mutation logic).
+/// the body survive untouched — then routes the whole frontmatter block
+/// through [`crate::record::canonicalize_frontmatter`] before writing it
+/// back once (ADR 0048). Templates ship most supersede keys as an empty line
+/// to fill; when a key is absent entirely (e.g. BDR/PRD templates have no
+/// `supersedes` line), the targeted edit inserts it at the block's close,
+/// and the canonical pass then moves it into its fixed position — so an
+/// inserted or changed key always lands in canonical order and `living-docs
+/// check` reports no non-canonical-frontmatter finding afterward. Shared
+/// with `status.rs`, `describe.rs`, `owner.rs` (lesson 3717: no duplicated
+/// frontmatter-mutation logic).
 pub(crate) fn set_frontmatter_fields(
     store: &dyn DocStore,
     path: &Path,
@@ -170,7 +177,22 @@ pub(crate) fn set_frontmatter_fields(
             apply_frontmatter_field(&acc, key, value)
         })
         .ok_or_else(|| format!("{}: missing frontmatter block", path.display()))?;
-    store.write(path, &updated).map_err(|e| e.to_string())
+    let canonical = canonicalize_frontmatter(path, &updated)
+        .ok_or_else(|| format!("{}: missing frontmatter block", path.display()))?;
+    store.write(path, &canonical).map_err(|e| e.to_string())
+}
+
+/// Re-serializes only `contents`' frontmatter block to canonical order via
+/// [`extract_record`]/[`to_canonical_markdown`], leaving everything from
+/// the closing `---` fence onward byte-identical (ADR 0048). `path` only
+/// drives typed-identity classification, never emitted, so it has no
+/// bearing on the output. `None` without a leading frontmatter block.
+fn canonicalize_frontmatter(path: &Path, contents: &str) -> Option<String> {
+    let block = frontmatter_block(contents)?;
+    let tail = &contents["---\n".len() + block.len()..];
+    let canonical = to_canonical_markdown(&extract_record(path, contents));
+    let canonical_block = frontmatter_block(&canonical)?;
+    Some(format!("---\n{canonical_block}{tail}"))
 }
 
 /// The shared single-key insert-or-replace frontmatter primitive: replaces

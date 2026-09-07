@@ -226,6 +226,46 @@ fn supersede_honors_a_type_qualifier_and_leaves_the_colliding_other_type_record_
     );
 }
 
+/// AC2/AC3: inserting a previously-absent key lands it in canonical
+/// position (right after `description:`, not at the frontmatter block's
+/// close) while a multi-line body stays byte-identical.
+#[test]
+fn set_frontmatter_fields_inserts_an_absent_key_in_canonical_order() {
+    let contents = "---\ntype: BDR\ntitle: A Behavior\ndescription: A summary.\n---\n\n## Context\n\nSome body text.\n";
+    let store = MapStore::seeded(&[("/bundle/bdr/0001-a-behavior.md", contents)]);
+    let path = Path::new("/bundle/bdr/0001-a-behavior.md");
+
+    set_frontmatter_fields(&store, path, &[("supersedes", "0001".to_string())])
+        .expect("set_frontmatter_fields should succeed");
+
+    let updated = store.read(path).unwrap();
+    assert_eq!(
+        updated,
+        "---\ntype: BDR\ntitle: A Behavior\ndescription: A summary.\nsupersedes: 0001\n---\n\n## Context\n\nSome body text.\n",
+        "got: {updated}"
+    );
+}
+
+/// AC2: changing an already-canonical, already-present key round-trips
+/// byte-identically.
+#[test]
+fn set_frontmatter_fields_changing_an_existing_key_stays_canonical() {
+    let contents =
+        "---\ntype: ADR\ntitle: A Decision\ndescription: A summary.\nstatus: Proposed\n---\n\n# Body\n";
+    let store = MapStore::seeded(&[("/bundle/adr/0001-a-decision.md", contents)]);
+    let path = Path::new("/bundle/adr/0001-a-decision.md");
+
+    set_frontmatter_fields(&store, path, &[("status", "Accepted".to_string())])
+        .expect("set_frontmatter_fields should succeed");
+
+    let updated = store.read(path).unwrap();
+    assert_eq!(
+        updated,
+        "---\ntype: ADR\ntitle: A Decision\ndescription: A summary.\nstatus: Accepted\n---\n\n# Body\n",
+        "got: {updated}"
+    );
+}
+
 #[test]
 fn supersede_fails_loud_on_an_ambiguous_unqualified_reference_and_writes_neither_record() {
     let store = MapStore::seeded(&[

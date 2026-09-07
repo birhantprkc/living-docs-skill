@@ -98,7 +98,10 @@ mod tests {
         assert!(updated.contains("owner: bob\n"), "got: {updated}");
         assert!(updated.contains("title: A Decision"), "got: {updated}");
         assert!(updated.contains("status: Proposed"), "got: {updated}");
-        assert!(updated.contains("supersedes:\n"), "got: {updated}");
+        assert!(
+            !updated.contains("supersedes:"),
+            "canonical form drops an empty placeholder key: got: {updated}"
+        );
         assert!(updated.contains("# A Decision\n"), "got: {updated}");
     }
 

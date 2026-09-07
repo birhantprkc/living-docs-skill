@@ -107,7 +107,10 @@ fn status_sets_the_status_field_and_preserves_the_rest_of_the_record() {
     let updated = store.read(Path::new("/bundle/adr/0001-record.md")).unwrap();
     assert!(updated.contains("status: Accepted"), "got: {updated}");
     assert!(updated.contains("# Record\n"), "got: {updated}");
-    assert!(updated.contains("supersedes:\n"), "got: {updated}");
+    assert!(
+        !updated.contains("supersedes:"),
+        "canonical form drops an empty placeholder key: got: {updated}"
+    );
 }
 
 #[test]

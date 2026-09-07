@@ -2,6 +2,25 @@ use super::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::io;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Creates a real, empty temp file/dir tree mirroring `paths` so
+/// [`resolve_targets`]'s `is_file`/`is_dir` checks (deliberately real-fs,
+/// since `fmt` is fs-backend only) see the same shape a `MapStore`-seeded
+/// test exercises through `read`/`write`. Returns the temp root.
+fn real_temp_tree(label: &str, paths: &[&str]) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!("living-docs-fmt-core-test-{label}-{nanos}"));
+    for rel in paths {
+        let path = root.join(rel.trim_start_matches('/'));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "").unwrap();
+    }
+    root
+}
 
 struct MapStore {
     files: RefCell<BTreeMap<PathBuf, String>>,
@@ -106,7 +125,7 @@ fn run_reports_zero_rewrites_over_an_empty_bundle() {
     let store = MapStore::seeded(&[]);
     let bundle = std::env::temp_dir();
 
-    let code = run(&store, &bundle);
+    let code = run(&store, &bundle, false);
 
     assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
 }
@@ -116,23 +135,34 @@ fn run_exits_with_code_two_when_the_bundle_root_is_missing() {
     let store = MapStore::seeded(&[]);
     let missing = std::env::temp_dir().join("living-docs-fmt-missing-bundle");
 
-    let code = run(&store, &missing);
+    let code = run(&store, &missing, false);
 
     assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::from(2)));
 }
 
 #[test]
-fn canonicalize_record_reflows_a_wrapped_paragraph_and_reports_a_rewrite() {
+fn canonicalize_record_leaves_a_hard_wrapped_paragraph_body_byte_identical() {
     let contents = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nThis paragraph\nwraps over\nthree lines.\n";
     let store = MapStore::seeded(&[("/bundle/adr/0001-doc.md", contents)]);
 
     let rewritten = canonicalize_record(&store, Path::new("/bundle/adr/0001-doc.md"));
 
-    assert!(rewritten);
-    assert_eq!(
-        store.contents("/bundle/adr/0001-doc.md"),
-        "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nThis paragraph wraps over three lines.\n"
-    );
+    assert!(!rewritten);
+    assert_eq!(store.contents("/bundle/adr/0001-doc.md"), contents);
+}
+
+#[test]
+fn canonicalize_record_leaves_a_multi_line_reference_list_line_count_unchanged() {
+    let contents = "---\ntitle: Quokka Caching\ntype: ADR\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nBody.\n\n# References\n\n- First reference\n- Second reference\n- Third reference\n";
+    let store = MapStore::seeded(&[("/bundle/adr/0001-doc.md", contents)]);
+
+    canonicalize_record(&store, Path::new("/bundle/adr/0001-doc.md"));
+
+    let rewritten = store.contents("/bundle/adr/0001-doc.md");
+    let original_body_lines = contents.lines().count();
+    let rewritten_body_lines = rewritten.lines().count();
+    assert_eq!(original_body_lines, rewritten_body_lines);
+    assert!(rewritten.contains("- First reference\n- Second reference\n- Third reference\n"));
 }
 
 #[test]
@@ -144,4 +174,57 @@ fn canonicalize_record_leaves_a_fenced_code_block_in_the_body_untouched() {
 
     assert!(!rewritten);
     assert_eq!(store.contents("/bundle/adr/0001-doc.md"), canonical);
+}
+
+#[test]
+fn run_against_a_single_record_file_canonicalizes_only_that_file() {
+    let non_canonical =
+        "---\ntitle: Quokka Caching\ntype: ADR\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nBody.\n";
+    let other = "---\ntitle: Other\ntype: ADR\ndescription: Other doc.\n---\n\n# Other\n\nBody.\n";
+    let root = real_temp_tree("single-file", &["adr/0001-doc.md", "adr/0002-other.md"]);
+    let target = root.join("adr/0001-doc.md");
+    let other_path = root.join("adr/0002-other.md");
+    let store = MapStore::seeded(&[
+        (target.to_str().unwrap(), non_canonical),
+        (other_path.to_str().unwrap(), other),
+    ]);
+
+    let code = run(&store, &target, false);
+
+    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert_eq!(
+        store.contents(target.to_str().unwrap()),
+        "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nBody.\n"
+    );
+    assert_eq!(store.contents(other_path.to_str().unwrap()), other);
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn run_check_on_a_non_canonical_record_writes_nothing_and_reports_it() {
+    let non_canonical =
+        "---\ntitle: Quokka Caching\ntype: ADR\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nBody.\n";
+    let root = real_temp_tree("check-pending", &["adr/0001-doc.md"]);
+    let target = root.join("adr/0001-doc.md");
+    let store = MapStore::seeded(&[(target.to_str().unwrap(), non_canonical)]);
+
+    let code = run(&store, &root, true);
+
+    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::from(1)));
+    assert_eq!(store.contents(target.to_str().unwrap()), non_canonical);
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn run_check_on_a_canonical_bundle_exits_zero() {
+    let canonical = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nBody.\n";
+    let root = real_temp_tree("check-canonical", &["adr/0001-doc.md"]);
+    let target = root.join("adr/0001-doc.md");
+    let store = MapStore::seeded(&[(target.to_str().unwrap(), canonical)]);
+
+    let code = run(&store, &root, true);
+
+    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert_eq!(store.contents(target.to_str().unwrap()), canonical);
+    let _ = std::fs::remove_dir_all(root);
 }

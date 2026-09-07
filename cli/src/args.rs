@@ -149,13 +149,18 @@ pub(crate) enum Command {
         #[arg(long)]
         require_owner: bool,
     },
-    /// Canonicalizes every concept record's frontmatter in place — the
-    /// remediation verb for `check`'s canonical-frontmatter invariant (ADR
-    /// 0019). Matches `check`'s own `[BUNDLE_ROOT]` argument rather than the
-    /// global `--docs-dir`; fs-backend only, since db-mode is canonical by
-    /// construction on export.
+    /// Canonicalizes a concept record's frontmatter in place, leaving its
+    /// body untouched — the remediation verb for `check`'s
+    /// canonical-frontmatter invariant. `paths` accepts a bundle root or a
+    /// single record path, matching `check`'s own `[BUNDLE_ROOT]` argument
+    /// rather than the global `--docs-dir`; fs-backend only, since db-mode
+    /// is canonical by construction on export.
     Fmt {
         paths: Vec<PathBuf>,
+        /// Reports which records would change without writing any of them;
+        /// exits non-zero when at least one record is pending.
+        #[arg(long)]
+        check: bool,
     },
     /// Read-only adaptation advisor (ADR 0037): prints an ordered plan of
     /// RUN (mechanical), AUTHOR (judgment) or ADOPT (bootstrap) steps.
