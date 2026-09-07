@@ -1,39 +1,75 @@
-//! `living-docs fmt` (ADR 0019 slice S2, ADR 0046): canonicalizes every
-//! concept record's frontmatter in place, and unwraps hard-wrapped prose in
-//! its body. Enumerates the bundle through the same `DocStore::list` call
-//! `check::run` reads from — no second directory walker — then rewrites
-//! each record through [`crate::record::extract_record`] ->
-//! [`reflow::reflow_body`] -> [`crate::record::to_canonical_markdown`], the
-//! round-trip primitives ADR 0019's canonical check (S3) validates against.
-//! File-mode only: db-mode is canonical by construction on export (ADR
-//! 0007), so this verb never runs against `--backend db`.
-
-mod reflow;
+//! `living-docs fmt` canonicalizes a concept record's frontmatter in
+//! place, and leaves the body below the closing `---` byte-for-byte
+//! unchanged. `target` accepts either a bundle root (canonicalizes every
+//! record under it, enumerated through the same `DocStore::list` call
+//! `check::run` reads from — no second directory walker) or a single
+//! record path (canonicalizes only that record). With `check_only`, no
+//! record is written: the command reports which records are pending
+//! instead.
+//! File-mode only: db-mode is canonical by construction on export, so
+//! this verb never runs against `--backend db`.
 
 use crate::record::{extract_record, to_canonical_markdown};
 use crate::store::DocStore;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-/// Rewrites every non-canonical record under `bundle` to its canonical
-/// frontmatter form, printing each rewritten path followed by a summary
-/// count. A record already in canonical form, or carrying no frontmatter
-/// block at all, is left untouched — `fmt` never fabricates frontmatter
-/// (the determinism boundary, CLAUDE.md rule 4).
-pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
-    if !bundle.is_dir() {
+/// Canonicalizes `target`'s frontmatter — a bundle root or a single record
+/// path — printing each pending record and a summary count. With
+/// `check_only`, prints the same pending records but writes nothing, and
+/// returns a non-zero exit code when any record is pending.
+pub fn run(store: &dyn DocStore, target: &Path, check_only: bool) -> ExitCode {
+    let Some(paths) = resolve_targets(store, target) else {
         eprintln!(
             "living-docs fmt: bundle root not found: {}",
-            bundle.display()
+            target.display()
         );
         return ExitCode::from(2);
+    };
+
+    if check_only {
+        return run_check(store, &paths);
     }
 
-    let all_md = store.list(bundle).unwrap_or_default();
-    let rewritten = canonicalize_bundle(store, &all_md);
-
+    let rewritten = canonicalize_bundle(store, &paths);
     println!("{rewritten} record(s) rewritten.");
     ExitCode::SUCCESS
+}
+
+/// Resolves `target` to the record paths `fmt` should consider: a single
+/// path when `target` is a file, every listed `.md` file when it is a
+/// directory, or `None` when it is neither.
+fn resolve_targets(store: &dyn DocStore, target: &Path) -> Option<Vec<PathBuf>> {
+    if target.is_file() {
+        Some(vec![target.to_path_buf()])
+    } else if target.is_dir() {
+        Some(store.list(target).unwrap_or_default())
+    } else {
+        None
+    }
+}
+
+/// Reports which of `paths` are non-canonical without writing any of them,
+/// printing each pending path and a summary count. Returns
+/// [`ExitCode::SUCCESS`] when none are pending, `ExitCode::from(1)`
+/// otherwise.
+fn run_check(store: &dyn DocStore, paths: &[PathBuf]) -> ExitCode {
+    let mut pending = 0;
+    for path in paths {
+        if is_reserved_file(path) {
+            continue;
+        }
+        if record_is_pending(store, path) {
+            println!("{}", path.display());
+            pending += 1;
+        }
+    }
+    println!("{pending} record(s) would change.");
+    if pending == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    }
 }
 
 /// Canonicalizes every non-reserved record in `all_md`, printing each
@@ -65,20 +101,34 @@ fn is_reserved_file(path: &Path) -> bool {
 /// frontmatter block whose canonical re-serialization differs byte for
 /// byte from its current contents. Returns whether a write happened.
 fn canonicalize_record(store: &dyn DocStore, path: &Path) -> bool {
-    let Ok(contents) = store.read(path) else {
+    let Some(canonical) = canonical_form_if_pending(store, path) else {
         return false;
     };
+    store.write(path, &canonical).is_ok()
+}
+
+/// Returns whether `path` carries a frontmatter block whose canonical
+/// re-serialization differs from its current contents, without writing it.
+fn record_is_pending(store: &dyn DocStore, path: &Path) -> bool {
+    canonical_form_if_pending(store, path).is_some()
+}
+
+/// Reads `path` and returns its canonical re-serialization when that
+/// differs from the current contents. Returns `None` when `path` cannot be
+/// read, carries no frontmatter, or is already canonical.
+fn canonical_form_if_pending(store: &dyn DocStore, path: &Path) -> Option<String> {
+    let contents = store.read(path).ok()?;
     if !has_frontmatter(&contents) {
-        return false;
+        return None;
     }
     let normalized = normalize_frontmatter_gap(&contents);
-    let mut record = extract_record(path, &normalized);
-    record.body = reflow::reflow_body(&record.body);
+    let record = extract_record(path, &normalized);
     let canonical = to_canonical_markdown(&record);
     if canonical == contents {
-        return false;
+        None
+    } else {
+        Some(canonical)
     }
-    store.write(path, &canonical).is_ok()
 }
 
 fn has_frontmatter(contents: &str) -> bool {

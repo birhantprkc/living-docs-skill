@@ -7,11 +7,18 @@ fn living_docs() -> Command {
     Command::new(env!("CARGO_BIN_EXE_living-docs"))
 }
 
-fn run_fmt(bundle: &Path) -> Output {
+fn run_fmt(target: &Path) -> Output {
     living_docs()
-        .args(["fmt", bundle.to_str().unwrap()])
+        .args(["fmt", target.to_str().unwrap()])
         .output()
         .expect("failed to run living-docs fmt")
+}
+
+fn run_fmt_check(target: &Path) -> Output {
+    living_docs()
+        .args(["fmt", "--check", target.to_str().unwrap()])
+        .output()
+        .expect("failed to run living-docs fmt --check")
 }
 
 fn stdout_of(output: &Output) -> String {
@@ -73,13 +80,11 @@ fn fmt_rewrites_a_non_canonical_record_preserving_body_and_author_owned_values()
     let _ = fs::remove_dir_all(&bundle);
 }
 
-const WRAPPED_RECORD: &str = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\nstatus: Accepted\ntags: [caching, performance]\n---\n\n# Quokka Caching\n\nAdopt an aggressive quokka\ncaching strategy for the\nread-heavy endpoints.\n\n- First step\n  runs the warm-up\n  before traffic shifts.\n- Second step\n\n```\nfn example() {\n    call_site();\n}\n```\n\n| Endpoint | Cache |\n| -------- | ----- |\n| /reads   | warm  |\n\n<!-- reviewer note\nspans two lines -->\n";
-
-const WRAPPED_RECORD_REFLOWED: &str = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\nstatus: Accepted\ntags: [caching, performance]\n---\n\n# Quokka Caching\n\nAdopt an aggressive quokka caching strategy for the read-heavy endpoints.\n\n- First step runs the warm-up before traffic shifts.\n- Second step\n\n```\nfn example() {\n    call_site();\n}\n```\n\n| Endpoint | Cache |\n| -------- | ----- |\n| /reads   | warm  |\n\n<!-- reviewer note\nspans two lines -->\n";
+const WRAPPED_RECORD: &str = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\nstatus: Accepted\ntags: [caching, performance]\n---\n\n# Quokka Caching\n\nAdopt an aggressive quokka\ncaching strategy for the\nread-heavy endpoints.\n\n# References\n\n- First reference\n- Second reference\n- Third reference\n";
 
 #[test]
-fn fmt_unwraps_a_hard_wrapped_paragraph_and_leaves_code_tables_and_comments_untouched() {
-    let bundle = temp_bundle("reflow");
+fn fmt_leaves_a_hard_wrapped_paragraph_and_a_reference_list_body_byte_identical() {
+    let bundle = temp_bundle("no-reflow");
     write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
     write(&bundle, "adr/0001-doc.md", WRAPPED_RECORD);
 
@@ -88,14 +93,64 @@ fn fmt_unwraps_a_hard_wrapped_paragraph_and_leaves_code_tables_and_comments_unto
 
     assert!(output.status.success(), "stderr: {:?}", output.stderr);
     assert!(
-        stdout.contains("0001-doc.md"),
-        "expected the rewritten path in stdout, got:\n{stdout}"
+        stdout.contains("0 record(s) rewritten."),
+        "expected no rewrites since the record's frontmatter was already canonical, got:\n{stdout}"
     );
+    assert_eq!(read(&bundle, "adr/0001-doc.md"), WRAPPED_RECORD);
+
+    let _ = fs::remove_dir_all(&bundle);
+}
+
+#[test]
+fn fmt_given_a_single_record_path_canonicalizes_only_that_record() {
+    let bundle = temp_bundle("single-file");
+    write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
+    write(&bundle, "adr/0001-doc.md", NON_CANONICAL_RECORD);
+    write(&bundle, "adr/0002-other.md", NON_CANONICAL_RECORD);
+    let target = bundle.join("adr/0001-doc.md");
+
+    let output = run_fmt(&target);
+    let stdout = stdout_of(&output);
+
+    assert!(output.status.success(), "stderr: {:?}", output.stderr);
+    assert!(stdout.contains("1 record(s) rewritten."));
+    assert_eq!(read(&bundle, "adr/0001-doc.md"), CANONICAL_RECORD);
+    assert_eq!(read(&bundle, "adr/0002-other.md"), NON_CANONICAL_RECORD);
+
+    let _ = fs::remove_dir_all(&bundle);
+}
+
+#[test]
+fn fmt_check_on_a_non_canonical_bundle_prints_pending_records_writes_nothing_and_exits_non_zero() {
+    let bundle = temp_bundle("check-pending");
+    write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
+    write(&bundle, "adr/0001-doc.md", NON_CANONICAL_RECORD);
+
+    let output = run_fmt_check(&bundle);
+    let stdout = stdout_of(&output);
+
+    assert!(!output.status.success());
     assert!(
-        stdout.contains("1 record(s) rewritten."),
-        "expected the summary count, got:\n{stdout}"
+        stdout.contains("0001-doc.md"),
+        "expected the pending path in stdout, got:\n{stdout}"
     );
-    assert_eq!(read(&bundle, "adr/0001-doc.md"), WRAPPED_RECORD_REFLOWED);
+    assert_eq!(read(&bundle, "adr/0001-doc.md"), NON_CANONICAL_RECORD);
+
+    let _ = fs::remove_dir_all(&bundle);
+}
+
+#[test]
+fn fmt_check_on_an_already_canonical_bundle_exits_zero() {
+    let bundle = temp_bundle("check-canonical");
+    write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
+    write(&bundle, "adr/0001-doc.md", CANONICAL_RECORD);
+
+    let output = run_fmt_check(&bundle);
+    let stdout = stdout_of(&output);
+
+    assert!(output.status.success(), "stderr: {:?}", output.stderr);
+    assert!(stdout.contains("0 record(s) would change."));
+    assert_eq!(read(&bundle, "adr/0001-doc.md"), CANONICAL_RECORD);
 
     let _ = fs::remove_dir_all(&bundle);
 }
@@ -104,7 +159,7 @@ fn fmt_unwraps_a_hard_wrapped_paragraph_and_leaves_code_tables_and_comments_unto
 fn fmt_is_idempotent_a_second_run_reports_zero_changes_and_bytes_are_identical() {
     let bundle = temp_bundle("idempotent");
     write(&bundle, "index.md", "# Index\n\n- [Doc](adr/0001-doc.md)\n");
-    write(&bundle, "adr/0001-doc.md", WRAPPED_RECORD);
+    write(&bundle, "adr/0001-doc.md", NON_CANONICAL_RECORD);
 
     let first = run_fmt(&bundle);
     assert!(first.status.success(), "stderr: {:?}", first.stderr);

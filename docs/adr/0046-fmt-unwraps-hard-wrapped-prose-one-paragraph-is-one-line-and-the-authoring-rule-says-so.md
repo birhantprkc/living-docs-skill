@@ -3,7 +3,8 @@ type: ADR
 title: "fmt unwraps hard-wrapped prose: one paragraph is one line, and the authoring rule says so"
 description: living-docs fmt joins the lines of each prose block into one line; code, tables, headings, comments, and hard breaks stay untouched; the authoring topics state the rule.
 owner: Evaldo Klock
-status: Proposed
+status: Superseded
+superseded_by: 0047
 timestamp: 2026-09-01T19:57:47Z
 ---
 

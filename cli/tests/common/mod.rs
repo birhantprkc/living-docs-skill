@@ -16,6 +16,48 @@ pub fn run_check(bundle: &Path) -> Output {
         .expect("failed to run living-docs check")
 }
 
+pub fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
+    living_docs()
+        .args([
+            "--docs-dir",
+            docs_dir.to_str().unwrap(),
+            "new",
+            doc_type,
+            title,
+        ])
+        .output()
+        .expect("failed to run living-docs new")
+}
+
+pub fn run_supersede(docs_dir: &Path, old: &str, new: &str) -> Output {
+    living_docs()
+        .args([
+            "--docs-dir",
+            docs_dir.to_str().unwrap(),
+            "supersede",
+            old,
+            new,
+        ])
+        .output()
+        .expect("failed to run living-docs supersede")
+}
+
+/// Scaffolds two fresh ADR records ("Old Decision" then "New Decision") and
+/// supersedes the first with the second, asserting every step succeeded.
+/// Returns `supersede`'s own [`Output`] for any further assertion the
+/// caller needs on top of the shared preamble.
+pub fn new_two_adrs_and_supersede(docs_dir: &Path) -> Output {
+    assert!(run_new(docs_dir, "adr", "Old Decision").status.success());
+    assert!(run_new(docs_dir, "adr", "New Decision").status.success());
+    let output = run_supersede(docs_dir, "0001", "0002");
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    output
+}
+
 pub fn stdout_of(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }

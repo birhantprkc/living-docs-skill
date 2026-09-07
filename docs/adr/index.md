@@ -51,7 +51,8 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0043 — Owner is a CLI-owned frontmatter field with a warn-then-error ratchet on ADR and BDR](0043-owner-is-a-cli-owned-frontmatter-field-with-a-warn-then-error-ratchet-on-adr-and-bdr.md) - Accepted
 * [0044 — Moved-source review queue: check emits a warn-level finding when a linked record is superseded or demoted](0044-moved-source-review-queue-check-emits-a-warn-level-finding-when-a-linked-record-is-superseded-or-demoted.md) - Accepted
 * [0045 — Doc-readiness scorecard is a read-only verb over existing check passes with a fixed attribute-signal table](0045-doc-readiness-scorecard-is-a-read-only-verb-over-existing-check-passes-with-a-fixed-attribute-signal-table.md) - Accepted
-* [0046 — fmt unwraps hard-wrapped prose: one paragraph is one line, and the authoring rule says so](0046-fmt-unwraps-hard-wrapped-prose-one-paragraph-is-one-line-and-the-authoring-rule-says-so.md) - Proposed
+* [0047 — living-docs fmt is frontmatter-only and the record body stays byte-identical](0047-living-docs-fmt-is-frontmatter-only-and-the-record-body-stays-byte-identical.md) - Accepted
+* [0048 — CLI mutation verbs emit canonical frontmatter so check never routes a user to fmt](0048-cli-mutation-verbs-emit-canonical-frontmatter-so-check-never-routes-a-user-to-fmt.md) - Accepted
 
 ## Superseded
 
@@ -59,3 +60,4 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0014 — The CLI serves skill content from an embedded corpus; harness SKILL.md files are slim stubs](0014-the-cli-serves-skill-content-from-an-embedded-corpus-harness-skill-md-files-are-slim-stubs.md) - Superseded
 * [0019 — Hand-written record frontmatter is blocked at write time, detected by check, and taught at point of use](0019-hand-written-record-frontmatter-is-blocked-at-write-time-detected-by-check-and-taught-at-point-of-use.md) - Superseded
 * [0024 — A release is atomic: a missing binary asset fails the workflow and demotes the release to a draft](0024-a-release-is-atomic-a-missing-binary-asset-fails-the-workflow-and-demotes-the-release-to-a-draft.md) - Superseded
+* [0046 — fmt unwraps hard-wrapped prose: one paragraph is one line, and the authoring rule says so](0046-fmt-unwraps-hard-wrapped-prose-one-paragraph-is-one-line-and-the-authoring-rule-says-so.md) - Superseded
