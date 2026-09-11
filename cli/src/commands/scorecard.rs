@@ -47,7 +47,10 @@ fn consumption_block(args: &ScorecardArgs) -> String {
     let Some(reads) = read_capture(CONSUMPTION_LOG_ENV, Some(DEFAULT_CONSUMPTION_LOG)) else {
         return "consumption — not measured (enable the observe-docs-read hook)".to_string();
     };
-    let findings = read_capture(FINDINGS_LOG_ENV, None);
+    let findings = match &args.findings {
+        Some(path) => std::fs::read_to_string(path).ok(),
+        None => read_capture(FINDINGS_LOG_ENV, None),
+    };
     let since = args.since.as_deref().and_then(parse_since_days);
     consumption::render_block(&consumption::summarize(&reads, findings.as_deref(), since))
 }

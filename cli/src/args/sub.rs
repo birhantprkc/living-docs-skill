@@ -48,6 +48,11 @@ pub(crate) struct ScorecardArgs {
     /// spans the whole capture.
     #[arg(long)]
     pub(crate) since: Option<String>,
+    /// Review-findings JSONL to classify for the doc-trail-finding share (ADR
+    /// 0053): one `{"text": "..."}` object per line. Overrides
+    /// `$LIVING_DOCS_FINDINGS_LOG`; absent, the share reads "not measured".
+    #[arg(long)]
+    pub(crate) findings: Option<String>,
 }
 
 /// Arguments for the `why` verb (ADR 0051), in their own `Args` struct for the
