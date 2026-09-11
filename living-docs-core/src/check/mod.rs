@@ -3,14 +3,12 @@
 //! Covers the mechanical invariants: OKF frontmatter/type, index-format,
 //! directory-index membership, bundle-root reachability, supersede-chain
 //! integrity, local link/image validity via `pulldown-cmark`, requirement
-//! traceability (ADR 0035), record liveness (ADR 0049), and (ADR 0013)
-//! ```mermaid``` fence validation in-process via `merman-core`.
+//! traceability (ADR 0035), record liveness (ADR 0049), and ```mermaid``` fence validation (ADR 0013).
 //!
 //! Every record's content (`records`, `links`) is read through
 //! `DocStore::read`, so `check` validates whichever backend `run` is given.
 //! `index.md`/`log.md` are excluded from the record domain by design (never
-//! synced to `db-store`, see `db_store::record::is_reserved`), so
-//! `check::graph`'s directory-index parsing reads them straight from disk.
+//! synced to `db-store`); `check::graph` reads them straight from disk.
 
 pub(crate) mod canonical;
 mod graph;
@@ -111,6 +109,9 @@ fn run_all_checks(
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
     mermaid::check_bundle(&all_md, reporter);
     size::check_body_size(store, &all_md, reporter);
+    if let Some(summary) = size::word_budget_summary(store, &all_md) {
+        reporter.advise(bundle, summary);
+    }
     seal::check_seals(store, bundle, &all_md, reporter);
     traceability::check_requirement_traceability(store, &all_md, reporter);
     liveness::check_liveness(store, bundle, &all_md, reporter);
