@@ -85,10 +85,16 @@ fn main() -> ExitCode {
         Command::Check {
             paths,
             require_owner,
+            liveness,
             ..
-        } => {
-            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths, require_owner)
-        }
+        } => commands::check::run_check(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            paths,
+            require_owner,
+            liveness,
+        ),
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
         Command::Migrate { paths, apply } => {
             commands::migrate::run_migrate(cli.backend, cli.engine, &cli.docs_dir, paths, apply)

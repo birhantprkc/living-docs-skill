@@ -3,18 +3,18 @@
 //! Covers the mechanical invariants: OKF frontmatter/type, index-format,
 //! directory-index membership, bundle-root reachability, supersede-chain
 //! integrity, local link/image validity via `pulldown-cmark`, requirement
-//! traceability (ADR 0035), and (ADR 0013) ```mermaid``` fence validation
-//! in-process via `merman-core`.
+//! traceability (ADR 0035), record liveness (ADR 0049), and (ADR 0013)
+//! ```mermaid``` fence validation in-process via `merman-core`.
 //!
 //! Every record's content (`records`, `links`) is read through
 //! `DocStore::read`, so `check` validates whichever backend `run` is given.
 //! `index.md`/`log.md` are excluded from the record domain by design (never
 //! synced to `db-store`, see `db_store::record::is_reserved`), so
-//! `check::graph`'s directory-index parsing reads them straight from disk —
-//! that traversal is documented at its own call site.
+//! `check::graph`'s directory-index parsing reads them straight from disk.
 
 pub(crate) mod canonical;
 mod graph;
+pub mod liveness;
 pub(crate) mod links;
 mod mermaid;
 mod moved_source;
@@ -43,6 +43,23 @@ pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
 /// registry row requires it from an advisory to an invariant violation.
 /// Every other invariant behaves exactly as [`run`].
 pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
+    run_configured(store, bundle, require_owner, false)
+}
+
+/// `check --liveness`: every invariant [`run_require_owner`] validates, plus a
+/// trailing summary of the four record-liveness counts (ADR 0049). The
+/// per-record liveness advisories print unconditionally either way; only the
+/// summary block is gated on this flag.
+pub fn run_liveness(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
+    run_configured(store, bundle, require_owner, true)
+}
+
+fn run_configured(
+    store: &dyn DocStore,
+    bundle: &Path,
+    require_owner: bool,
+    liveness_summary: bool,
+) -> ExitCode {
     if !bundle.is_dir() {
         eprintln!(
             "living-docs check: bundle root not found: {}",
@@ -59,6 +76,10 @@ pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: boo
 
     let mut reporter = Reporter::new();
     let doc_count = run_all_checks(store, bundle, &mut reporter, require_owner);
+
+    if liveness_summary {
+        liveness::print_summary(store, bundle);
+    }
 
     reporter.finish(doc_count)
 }
@@ -95,6 +116,7 @@ fn run_all_checks(
     size::check_body_size(store, &all_md, reporter);
     seal::check_seals(store, bundle, &all_md, reporter);
     traceability::check_requirement_traceability(store, &all_md, reporter);
+    liveness::check_liveness(store, bundle, &all_md, reporter);
 
     all_md.len()
 }

@@ -148,6 +148,12 @@ pub(crate) enum Command {
         /// requires it (ADR, BDR) from a warning to an invariant violation.
         #[arg(long)]
         require_owner: bool,
+        /// Prints a trailing summary of the four record-liveness counts
+        /// (stale-proposed, stale-impact, contract, narrative — ADR 0049).
+        /// The per-record liveness advisories print either way; this only
+        /// adds the summary line. Never changes the exit code.
+        #[arg(long)]
+        liveness: bool,
     },
     /// Canonicalizes a concept record's frontmatter in place, leaving its
     /// body untouched — the remediation verb for `check`'s

@@ -12,9 +12,11 @@ pub(crate) fn run_check(
     docs_dir: &Path,
     paths: Vec<PathBuf>,
     require_owner: bool,
+    liveness: bool,
 ) -> ExitCode {
     let bundle = check_bundle(backend, docs_dir, paths);
     match build_backend_store(backend, engine, &bundle) {
+        Ok(store) if liveness => check::run_liveness(store.as_ref(), &bundle, require_owner),
         Ok(store) => check::run_require_owner(store.as_ref(), &bundle, require_owner),
         Err(err) => report_failure(&err),
     }
