@@ -84,20 +84,6 @@ const ADR: DocTypeSpec = DocTypeSpec {
     terminal_statuses: &["Deprecated"],
 };
 
-const BDR: DocTypeSpec = DocTypeSpec {
-    token: "bdr",
-    identity: Identity::Numbered { dir: "bdr" },
-    frontmatter: "BDR",
-    template: include_str!("../../skills/living-docs/templates/bdr.md"),
-    index_heading: "BDRs",
-    index_partition: IndexPartition::ActiveSuperseded,
-    web_creatable: true,
-    body_size: BodySize::Targeted,
-    status_vocabulary: &["Draft", "Accepted", "Implemented"],
-    requires_owner: true,
-    terminal_statuses: &[],
-};
-
 const PRD: DocTypeSpec = DocTypeSpec {
     token: "prd",
     identity: Identity::Numbered { dir: "prd" },
@@ -202,7 +188,7 @@ const CONSTITUTION: DocTypeSpec = DocTypeSpec {
 
 /// The sole enumeration of the doc-type taxonomy. Every consumer derives
 /// from this table instead of hand-syncing its own copy.
-pub const DOC_TYPES: &[DocTypeSpec] = &[ADR, BDR, PRD, ISSUE, RESEARCH, VIEW, CONSTITUTION];
+pub const DOC_TYPES: &[DocTypeSpec] = &[ADR, PRD, ISSUE, RESEARCH, VIEW, CONSTITUTION];
 
 /// Looks up a doc type by its CLI token.
 pub fn spec_for(token: &str) -> Option<&'static DocTypeSpec> {

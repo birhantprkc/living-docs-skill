@@ -5,15 +5,13 @@ use clap::{Parser, Subcommand};
 
 mod sub;
 use std::path::PathBuf;
-pub(crate) use sub::{
-    DbCmd, EffectiveArgs, HooksCmd, ScorecardArgs, SealCmd, SkillCmd, TierArg, WhyArgs,
-};
+pub(crate) use sub::{DbCmd, EffectiveArgs, HooksCmd, SkillCmd};
 
 #[derive(Parser)]
 #[command(
     name = "living-docs",
     version,
-    about = "Deterministic layer of Living Docs authoring. Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`."
+    about = "Deterministic layer of Living Docs authoring. Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs set` / `supersede` / `index`."
 )]
 pub(crate) struct Cli {
     /// Root of the docs bundle. Overridable so tests can point at a temp tree.
@@ -69,18 +67,6 @@ pub(crate) enum Command {
         #[arg(long)]
         owner: Option<String>,
     },
-    /// `new` plus deterministic pre-fill (issue 0008): frontmatter title,
-    /// numbered title heading, a trail comment, and every judgment section
-    /// collapsed to a marked empty `<!-- judgment: ... -->` slot the
-    /// authoring model fills.
-    Brief {
-        doc_type: String,
-        title: String,
-        /// Git range (e.g. HEAD~3..HEAD) whose touched files are listed —
-        /// verbatim from `git diff --name-only` — under the context slot.
-        #[arg(long)]
-        from_diff: Option<String>,
-    },
     Index {
         doc_type: Option<String>,
         /// Restrict the rendered index to records whose effective visibility
@@ -95,46 +81,18 @@ pub(crate) enum Command {
     /// number exists in more than one doc-type directory, since a bare
     /// `NNNN` fails loudly on that collision instead of guessing (issue
     /// 0029/0025).
-    Supersede {
-        old: String,
-        new: String,
-    },
-    /// Sets a record's `status:` frontmatter field directly — for the
-    /// `Proposed`/`Accepted`/`Deprecated` lifecycle only. `Superseded` is
-    /// rejected; use `supersede`, which also wires the
-    /// `supersedes`/`superseded_by` links. `number` accepts a bare `NNNN`
-    /// or a type-qualified `TYPE/NNNN` reference (e.g. `issue/0028`),
+    Supersede { old: String, new: String },
+    /// Sets one CLI-owned frontmatter field on a record: `status`,
+    /// `description`, or `owner`. `status` is validated against the record's
+    /// own type vocabulary (`Superseded` is reserved for `supersede`);
+    /// `description`/`owner` accept any string. `reference` accepts a bare
+    /// `NNNN` or a type-qualified `TYPE/NNNN` reference (e.g. `issue/0028`),
     /// required when the same number exists in more than one doc-type
     /// directory (issue 0029/0025).
-    Status {
-        number: String,
-        new_status: String,
-    },
-    /// Sets a record's `description:` frontmatter field directly — the
-    /// CLI-owned counterpart to hand-editing the placeholder, reusing the
-    /// same record-resolution and frontmatter-mutation helpers `status`
-    /// uses (issue 0021, part 2 of 2). Unlike `status`, no vocabulary
-    /// constrains the sentence; any string is accepted. `number` accepts a
-    /// bare `NNNN` or a type-qualified `TYPE/NNNN` reference (e.g.
-    /// `issue/0028`), required when the same number exists in more than one
-    /// doc-type directory (issue 0029/0025).
-    Describe {
-        number: String,
-        description: String,
-    },
-    /// Sets a record's `owner:` frontmatter field directly — the CLI-owned
-    /// counterpart to hand-editing it, reusing the same record-resolution
-    /// and frontmatter-mutation helpers `status`/`describe` use. Any string
-    /// is accepted (a name or an email); the tool never validates it
-    /// against an identity directory. `number` accepts a bare `NNNN` or a
-    /// type-qualified `TYPE/NNNN` reference (e.g. `adr/0028`), required
-    /// when the same number exists in more than one doc-type directory.
-    Owner {
-        number: String,
+    Set {
+        reference: String,
+        key: String,
         value: String,
-    },
-    Next {
-        doc_type: String,
     },
     /// Validate the mechanical Living Docs invariants on a docs bundle, matching
     /// `lint-docs.sh`'s `[BUNDLE_ROOT]` argument (default `docs`) rather than the
@@ -147,15 +105,9 @@ pub(crate) enum Command {
         #[arg(long)]
         mermaid_only: bool,
         /// Promotes a missing `owner` on a doctype whose registry row
-        /// requires it (ADR, BDR) from a warning to an invariant violation.
+        /// requires it (ADR) from a warning to an invariant violation.
         #[arg(long)]
         require_owner: bool,
-        /// Prints a trailing summary of the four record-liveness counts
-        /// (stale-proposed, stale-impact, contract, narrative — ADR 0049).
-        /// The per-record liveness advisories print either way; this only
-        /// adds the summary line. Never changes the exit code.
-        #[arg(long)]
-        liveness: bool,
     },
     /// Canonicalizes a concept record's frontmatter in place, leaving its
     /// body untouched — the remediation verb for `check`'s
@@ -179,13 +131,6 @@ pub(crate) enum Command {
         /// failure or check regression. AUTHOR steps are never applied.
         #[arg(long)]
         apply: bool,
-    },
-    /// Provenance sealing (ADR 0039): records written by the CLI carry an
-    /// HMAC seal in `.git/living-docs/` that `check` verifies (fail-open
-    /// until initialized).
-    Seal {
-        #[command(subcommand)]
-        cmd: SealCmd,
     },
     /// Materializes every record the active `--backend` lists back into
     /// conformant `.md` files under `out_dir` — the lossless round-trip
@@ -219,12 +164,11 @@ pub(crate) enum Command {
         check_tier3: bool,
     },
     /// Compiles the agent-facing effective view of the bundle (ADR 0050):
-    /// active records only, chains collapsed, ranked, at a progressive tier
-    /// under a hard token budget. Read this instead of `index.md`.
+    /// active records only (superseded/deprecated withheld), supersede chains
+    /// collapsed to the head with a one-line lineage, grouped by kind. Read
+    /// this instead of `index.md`. `--topic` filters by a substring; `--full`
+    /// prints bodies.
     Effective(EffectiveArgs),
-    /// Answers which records govern a path (ADR 0051), most-specific match
-    /// first. Provenance is a query, never a code comment.
-    Why(WhyArgs),
     /// Full-text search the derived read-model, ranked best-match-first.
     Search {
         query: String,
@@ -238,11 +182,6 @@ pub(crate) enum Command {
         #[arg(long)]
         strict: bool,
     },
-    /// Read-only doc-readiness scorecard: reruns `check`'s passes and grades
-    /// the fixed Trusted/Contextual/Traceable/Governed attribute table,
-    /// printing a table or (with `--json`) a deterministic JSON payload.
-    /// Never mutates the tree and always exits zero — the grades never gate.
-    Scorecard(ScorecardArgs),
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
     /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR

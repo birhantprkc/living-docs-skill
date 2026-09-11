@@ -18,43 +18,30 @@ fn temp_dir(label: &str) -> PathBuf {
     common::temp_bundle("canonical-frontmatter", label)
 }
 
-fn run_status(docs: &Path, reference: &str, new_status: &str) -> Output {
+fn run_set(docs: &Path, reference: &str, key: &str, value: &str) -> Output {
     living_docs()
         .args([
             "--docs-dir",
             docs.to_str().unwrap(),
-            "status",
+            "set",
             reference,
-            new_status,
-        ])
-        .output()
-        .expect("failed to run living-docs status")
-}
-
-fn run_describe(docs: &Path, reference: &str, description: &str) -> Output {
-    living_docs()
-        .args([
-            "--docs-dir",
-            docs.to_str().unwrap(),
-            "describe",
-            reference,
-            description,
-        ])
-        .output()
-        .expect("failed to run living-docs describe")
-}
-
-fn run_owner_verb(docs: &Path, reference: &str, value: &str) -> Output {
-    living_docs()
-        .args([
-            "--docs-dir",
-            docs.to_str().unwrap(),
-            "owner",
-            reference,
+            key,
             value,
         ])
         .output()
-        .expect("failed to run living-docs owner")
+        .expect("failed to run living-docs set")
+}
+
+fn run_status(docs: &Path, reference: &str, new_status: &str) -> Output {
+    run_set(docs, reference, "status", new_status)
+}
+
+fn run_describe(docs: &Path, reference: &str, description: &str) -> Output {
+    run_set(docs, reference, "description", description)
+}
+
+fn run_owner_verb(docs: &Path, reference: &str, value: &str) -> Output {
+    run_set(docs, reference, "owner", value)
 }
 
 fn body_of(path: &Path) -> String {

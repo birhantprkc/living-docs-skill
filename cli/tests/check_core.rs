@@ -34,18 +34,6 @@ fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
     run_authoring_verb("new", docs_dir, doc_type, title)
 }
 
-fn run_brief(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
-    run_authoring_verb("brief", docs_dir, doc_type, title)
-}
-
-fn singleton_token() -> &'static str {
-    doc_type::DOC_TYPES
-        .iter()
-        .find(|spec| matches!(spec.identity, Identity::Singleton { .. }))
-        .expect("registry must carry at least one singleton row")
-        .token
-}
-
 /// The fixture's `type` value is spread across three files as a double-quoted,
 /// single-quoted, and trailing-commented scalar to prove the type-extraction
 /// invariant tolerates all three forms. Its docs sit at the bundle root, so
@@ -341,44 +329,7 @@ fn fresh_new_scaffold_is_a_canonical_round_trip_fixed_point_for_every_doc_type()
     }
 }
 
-/// ADR 0026 decision point 7: a briefed bundle-root singleton
-/// (`constitution.md`) is CLI-owned for the canonical-frontmatter invariant
-/// and exempt from directory-index membership — `check` reports neither a
-/// dangling markdown link left over from an unfilled slot nor a
-/// non-canonical frontmatter block.
-#[test]
-fn briefed_singleton_scaffold_passes_check_over_its_own_bundle() {
-    let docs = temp_bundle("briefed-singleton");
-    write(&docs, "index.md", "# Index\n");
-
-    let brief_output = run_brief(&docs, singleton_token(), "Acme Constitution");
-    assert!(
-        brief_output.status.success(),
-        "stderr: {}",
-        String::from_utf8_lossy(&brief_output.stderr)
-    );
-
-    let singleton_file = doc_type::DOC_TYPES
-        .iter()
-        .find_map(|spec| match spec.identity {
-            Identity::Singleton { file } => Some(file),
-            Identity::Numbered { .. } | Identity::Named { .. } => None,
-        })
-        .expect("registry must carry at least one singleton row");
-    assert!(
-        docs.join(singleton_file).is_file(),
-        "brief did not scaffold {singleton_file} at the bundle root"
-    );
-
-    let output = run_check(&docs);
-    let stdout = stdout_of(&output);
-    assert_eq!(output.status.code(), Some(0), "got:\n{stdout}");
-    assert!(stdout.contains("no invariant violations"), "got:\n{stdout}");
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
-/// The other half of decision point 7's canonical-frontmatter ownership: a
+/// Decision point 7's canonical-frontmatter ownership: a
 /// hand-written bundle-root singleton with non-canonical frontmatter is
 /// caught by `check`, not silently accepted because it sits outside every
 /// CLI-owned type directory. `constitution.md` is hardcoded, matching

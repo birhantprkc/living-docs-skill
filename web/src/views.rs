@@ -782,7 +782,7 @@ mod tests {
     fn create_form_lists_every_creatable_doc_type_option() {
         let rendered = create_form(None, None, None).into_string();
 
-        for doc_type in ["adr", "bdr", "prd", "issue"] {
+        for doc_type in ["adr", "prd", "issue"] {
             assert!(
                 rendered.contains(&format!("value=\"{doc_type}\"")),
                 "missing option for {doc_type}: {rendered}"
@@ -807,9 +807,9 @@ mod tests {
 
     #[test]
     fn create_form_preserves_the_submitted_doc_type_and_title_on_re_render() {
-        let rendered = create_form(Some("bdr"), Some("Draft Behavior"), None).into_string();
+        let rendered = create_form(Some("prd"), Some("Draft Behavior"), None).into_string();
 
-        assert!(rendered.contains("<option value=\"bdr\" selected>bdr</option>"));
+        assert!(rendered.contains("<option value=\"prd\" selected>prd</option>"));
         assert!(rendered.contains("value=\"Draft Behavior\""));
     }
 

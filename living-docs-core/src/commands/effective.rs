@@ -1,10 +1,10 @@
-//! `living-docs effective` (ADR 0050): compiles the agent-facing view of the
-//! bundle — active records only, supersede chains collapsed to the head with a
-//! one-line lineage, ranked constitution/PRD/contract-first, and rendered at a
-//! progressive tier under a hard token budget. Derived, never committed: the
-//! records stay the SSOT, exactly as the generated indexes do.
+//! `living-docs effective` (ADR 0050, simplified by ADR 0057): the agent-facing
+//! read of the bundle — active records only (superseded/deprecated withheld),
+//! supersede chains collapsed to the head with a one-line lineage, grouped by
+//! kind then number. `--topic` restricts to records mentioning a term
+//! (case-insensitive, title/description/body); `--full` prints bodies instead
+//! of the one-line index. Derived, never committed: the records stay the SSOT.
 
-use crate::check::liveness;
 use crate::record::{self, ExtractedRecord};
 use crate::store::DocStore;
 use std::collections::BTreeMap;
@@ -13,27 +13,10 @@ use std::process::ExitCode;
 
 mod render;
 
-/// Progressive disclosure tier: how much of each surviving record the view
-/// carries. `Index` is the default — enough to orient, not to drill in.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Tier {
-    Index,
-    Outline,
-    Full,
-}
-
 /// Everything `effective` needs from the CLI front.
 pub struct Options {
     pub topic: Option<String>,
-    pub tier: Tier,
-    pub budget: Option<usize>,
-    pub include_stale: bool,
-    /// Record paths (`bundle`-prefixed, matching [`DocStore::list`]) in FTS5
-    /// relevance order, when the front resolved `--topic` against the search
-    /// read-model (ADR 0056). When `Some`, the view is restricted to these
-    /// records in this order; when `None`, `--topic` falls back to a
-    /// deterministic relevance rank over the store.
-    pub ranked_topic: Option<Vec<String>>,
+    pub full: bool,
 }
 
 /// One record that survived selection, flattened to what the renderer needs.
@@ -46,12 +29,8 @@ pub(crate) struct View {
     pub lineage: Option<String>,
 }
 
-/// A read record paired with its `bundle`-prefixed path — the unit the
-/// ordering helpers pass around.
+/// A read record paired with its `bundle`-prefixed path.
 type Entry = (PathBuf, ExtractedRecord);
-
-/// The base sort key `(group, not_contract, number)`.
-type Rank = (u8, u8, i32);
 
 pub fn run(store: &dyn DocStore, bundle: &Path, options: &Options) -> ExitCode {
     print!("{}", compile(store, bundle, options));
@@ -62,83 +41,21 @@ pub fn run(store: &dyn DocStore, bundle: &Path, options: &Options) -> ExitCode {
 /// the compiled text without capturing stdout.
 pub fn compile(store: &dyn DocStore, bundle: &Path, options: &Options) -> String {
     let all_md = store.list(bundle).unwrap_or_default();
-    let stale = liveness::classify(store, bundle, &all_md);
     let records = read_records(store, &all_md);
+    let topic = options.topic.as_deref().map(str::to_lowercase);
 
-    let active: Vec<&Entry> = records
+    let mut active: Vec<&Entry> = records
         .iter()
-        .filter(|(path, record)| is_selected(record, options, stale.is_stale(path)))
+        .filter(|(_, record)| is_in_force(record.status.as_deref()))
+        .filter(|(_, record)| matches_topic(record, topic.as_deref()))
         .collect();
-    let ordered = order_for_topic(active, options);
-    let views: Vec<View> = ordered
+    active.sort_by_key(|(_, record)| base_rank(record));
+
+    let views: Vec<View> = active
         .iter()
         .map(|(_, record)| view_of(record, &records))
         .collect();
-
-    render::render(&views, options.tier, options.budget)
-}
-
-/// Orders (and, for a topic, filters) the active records: by the FTS5 ranked
-/// set when the front supplied one, else by a deterministic relevance rank for
-/// a `--topic`, else by the base constitution/PRD/contract rank (ADR 0056).
-fn order_for_topic<'a>(active: Vec<&'a Entry>, options: &Options) -> Vec<&'a Entry> {
-    if let Some(ranked) = &options.ranked_topic {
-        return order_by_ranked_set(active, ranked);
-    }
-    match options.topic.as_deref() {
-        Some(topic) => order_by_relevance(active, topic),
-        None => order_by_base_rank(active),
-    }
-}
-
-/// Keeps only records whose `bundle`-prefixed path is in `ranked` and orders
-/// them by their position there — the FTS5 relevance order.
-fn order_by_ranked_set<'a>(active: Vec<&'a Entry>, ranked: &[String]) -> Vec<&'a Entry> {
-    let position: BTreeMap<&str, usize> = ranked
-        .iter()
-        .enumerate()
-        .map(|(i, path)| (path.as_str(), i))
-        .collect();
-    let mut kept: Vec<(usize, &Entry)> = active
-        .into_iter()
-        .filter_map(|entry| {
-            position
-                .get(entry.0.display().to_string().as_str())
-                .map(|rank| (*rank, entry))
-        })
-        .collect();
-    kept.sort_by_key(|(rank, _)| *rank);
-    kept.into_iter().map(|(_, entry)| entry).collect()
-}
-
-/// Keeps records that mention `topic` (title/description/body) and orders them
-/// by a deterministic relevance score, tie-broken by the base rank — the
-/// no-projection fallback for `--topic`.
-fn order_by_relevance<'a>(active: Vec<&'a Entry>, topic: &str) -> Vec<&'a Entry> {
-    let needle = topic.to_lowercase();
-    let mut scored: Vec<(u32, Rank, &Entry)> = active
-        .into_iter()
-        .filter_map(|entry| {
-            let score = relevance_score(&entry.1, &needle);
-            (score > 0).then(|| (score, base_rank(&entry.1), entry))
-        })
-        .collect();
-    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
-    scored.into_iter().map(|(_, _, entry)| entry).collect()
-}
-
-fn order_by_base_rank(active: Vec<&Entry>) -> Vec<&Entry> {
-    let mut ordered = active;
-    ordered.sort_by_key(|entry| base_rank(&entry.1));
-    ordered
-}
-
-/// Weighted term-frequency of `needle` across a record: title counts triple,
-/// description double, body single — enough to order topic matches without a
-/// search index.
-fn relevance_score(record: &ExtractedRecord, needle: &str) -> u32 {
-    let count = |haystack: &str| haystack.to_lowercase().matches(needle).count() as u32;
-    count(&record.title) * 3 + count(&record.description) * 2 + count(&record.body)
+    render::render(&views, options.full)
 }
 
 fn read_records(store: &dyn DocStore, all_md: &[PathBuf]) -> Vec<(PathBuf, ExtractedRecord)> {
@@ -160,18 +77,22 @@ fn is_reserved(path: &Path) -> bool {
     )
 }
 
-/// A record is in the effective view when it is in force (not `Superseded`
-/// /`Deprecated`) and either not stale or explicitly requested via
-/// `--include-stale`.
-fn is_selected(record: &ExtractedRecord, options: &Options, is_stale: bool) -> bool {
-    is_in_force(record.status.as_deref()) && (options.include_stale || !is_stale)
-}
-
 fn is_in_force(status: Option<&str>) -> bool {
     !matches!(
         status.map(|s| s.to_ascii_lowercase()).as_deref(),
         Some("superseded") | Some("deprecated")
     )
+}
+
+/// Whether a record mentions `topic` (already lowercased) anywhere in its
+/// title, description, or body. `None` matches every record.
+fn matches_topic(record: &ExtractedRecord, topic: Option<&str>) -> bool {
+    let Some(topic) = topic else {
+        return true;
+    };
+    [&record.title, &record.description, &record.body]
+        .iter()
+        .any(|field| field.to_lowercase().contains(topic))
 }
 
 fn view_of(record: &ExtractedRecord, all: &[(PathBuf, ExtractedRecord)]) -> View {
@@ -222,17 +143,16 @@ fn supersede_chain(record: &ExtractedRecord, all: &[(PathBuf, ExtractedRecord)])
     chain
 }
 
-/// Base sort key: constitution and PRDs first, then contracts (a
-/// `## Verification` block) above narrative, then by number.
-/// `(group, not_contract, number)`.
-fn base_rank(record: &ExtractedRecord) -> Rank {
+/// Reading order: constitution and PRDs first, then ADRs, then everything
+/// else, each by number. A grouping for orientation, not a relevance rank.
+fn base_rank(record: &ExtractedRecord) -> (u8, i32) {
     let group = match record.doc_type.as_str() {
         "Constitution" => 0,
         "PRD" => 1,
-        _ => 2,
+        "ADR" => 2,
+        _ => 3,
     };
-    let not_contract = u8::from(!record.body.contains("## Verification"));
-    (group, not_contract, record.number.unwrap_or(i32::MAX))
+    (group, record.number.unwrap_or(i32::MAX))
 }
 
 #[cfg(test)]

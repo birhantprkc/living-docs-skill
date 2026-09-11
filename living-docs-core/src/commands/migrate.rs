@@ -5,7 +5,6 @@
 //! topic `rules/migration.md`); `ADOPT` steps bootstrap a project with no
 //! bundle at all. The verb never writes or edits anything.
 
-use crate::check::traceability::requirement_ids;
 use crate::commands::index::is_table_listing_row;
 use crate::doc_type::{self, Identity, VIEW_KIND_ORDER};
 use crate::frontmatter;
@@ -40,7 +39,6 @@ pub fn plan(store: &dyn DocStore, bundle: &Path) -> Vec<String> {
     let mut steps = Vec::new();
     single_architecture_file(&all_md, bundle, &mut steps);
     views_missing_kind(store, &all_md, bundle, &mut steps);
-    prds_missing_requirement_ids(store, &all_md, &mut steps);
     legacy_table_indexes(store, &all_md, &mut steps);
     if !steps.is_empty() {
         steps.push("RUN living-docs fmt".to_string());
@@ -56,10 +54,9 @@ fn adoption_steps(bundle: &Path) -> Vec<String> {
         format!("ADOPT 1. create {at}/index.md — the bundle-root index every record hangs off (invariant 3)"),
         "ADOPT 2. living-docs new constitution \"<product>\" — scope, non-negotiables (confirm content with the user)".to_string(),
         "ADOPT 3. living-docs hooks install — doc-gate pre-commit + CLI-owned authoring hooks".to_string(),
-        "ADOPT 4. living-docs seal init — baseline provenance sealing so check catches out-of-CLI writes (ADR 0039)".to_string(),
-        "ADOPT 5. back-fill standing decisions with living-docs new adr — confirm each with the user, never infer (skill topic: procedure)".to_string(),
-        format!("ADOPT 6. living-docs new view \"Context\" --kind context — first architecture view, then more kinds as they earn their place (one of {})", VIEW_KIND_ORDER.join("|")),
-        format!("ADOPT 7. living-docs index && living-docs check {at}"),
+        "ADOPT 4. back-fill standing decisions with living-docs new adr — confirm each with the user, never infer (skill topic: procedure)".to_string(),
+        format!("ADOPT 5. living-docs new view \"Context\" --kind context — first architecture view, then more kinds as they earn their place (one of {})", VIEW_KIND_ORDER.join("|")),
+        format!("ADOPT 6. living-docs index && living-docs check {at}"),
     ]
 }
 
@@ -109,25 +106,6 @@ fn named_view_dir(bundle: &Path) -> PathBuf {
         })
         .unwrap_or("architecture");
     bundle.join(dir)
-}
-
-fn prds_missing_requirement_ids(store: &dyn DocStore, all_md: &[PathBuf], steps: &mut Vec<String>) {
-    for path in all_md {
-        let Ok(contents) = store.read(path) else {
-            continue;
-        };
-        if frontmatter::read_scalar_from_str(&contents, "type").as_deref() != Some("PRD") {
-            continue;
-        }
-        let status = frontmatter::read_scalar_from_str(&contents, "status");
-        let past_draft = matches!(status.as_deref(), Some("Accepted") | Some("Implemented"));
-        if past_draft && requirement_ids(&contents).is_empty() {
-            steps.push(format!(
-                "AUTHOR {} — requirements carry no FR-N/NFR-N IDs; rewrite them as EARS statements under stable IDs so BDRs can cite what they prove (ADR 0035)",
-                path.display()
-            ));
-        }
-    }
 }
 
 fn legacy_table_indexes(store: &dyn DocStore, all_md: &[PathBuf], steps: &mut Vec<String>) {

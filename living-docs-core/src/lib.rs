@@ -8,11 +8,9 @@ pub mod commands;
 pub mod doc_type;
 pub mod fingerprint;
 pub mod frontmatter;
-pub mod impact;
 pub mod paths;
 pub mod pii;
 pub mod record;
-pub mod seal;
 pub mod store;
 pub mod templates;
 

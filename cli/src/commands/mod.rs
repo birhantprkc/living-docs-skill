@@ -1,9 +1,7 @@
 //! One module per CLI subcommand wrapper, mirroring `living_docs_core::commands` (issue 0028).
 
-pub(crate) mod brief;
 pub(crate) mod check;
 pub(crate) mod db;
-pub(crate) mod describe;
 pub(crate) mod effective;
 pub(crate) mod export;
 pub(crate) mod fmt;
@@ -12,12 +10,7 @@ pub(crate) mod index;
 pub(crate) mod leak_gate;
 pub(crate) mod migrate;
 pub(crate) mod new;
-pub(crate) mod next;
-pub(crate) mod owner;
-pub(crate) mod scorecard;
-pub(crate) mod seal_cmd;
 pub(crate) mod search;
+pub(crate) mod set;
 pub(crate) mod skill_cmd;
-pub(crate) mod status;
 pub(crate) mod supersede;
-pub(crate) mod why;

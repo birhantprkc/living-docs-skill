@@ -15,7 +15,6 @@ mod tests {
     #[test]
     fn template_for_returns_the_matching_embedded_template() {
         assert!(template_for("adr").unwrap().starts_with("---\ntype: ADR"));
-        assert!(template_for("bdr").unwrap().starts_with("---\ntype: BDR"));
         assert!(template_for("prd").unwrap().starts_with("---\ntype: PRD"));
         assert!(template_for("issue")
             .unwrap()

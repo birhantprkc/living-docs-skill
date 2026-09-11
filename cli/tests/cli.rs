@@ -17,113 +17,6 @@ fn temp_dir(label: &str) -> PathBuf {
     dir
 }
 
-#[test]
-fn next_on_absent_type_dir_prints_0001() {
-    let docs = temp_dir("next-absent");
-
-    let output = living_docs()
-        .args(["--docs-dir", docs.to_str().unwrap(), "next", "adr"])
-        .output()
-        .expect("failed to run living-docs");
-
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "0001");
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
-#[test]
-fn next_on_empty_type_dir_prints_0001() {
-    let docs = temp_dir("next-empty");
-    fs::create_dir_all(docs.join("adr")).unwrap();
-
-    let output = living_docs()
-        .args(["--docs-dir", docs.to_str().unwrap(), "next", "adr"])
-        .output()
-        .expect("failed to run living-docs");
-
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "0001");
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
-#[test]
-fn next_increments_past_the_highest_existing_number() {
-    let docs = temp_dir("next-existing");
-    let adr_dir = docs.join("adr");
-    fs::create_dir_all(&adr_dir).unwrap();
-    fs::write(adr_dir.join("0001-old.md"), "---\ntype: ADR\n---\n# Old\n").unwrap();
-
-    let output = living_docs()
-        .args(["--docs-dir", docs.to_str().unwrap(), "next", "adr"])
-        .output()
-        .expect("failed to run living-docs");
-
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "0002");
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
-#[test]
-fn next_ignores_files_without_the_nnnn_dash_prefix() {
-    let docs = temp_dir("next-ignore-others");
-    let adr_dir = docs.join("adr");
-    fs::create_dir_all(&adr_dir).unwrap();
-    fs::write(adr_dir.join("index.md"), "# Index\n").unwrap();
-    fs::write(adr_dir.join("0003-current.md"), "---\ntype: ADR\n---\n").unwrap();
-
-    let output = living_docs()
-        .args(["--docs-dir", docs.to_str().unwrap(), "next", "adr"])
-        .output()
-        .expect("failed to run living-docs");
-
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "0004");
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
-/// Regression for the `next issue` footgun: `issue` is the only registered
-/// token whose directory (`issues`) differs from the token itself, so this
-/// is the one case that catches `run_next` passing the raw token straight
-/// through instead of resolving it via `paths::dir_for` first.
-#[test]
-fn next_issue_resolves_the_token_to_the_issues_directory() {
-    let docs = temp_dir("next-issue-token");
-    let issues_dir = docs.join("issues");
-    fs::create_dir_all(&issues_dir).unwrap();
-    fs::write(issues_dir.join("0001-first.md"), "content").unwrap();
-    fs::write(issues_dir.join("0004-fourth.md"), "content").unwrap();
-
-    let output = living_docs()
-        .args(["--docs-dir", docs.to_str().unwrap(), "next", "issue"])
-        .output()
-        .expect("failed to run living-docs");
-
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "0005");
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
-#[test]
-fn next_on_an_unknown_doc_type_token_exits_nonzero_and_prints_no_number() {
-    let docs = temp_dir("next-unknown-token");
-
-    let output = living_docs()
-        .args(["--docs-dir", docs.to_str().unwrap(), "next", "glossary"])
-        .output()
-        .expect("failed to run living-docs");
-
-    assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stdout).trim().is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("glossary"));
-
-    let _ = fs::remove_dir_all(&docs);
-}
-
 /// ADR 0019, AC ac-s4-3: the root `--help` about text carries the same
 /// body-only instruction `new` prints after a created path.
 #[test]
@@ -136,7 +29,7 @@ fn root_help_carries_the_body_only_instruction() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     assert!(stdout.contains("Write ONLY the body below the closing"));
-    assert!(stdout.contains("living-docs status"));
+    assert!(stdout.contains("living-docs set"));
     assert!(stdout.contains("supersede"));
     assert!(stdout.contains("index"));
 }
@@ -154,7 +47,7 @@ fn unknown_subcommand_exits_with_code_2() {
 #[test]
 fn missing_required_argument_exits_with_code_2() {
     let output = living_docs()
-        .arg("next")
+        .arg("new")
         .output()
         .expect("failed to run living-docs");
 

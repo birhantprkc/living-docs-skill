@@ -8,7 +8,7 @@ use super::*;
 fn all_type_tokens_matches_every_numbered_and_named_registry_token_in_order() {
     assert_eq!(
         all_type_tokens(),
-        vec!["adr", "bdr", "prd", "issue", "research", "view"]
+        vec!["adr", "prd", "issue", "research", "view"]
     );
 }
 

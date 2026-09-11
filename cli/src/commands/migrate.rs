@@ -1,15 +1,15 @@
 //! `migrate` verb wrapper: resolves the bundle path exactly like `check`,
 //! then delegates to the read-only advisor `living_docs_core::commands::migrate::run`.
 //! With `--apply` (ADR 0040) it becomes an fs-only transaction over the
-//! mechanical subset: snapshot every `.md` plus the seal ledger, run
-//! `index` then `fmt`, and roll back byte-for-byte on any failure or a
-//! `check` regression. The core advisor stays read-only; `AUTHOR` steps are
-//! never applied, and an `ADOPT` plan refuses `--apply`.
+//! mechanical subset: snapshot every `.md`, run `index` then `fmt`, and roll
+//! back byte-for-byte on any failure or a `check` regression. The core advisor
+//! stays read-only; `AUTHOR` steps are never applied, and an `ADOPT` plan
+//! refuses `--apply`.
 
 use crate::commands::check::check_bundle;
 use crate::config::{Backend, Engine};
 use crate::store::{build_backend_store, report_failure};
-use living_docs_core::{check, commands, seal};
+use living_docs_core::{check, commands};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -120,7 +120,7 @@ fn report_applied(steps: &[String], before: usize, after: usize) -> ExitCode {
 fn rollback(snapshot: &Snapshot, bundle: &Path, reason: &str) -> ExitCode {
     match snapshot.restore(bundle) {
         Ok(()) => eprintln!(
-            "living-docs migrate --apply: ROLLED BACK — {reason}; bundle and seal ledger restored byte-for-byte"
+            "living-docs migrate --apply: ROLLED BACK — {reason}; bundle restored byte-for-byte"
         ),
         Err(err) => eprintln!(
             "living-docs migrate --apply: {reason}; AND the rollback itself failed: {err} — restore from git"
@@ -135,24 +135,17 @@ fn succeeded(code: ExitCode) -> bool {
     format!("{code:?}") == format!("{:?}", ExitCode::SUCCESS)
 }
 
-/// A byte-for-byte snapshot of every `.md` under the bundle plus the seal
-/// ledger (ADR 0039) — restoring deletes files created after the snapshot,
-/// rewrites changed ones, and puts the ledger back exactly as it was.
+/// A byte-for-byte snapshot of every `.md` under the bundle — restoring
+/// deletes files created after the snapshot and rewrites changed ones.
 struct Snapshot {
     files: BTreeMap<PathBuf, Vec<u8>>,
-    ledger: Option<(PathBuf, Option<Vec<u8>>)>,
 }
 
 impl Snapshot {
     fn take(bundle: &Path) -> io::Result<Self> {
         let mut files = BTreeMap::new();
         collect_md(bundle, &mut files)?;
-        let ledger = seal::seal_dir_for(bundle).map(|dir| {
-            let path = dir.join("seals.json");
-            let bytes = fs::read(&path).ok();
-            (path, bytes)
-        });
-        Ok(Self { files, ledger })
+        Ok(Self { files })
     }
 
     fn restore(&self, bundle: &Path) -> io::Result<()> {
@@ -165,11 +158,6 @@ impl Snapshot {
         }
         for (path, bytes) in &self.files {
             fs::write(path, bytes)?;
-        }
-        match &self.ledger {
-            Some((path, Some(bytes))) => fs::write(path, bytes)?,
-            Some((path, None)) if path.exists() => fs::remove_file(path)?,
-            Some(_) | None => {}
         }
         Ok(())
     }

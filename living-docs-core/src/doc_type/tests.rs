@@ -52,10 +52,6 @@ fn status_vocabulary_matches_adr_0029_per_type() {
         &["Proposed", "Accepted", "Deprecated"]
     );
     assert_eq!(
-        spec_for("bdr").unwrap().status_vocabulary,
-        &["Draft", "Accepted", "Implemented"]
-    );
-    assert_eq!(
         spec_for("prd").unwrap().status_vocabulary,
         &["Draft", "Accepted", "Implemented"]
     );

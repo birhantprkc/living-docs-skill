@@ -1671,10 +1671,10 @@ mod tests {
                     path: "adr/0002-second-adr.md".to_owned(),
                 },
                 NavEntry {
-                    doc_type: "BDR".to_owned(),
+                    doc_type: "Issue".to_owned(),
                     number: Some(1),
-                    title: "First BDR".to_owned(),
-                    path: "bdr/0001-first-bdr.md".to_owned(),
+                    title: "First Issue".to_owned(),
+                    path: "issues/0001-first-issue.md".to_owned(),
                 },
             ]
         );
@@ -1712,10 +1712,10 @@ mod tests {
                     path: "adr/0002-second-adr.md".to_owned(),
                 },
                 NavEntry {
-                    doc_type: "BDR".to_owned(),
+                    doc_type: "Issue".to_owned(),
                     number: Some(1),
-                    title: "First BDR".to_owned(),
-                    path: "bdr/0001-first-bdr.md".to_owned(),
+                    title: "First Issue".to_owned(),
+                    path: "issues/0001-first-issue.md".to_owned(),
                 },
             ],
             "records_by_type must return each distinct path exactly once even when \
