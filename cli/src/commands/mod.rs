@@ -4,6 +4,7 @@ pub(crate) mod brief;
 pub(crate) mod check;
 pub(crate) mod db;
 pub(crate) mod describe;
+pub(crate) mod effective;
 pub(crate) mod export;
 pub(crate) mod fmt;
 pub(crate) mod hooks_cmd;

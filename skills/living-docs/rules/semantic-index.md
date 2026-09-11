@@ -23,6 +23,20 @@ Split when a doc passes ~200 lines or starts mixing unrelated concerns.
 5. **Cut over.** Repoint the live pointers (project guide's Docs index, maintenance rules) to the new index. Delete the old monolith. Leave *historical* mentions (in ADR/issue "Consequences") untouched — they are history.
 6. **Completeness review.** Diff the old content against the union of new files: every term present exactly once, nothing lost or duplicated, all index links resolve, old file removed.
 
+## Reading the corpus — the effective view, not the raw index
+
+The corpus is append-only (supersede, never rewrite): right for history, wrong as the thing an agent reads. An `index.md` lists **everything**, including superseded links and stale records, and leaves supersede-chain resolution to the reader — who then plans on whichever record they opened first.
+
+**Agents read `living-docs effective`, never `index.md` directly** (ADR 0050). It compiles the in-force view: active records only (superseded/deprecated and stale records — ADR 0049 — withheld), supersede chains collapsed to the head with a one-line lineage (`supersedes 0131 via 0133`), ranked **constitution and PRDs first, then contracts (records with a `## Verification` block) above narrative**, so the reader orients before drilling in.
+
+- `living-docs effective` — the whole active view at the `index` tier (title + description per record).
+- `living-docs effective --topic <term>` — only records matching the term.
+- `living-docs effective --tier outline|full` — headings, or full bodies.
+- `living-docs effective --budget <tokens>` — a hard cap: truncation degrades the tier (full → outline → index), then drops the lowest-ranked records, so the response never overflows the window.
+- `living-docs effective --include-stale` — restore the records liveness withholds.
+
+`index.md` remains the generated on-disk artifact and the human/browser entry point; `effective` is the agent's read surface over the same records.
+
 ## Heading discipline
 
 Each group file is a standalone document: it leads with a single `#` H1 title, then `##` sections. Do not carry over `##`-as-top-level headings from the section you extracted — promote them to H1 so the file reads as its own document.

@@ -117,6 +117,12 @@ fn main() -> ExitCode {
         Command::Db {
             cmd: DbCmd::Sync { project },
         } => commands::db::run_db_sync(&cli.docs_dir, cli.engine, project),
+        Command::Effective(args) => commands::effective::run_effective(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            args,
+        ),
         Command::Search {
             query,
             project,

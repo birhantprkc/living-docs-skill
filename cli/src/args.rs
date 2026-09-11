@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 
 mod sub;
 use std::path::PathBuf;
-pub(crate) use sub::{DbCmd, HooksCmd, SealCmd, SkillCmd};
+pub(crate) use sub::{DbCmd, EffectiveArgs, HooksCmd, SealCmd, SkillCmd, TierArg};
 
 #[derive(Parser)]
 #[command(
@@ -216,6 +216,11 @@ pub(crate) enum Command {
         #[arg(long)]
         check_tier3: bool,
     },
+    /// Compiles the agent-facing effective view of the bundle (ADR 0050):
+    /// active records only, supersede chains collapsed to the head with a
+    /// lineage line, ranked constitution/PRD/contract-first, at a progressive
+    /// tier under a hard token budget. Read this instead of `index.md`.
+    Effective(EffectiveArgs),
     /// Full-text search the derived read-model, ranked best-match-first.
     Search {
         query: String,
