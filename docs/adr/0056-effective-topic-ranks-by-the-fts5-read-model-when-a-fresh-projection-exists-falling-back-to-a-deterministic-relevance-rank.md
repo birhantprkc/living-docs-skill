@@ -3,7 +3,7 @@ type: ADR
 title: effective --topic ranks by the FTS5 read-model when a fresh projection exists, falling back to a deterministic relevance rank
 description: effective --topic layers onto the search FTS5 read-model for relevance ranking when a fresh projection is available (front resolves ranked paths, core filters+orders by them, liveness still excludes stale hits); with no or stale projection it falls back to a deterministic term-frequency rank — never erroring the read-only verb
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T13:57:31Z
 ---
 

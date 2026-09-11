@@ -3,7 +3,7 @@ type: ADR
 title: "Mechanical record liveness: check derives stale-proposed and stale-impact from the linked issue and Verification paths"
 description: check derives a liveness signal for ADR/BDR mechanically — Proposed with a terminal linked issue, Accepted with a dead Implementation-impact path — as advisories with a --liveness summary; currency has an oracle where materiality does not
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T11:51:50Z
 ---
 

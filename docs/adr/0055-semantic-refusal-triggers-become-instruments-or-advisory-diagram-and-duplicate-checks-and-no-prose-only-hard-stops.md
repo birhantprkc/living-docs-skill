@@ -3,7 +3,7 @@ type: ADR
 title: "Semantic refusal triggers become instruments or advisory: DIAGRAM and DUPLICATE checks, and no prose-only hard stops"
 description: the three semantic refusal triggers (stale diagram, duplicate home, doc trail) become instrumented advisories or, for the doc trail, materiality-gated — check emits DIAGRAM and DUPLICATE lines and the enforcement-modes file keeps no prose-only hard stop; the agent runs check and treats advisories as work
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T12:54:56Z
 ---
 
