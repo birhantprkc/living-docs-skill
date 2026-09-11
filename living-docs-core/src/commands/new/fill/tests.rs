@@ -49,7 +49,6 @@ fn fill_frontmatter_seeds_each_types_own_first_vocabulary_value() {
 
     let cases = [
         ("ADR", "Proposed"),
-        ("BDR", "Draft"),
         ("PRD", "Draft"),
         ("Issue", "open"),
         ("Research", "Draft"),

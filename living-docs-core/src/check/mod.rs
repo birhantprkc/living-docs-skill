@@ -2,8 +2,9 @@
 //!
 //! Covers the mechanical invariants: OKF frontmatter/type, index-format,
 //! directory-index membership, bundle-root reachability, supersede-chain
-//! integrity, local link/image validity via `pulldown-cmark`, requirement
-//! traceability (ADR 0035), record liveness (ADR 0049), and ```mermaid``` fence validation (ADR 0013).
+//! integrity, local link/image validity via `pulldown-cmark`, unfilled
+//! placeholders, and ```mermaid``` fence validation (ADR 0013). Record
+//! liveness (ADR 0049, `stale-proposed` only) is advisory.
 //!
 //! Every record's content (`records`, `links`) is read through
 //! `DocStore::read`, so `check` validates whichever backend `run` is given.
@@ -12,16 +13,13 @@
 
 pub(crate) mod canonical;
 mod graph;
-mod leak;
 pub(crate) mod links;
-pub mod liveness;
+mod liveness;
 mod mermaid;
 mod moved_source;
+mod placeholder;
 mod records;
-mod seal;
-mod semantic;
 mod size;
-pub(crate) mod traceability;
 
 use crate::doc_type::{self, Identity};
 use crate::store::DocStore;
@@ -43,21 +41,6 @@ pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
 /// registry row requires it from an advisory to an invariant violation.
 /// Every other invariant behaves exactly as [`run`].
 pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
-    run_configured(store, bundle, require_owner, false)
-}
-
-/// `check --liveness`: every invariant [`run_require_owner`] validates, plus a
-/// trailing summary of the four record-liveness counts (ADR 0049).
-pub fn run_liveness(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
-    run_configured(store, bundle, require_owner, true)
-}
-
-fn run_configured(
-    store: &dyn DocStore,
-    bundle: &Path,
-    require_owner: bool,
-    liveness_summary: bool,
-) -> ExitCode {
     if !bundle.is_dir() {
         eprintln!(
             "living-docs check: bundle root not found: {}",
@@ -73,12 +56,7 @@ fn run_configured(
     println!();
 
     let mut reporter = Reporter::new();
-    let doc_count = run_all_checks(store, bundle, &mut reporter, require_owner);
-
-    if liveness_summary {
-        liveness::print_summary(store, bundle);
-    }
-
+    let doc_count = run_all_checks(store, bundle, &mut reporter, require_owner, true);
     reporter.finish(doc_count)
 }
 
@@ -93,6 +71,7 @@ fn run_all_checks(
     bundle: &Path,
     reporter: &mut Reporter,
     require_owner: bool,
+    check_placeholders: bool,
 ) -> usize {
     let all_md = store.list(bundle).unwrap_or_default();
     let root_index = bundle.join("index.md");
@@ -109,87 +88,27 @@ fn run_all_checks(
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
     mermaid::check_bundle(&all_md, reporter);
     size::check_body_size(store, &all_md, reporter);
-    if let Some(summary) = size::word_budget_summary(store, &all_md) {
-        reporter.advise(bundle, summary);
+    if check_placeholders {
+        placeholder::check_placeholders(store, &all_md, reporter);
     }
-    seal::check_seals(store, bundle, &all_md, reporter);
-    traceability::check_requirement_traceability(store, &all_md, reporter);
     liveness::check_liveness(store, bundle, &all_md, reporter);
-    leak::check_leak(store, &all_md, reporter);
-    semantic::check_semantic(store, bundle, &all_md, reporter);
 
     all_md.len()
 }
 
-/// The same invariants [`run`] validates, returned as a plain violation list
-/// rather than printed and turned into an [`ExitCode`] — the mechanism a
-/// transactional write+check verb (e.g. `db_store::DbDocStore::write_checked`)
-/// needs to gate a commit on `check` passing without emitting `check`'s own
-/// stdout report.
+/// The invariants [`run`] validates, minus the unfilled-placeholder pass,
+/// returned as a plain violation list rather than printed — the mechanism a
+/// per-write gate (e.g. `db_store::DbDocStore::write_checked`) uses to reject a
+/// structurally invalid record. The placeholder pass is deliberately excluded
+/// here: db-mode authoring is create-then-edit, so a freshly created record
+/// legitimately still carries its `{{PLACEHOLDER}}` slots until the author
+/// fills them in the edit view. Unfilled placeholders are caught at the commit
+/// boundary by the `check` command (which runs the pass), not by the per-write
+/// gate.
 pub fn check_violations(store: &dyn DocStore, bundle: &Path) -> Vec<(String, String)> {
     let mut reporter = Reporter::new();
-    run_all_checks(store, bundle, &mut reporter, false);
+    run_all_checks(store, bundle, &mut reporter, false, false);
     reporter.into_violations()
-}
-
-/// One check finding: the record's display path paired with the finding's
-/// message.
-pub type Finding = (String, String);
-
-/// Every violation and advisory [`run`] would print, without the printing
-/// or the [`ExitCode`] — the read-only aggregation surface a summarizing
-/// verb (e.g. `scorecard`) runs its own classification over. [`run`] and
-/// [`run_require_owner`] keep their own output and exit code unchanged;
-/// this is an additive view over the same [`run_all_checks`] pass.
-pub struct Findings {
-    pub violations: Vec<Finding>,
-    pub advisories: Vec<Finding>,
-}
-
-/// Runs every invariant [`run`] validates and returns the full finding set,
-/// printing nothing.
-pub fn findings(store: &dyn DocStore, bundle: &Path) -> Findings {
-    let mut reporter = Reporter::new();
-    run_all_checks(store, bundle, &mut reporter, false);
-    let (violations, advisories) = reporter.into_findings();
-    Findings {
-        violations,
-        advisories,
-    }
-}
-
-/// Owner coverage over the records whose doctype registry row requires an
-/// owner, as `(owned, required)`. `None` when no record under `bundle`
-/// requires one — there is nothing to grade a ratio over.
-pub fn owner_coverage(store: &dyn DocStore, bundle: &Path) -> Option<(usize, usize)> {
-    let all_md = store.list(bundle).unwrap_or_default();
-    let (mut owned, mut required) = (0usize, 0usize);
-    for f in &all_md {
-        count_owner_coverage(store, f, &mut owned, &mut required);
-    }
-    (required > 0).then_some((owned, required))
-}
-
-fn count_owner_coverage(store: &dyn DocStore, f: &Path, owned: &mut usize, required: &mut usize) {
-    if records::is_reserved(&file_name_str(f)) {
-        return;
-    }
-    let Ok(contents) = store.read(f) else {
-        return;
-    };
-    let Some(doc_type) = records::frontmatter_scalar(&contents, "type") else {
-        return;
-    };
-    let Some(spec) = doc_type::spec_for_frontmatter(&doc_type) else {
-        return;
-    };
-    if !spec.requires_owner {
-        return;
-    }
-    *required += 1;
-    if records::frontmatter_scalar(&contents, "owner").is_some() {
-        *owned += 1;
-    }
 }
 
 pub(crate) fn file_name_str(path: &Path) -> String {
@@ -266,10 +185,6 @@ impl Reporter {
 
     fn into_violations(self) -> Vec<(String, String)> {
         self.violations
-    }
-
-    fn into_findings(self) -> (Vec<Finding>, Vec<Finding>) {
-        (self.violations, self.advisories)
     }
 
     fn finish(self, doc_count: usize) -> ExitCode {

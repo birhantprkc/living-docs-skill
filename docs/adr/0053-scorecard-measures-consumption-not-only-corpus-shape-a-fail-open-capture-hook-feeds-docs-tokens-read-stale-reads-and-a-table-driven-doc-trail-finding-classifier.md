@@ -3,7 +3,7 @@ type: ADR
 title: "Scorecard measures consumption, not only corpus shape: a fail-open capture hook feeds docs-tokens-read, stale-reads, and a table-driven doc-trail finding classifier"
 description: scorecard grows a consumption block fed by a fail-open observe-docs-read hook (JSONL) — docs tokens read (sum/median/p90), stale reads, and doc-trail finding share via a table-driven regex classifier that reports unclassified rather than guessing; missing capture is not-measured, scorecard still never fails
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T12:43:30Z
 ---
 

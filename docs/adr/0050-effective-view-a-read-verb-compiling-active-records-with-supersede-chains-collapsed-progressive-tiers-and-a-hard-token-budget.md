@@ -3,7 +3,7 @@ type: ADR
 title: "Effective view: a read verb compiling active records with supersede chains collapsed, progressive tiers, and a hard token budget"
 description: effective compiles the agent-facing view of the bundle — active records only, supersede chains collapsed to the head with a lineage line, index/outline/full tiers ranked constitution/PRD/contract-first, capped by a hard --budget — so agents read the effective view, never the raw append-only corpus
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T12:08:36Z
 ---
 

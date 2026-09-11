@@ -34,6 +34,6 @@ else
   BIN_NOTE="CLI not built — run \`make build\` (or \`cargo build --release --manifest-path cli/Cargo.toml\`) before authoring docs"
 fi
 
-printf 'living-docs: %s. Docs authoring contract: write ONLY the body below the closing --- of a record. Numbering, frontmatter, supersede links, and index rows are CLI-owned — `living-docs new <type> "<title>"`, `living-docs status <NNNN> <Status>`, `living-docs supersede <old> <new>`, `living-docs index`, `living-docs fmt`. Hand-writes to those are blocked by a PreToolUse hook.\n' "$BIN_NOTE"
+printf 'living-docs: %s. Docs authoring contract: write ONLY the body below the closing --- of a record. Numbering, frontmatter, supersede links, and index rows are CLI-owned — `living-docs new <type> "<title>"`, `living-docs set <NNNN> <key> <value>`, `living-docs supersede <old> <new>`, `living-docs index`, `living-docs fmt`. Hand-writes to those are blocked by a PreToolUse hook.\n' "$BIN_NOTE"
 
 exit 0

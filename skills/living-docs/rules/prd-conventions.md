@@ -1,19 +1,18 @@
 # PRD Conventions
 
-A Product Requirements Document specifies **one** feature or capability: the problem it solves, who it's for, what "done" means, and what is explicitly out of scope. A PRD answers *what and why*; the ADRs and issues it spawns answer *how*.
+A PRD is **optional**. Write one when a feature has a "who asked / what is out of scope / what success looks like" worth pinning down before the work starts. A PRD without that is just a large issue — keep it an issue. A PRD answers *what and why*; the ADRs and issues it spawns answer *how*.
 
 ## Format
 
 Each PRD is an **OKF concept** (`type: PRD`) — see the `okf-knowledge-format` skill. `status` (`Draft` | `Accepted` | `Implemented` | `Superseded`) lives in the frontmatter, not a body line. See `templates/prd.md`. Core sections:
 
 - **Problem / Motivation** — the user or system pain. Lead with the problem, not the solution. If you can't state the problem without naming a solution, grill it first (`grill-me`).
+- **Who asked** — the stakeholder or need driving this. A PRD with no identifiable requester is a solution looking for a problem.
 - **Goals** — what success looks like, as outcomes (not tasks).
 - **Non-goals** — what this explicitly does *not* cover. The most valuable section: it bounds scope and prevents creep.
-- **Requirements** — testable statements in EARS patterns, each with a stable PRD-scoped ID (`FR-1`, `FR-2`, …). Each maps to acceptance criteria; BDRs cite the IDs they prove (ADR 0035).
-- **Quality requirements (NFRs)** — non-functional requirements as **quality-attribute scenarios**, each bound to a verifying instrument (see rule 9). This is the home for performance/availability/scale/security requirements; a freeform "should be fast" line is not enough.
+- **Requirements** — testable statements of what the system must do. Each must be falsifiable: "Search returns in <200ms at p95", not "search should be fast". A quality requirement (performance, availability, scale, security) states its measure and how it is verified.
 - **Acceptance criteria** — observable conditions that prove the requirement is met.
-- **Open questions** — unresolved decisions, each ideally headed toward an ADR.
-- **Decision log** — links to the ADRs that resolved the open questions.
+- **Open questions** — unresolved decisions, each headed toward an ADR.
 
 ## Relationship to the constitution
 
@@ -24,15 +23,15 @@ A PRD sits **under** the constitution — it specifies a feature within the prod
 1. **One capability per PRD.** Number sequentially: `docs/prd/NNNN-slug.md`. Index in `docs/prd/index.md` (OKF reserved listing, no frontmatter).
 2. **Problem before solution.** A PRD that opens with the implementation has skipped the thinking. Restate the underlying problem first.
 3. **Non-goals are mandatory.** An empty Non-goals section means scope is undefined. Name at least what tempting-but-excluded things are out.
-4. **Requirements are testable, written in EARS patterns, and carry stable IDs.** "The system should be fast" is not a requirement. "Search returns in <200ms at p95" is. Write each functional requirement in one of the five EARS patterns — ubiquitous ("The system shall …"), event-driven ("When ⟨trigger⟩, the system shall …"), state-driven ("While ⟨state⟩, the system shall …"), unwanted behavior ("If ⟨condition⟩, then the system shall …"), optional ("Where ⟨feature⟩, the system shall …") — under a stable PRD-scoped ID (`FR-N`; NFRs are `NFR-N` in the quality table). IDs never renumber; a dropped requirement leaves a gap. Once the PRD leaves Draft, `living-docs check` traces every ID to a BDR that links this PRD and cites the ID — advisory at `Accepted`, violation at `Implemented` (ADR 0035). Provenance (instrumentalized, not invented): EARS (MAVIN et al., RE'09).
-5. **Success metrics are mandatory.** Each PRD must state how success will be measured after delivery — quantified outcomes (not task completion) that would confirm the problem is solved.
+4. **Requirements are testable and measurable.** "The system should be fast" is not a requirement; "Search returns in <200ms at p95" is. A quality requirement without a way to verify it is a vibe — state the instrument (a load test, a CI floor, a security check) or, only for the genuine residue, explicit inspection.
+5. **Success metrics are mandatory.** State how success will be measured after delivery — quantified outcomes (not task completion) that would confirm the problem is solved.
 6. **Append-only once accepted.** A PRD under active design is editable. Once accepted and being implemented, changes are recorded as amendments or new ADRs — not silent edits to the requirements.
 7. **PRDs spawn issues.** Each requirement becomes one or more issues (see `rules/issue-workflow.md`). The PRD links to them; the issues link back to the PRD.
-8. **Open questions resolve into ADRs (how) or BDRs (behavior).** When an open question is answered with a load-bearing rationale about architecture, write an ADR and link it from the decision log. When the question resolves observable behavior — what the system must do, with Given/When/Then scenarios — write or amend a BDR instead. Both artifact types are spawned by the PRD and link back to it.
-9. **Every NFR is a quality-attribute scenario bound to an instrument.** Write each non-functional requirement in the six-part form — **source → stimulus → artifact → environment → response → response-measure** — so it is falsifiable, e.g. "Under peak load (10× current), a read request returns in < 200 ms at p99." Bind each to its **verifying instrument**: a load test, a CI performance/quality floor, a security check, or — only for the genuine residue — explicit inspection. A quality requirement without an instrument is a vibe; measure before committing to the complexity that meets it, and lock the measured floor in CI. The decision behind an NFR (and the fitness function that enforces it) is recorded in an ADR (`rules/adr-conventions.md` rule 6). Provenance (instrumentalized, not invented): quality-attribute scenarios + ATAM (KAZMAN; KLEIN; CLEMENTS, SEI).
+8. **Open questions resolve into ADRs.** When an open question is answered with a load-bearing rationale expensive to reverse, write an ADR and link it from the PRD. A cheap resolution goes in the issue that carries the work.
 
 ## Anti-patterns
 
 - A PRD that is a task list. Tasks are issues; the PRD is the spec they serve.
+- A PRD written for a change that had no "who asked / out of scope" to pin — it should have been an issue.
 - No acceptance criteria — then "done" is a matter of opinion.
 - Editing accepted requirements in place when scope changes — amend or supersede so the history of what was agreed survives.

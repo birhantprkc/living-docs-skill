@@ -3,7 +3,7 @@ type: ADR
 title: "why <path>: a reverse index from Implementation-impact lists so provenance is a query, not a code comment"
 description: living-docs why <path> inverts the Verification block's Implementation-impact lists (exact, directory-prefix, glob) over active records so an agent answers which records govern a file by query — exact match first — and never writes an ADR/BDR citation into a code comment
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T12:19:04Z
 ---
 

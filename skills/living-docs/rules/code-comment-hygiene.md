@@ -1,6 +1,6 @@
 # Code comments must not reference doc artifacts
 
-A docblock or code comment must never name or number a documentation artifact. This covers an ADR, PRD, BDR, issue, constitution article, research note, or delivery slice. Remove references such as `see ADR 0046`, `per BDR 0012`, `constitution rule 4`, `issue 0028`, or `slice R3b`.
+A docblock or code comment must never name or number a documentation artifact. This covers an ADR, PRD, issue, constitution article, research note, or delivery slice. Remove references such as `see ADR 0046`, `constitution rule 4`, `issue 0028`, or `slice R3b`.
 
 ## Why
 
@@ -13,23 +13,16 @@ Keep the reason when it is load-bearing, but state the invariant itself. Never p
 - Bad: `// batch size capped at 500 - see ADR 0046`
 - Good: `// batch size capped at 500: larger payloads exceed the 6 MB request limit`
 
-The traceability chain (constitution -> PRD -> ADR/BDR -> issue -> code) lives in the docs and their indexes, which the doc-gate keeps in sync. Code stays self-explanatory; the docs carry the numbering.
+The traceability chain (constitution -> PRD -> ADR -> issue -> code) lives in the docs and their indexes, which the doc-gate keeps in sync. Code stays self-explanatory; the docs carry the numbering.
 
-## Provenance is a query, never a comment
+## The ban is enforced by a hook, not a prompt line
 
-The reverse link — code file -> the records that govern it — is a **query**, not a comment. When you feel the urge to cite a record beside the code, run `living-docs why <path>` and cite nothing (ADR 0051). It inverts every record's `**Implementation impact:**` list and answers which ADR/BDR governs a file, most-specific match first, over active records only:
-
-```bash
-living-docs why living-docs-core/src/store.rs   # which records govern this file
-living-docs why --from-diff HEAD~1..HEAD         # every record a change set touches
-```
-
-`why --from-diff` is the pre-emit check an agent (or a PreToolUse hook) runs before claiming a task done. The instrument that keeps the ban honest is a hook, not a prompt line — block any diff that introduces a `(ADR|BDR|PRD|issue) NNNN` reference in a comment, and point the author at `why` instead:
+Instructions never block; only gates block. Keep the ban honest with a PreToolUse hook that rejects any diff introducing a doc-artifact citation in code, and let the author state the invariant instead:
 
 ```bash
 # PreToolUse (Edit|Write|MultiEdit): reject a doc-artifact citation in code
-grep -nE '(ADR|BDR|PRD|issue)[ -]?[0-9]{4}' "$CHANGED_FILE" && {
-  echo "provenance is a query: run 'living-docs why $CHANGED_FILE', cite nothing" >&2
+grep -nE '(ADR|PRD|issue)[ -]?[0-9]{4}' "$CHANGED_FILE" && {
+  echo "state the invariant itself; the docs carry the numbering, not the code" >&2
   exit 2
 }
 ```

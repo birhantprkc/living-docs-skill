@@ -1,4 +1,4 @@
-use args::{Cli, Command, DbCmd, HooksCmd, SealCmd, SkillCmd};
+use args::{Cli, Command, DbCmd, HooksCmd, SkillCmd};
 use clap::Parser;
 use living_docs_core::check;
 use std::process::ExitCode;
@@ -15,7 +15,6 @@ mod store;
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
-        Command::Next { doc_type } => commands::next::run_next(&cli.docs_dir, &doc_type),
         Command::New {
             doc_type,
             title,
@@ -36,18 +35,6 @@ fn main() -> ExitCode {
                 owner: owner.as_deref(),
             },
         ),
-        Command::Brief {
-            doc_type,
-            title,
-            from_diff,
-        } => commands::brief::run_brief(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            &doc_type,
-            &title,
-            from_diff,
-        ),
         Command::Index {
             doc_type,
             visibility,
@@ -57,26 +44,18 @@ fn main() -> ExitCode {
         Command::Supersede { old, new } => {
             commands::supersede::run_supersede(cli.backend, cli.engine, &cli.docs_dir, &old, &new)
         }
-        Command::Status { number, new_status } => commands::status::run_status(
+        Command::Set {
+            reference,
+            key,
+            value,
+        } => commands::set::run_set(
             cli.backend,
             cli.engine,
             &cli.docs_dir,
-            &number,
-            &new_status,
+            &reference,
+            &key,
+            &value,
         ),
-        Command::Describe {
-            number,
-            description,
-        } => commands::describe::run_describe(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            &number,
-            &description,
-        ),
-        Command::Owner { number, value } => {
-            commands::owner::run_owner(cli.backend, cli.engine, &cli.docs_dir, &number, &value)
-        }
         Command::Check {
             paths,
             mermaid_only,
@@ -85,21 +64,14 @@ fn main() -> ExitCode {
         Command::Check {
             paths,
             require_owner,
-            liveness,
             ..
-        } => commands::check::run_check(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            paths,
-            require_owner,
-            liveness,
-        ),
+        } => {
+            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths, require_owner)
+        }
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
         Command::Migrate { paths, apply } => {
             commands::migrate::run_migrate(cli.backend, cli.engine, &cli.docs_dir, paths, apply)
         }
-        Command::Seal { cmd: SealCmd::Init } => commands::seal_cmd::run_seal_init(&cli.docs_dir),
         Command::Export {
             out_dir,
             visibility,
@@ -120,15 +92,11 @@ fn main() -> ExitCode {
         Command::Effective(args) => {
             commands::effective::run_effective(cli.backend, cli.engine, &cli.docs_dir, args)
         }
-        Command::Why(args) => commands::why::run_why(cli.backend, cli.engine, &cli.docs_dir, args),
         Command::Search {
             query,
             project,
             strict,
         } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
-        Command::Scorecard(args) => {
-            commands::scorecard::run_scorecard(cli.backend, cli.engine, &cli.docs_dir, args)
-        }
         Command::Skill {
             action:
                 Some(SkillCmd::Install {

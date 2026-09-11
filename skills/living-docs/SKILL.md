@@ -1,24 +1,24 @@
 ---
 name: living-docs
-description: Run a project's documentation as a living system — docs-first issues/PRDs, MADR-lite ADRs (supersede, never delete), Behavior Decision Records (BDRs), a project constitution, research artifacts, living Mermaid architecture diagrams, and semantic-index organization where every doc lands in exactly one place and indexes never drift. Use when setting up or maintaining project docs, writing an ADR/PRD/BDR/constitution/issue/research note, defining a term or acronym in the glossary, drawing or updating an architecture/flow/sequence diagram, splitting an oversized doc into an index, or enforcing the no-drift maintenance rule.
+description: Run a project's engineering decisions as a living log — MADR-lite ADRs (supersede, never delete) for decisions expensive to reverse, issues for the work (and its cheap-to-reverse choices), research artifacts, an optional PRD, a project constitution, and living Mermaid architecture views, where every record has exactly one home, indexes never drift, and a record is earned by materiality, not written per layer. Use when setting up or maintaining project docs, writing an ADR/PRD/constitution/issue/research note, drawing or updating an architecture diagram, or enforcing the no-drift maintenance rule.
 version: "0.15.1"
 metadata:
   type: skill
   layer: procedural
-  tags: [documentation, adr, prd, bdr, constitution, issues, research, architecture, semantic-index]
+  tags: [documentation, adr, prd, constitution, issues, research, architecture]
 ---
 
 # Living Docs
 
-Treat documentation as a living system that stays in sync with the code, not a write-once artifact that rots. The discipline has one spine — **every piece of knowledge has exactly one home, that home is indexed, and nothing structural ships without its doc** — and several document types that hang off it: a constitution, ADRs, BDRs, PRDs, issues, research, architecture diagrams, and a semantic context index.
+Living Docs is a **decision log with a gate**. It records the engineering decisions a future reader would pay to rediscover, traces each from its rationale to the code, and refuses to let a record exist unindexed, untyped, or silently rewritten. The spine — **every piece of knowledge has exactly one home, that home is indexed, and a material decision ships with its record** — carries a small set of record types: ADRs, issues, research, a constitution, an optional PRD, and living architecture views.
 
-This skill is stack-agnostic. It governs *how* docs are organized and maintained, never *what* technology a project uses.
+This skill is stack-agnostic. It governs *how* decisions are recorded and maintained, never *what* technology a project uses.
 
 ---
 
 ## Using this skill (progressive disclosure)
 
-This SKILL.md is a **slim stub** — a trigger plus a task->topic router. The `living-docs` CLI
+This SKILL.md is a **slim stub** — a trigger plus a task→topic router. The `living-docs` CLI
 holds the full, authoritative conventions and templates and discloses them progressively.
 **Before authoring anything, load the topic for your task and operate from it, not from this
 stub:**
@@ -27,42 +27,38 @@ stub:**
 - `living-docs skill living-docs --topic <topic>` — load that topic's full rules (+ template).
 
 Piped output is minified JSON (machine default); `--plain` for human text, `--json` to force
-JSON. Topics: spine, procedure, adr, prd, bdr, constitution, issue-workflow, glossary,
-architecture-diagrams, semantic-index, doc-language, citation, enforcement-modes, check, migration,
-okf-format, doc-trail, size-targets, about (run --list for the full set).
+JSON.
 
-This stub is a **pure router** (ADR 0017): it triggers and points at topics — it holds no rules
-inline. The **five core invariants** and the **CLI-owns-the-mechanics hard rule** are topics, not
-stub prose; load them before authoring:
+Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs set` / `supersede` / `index`.
 
-Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`. (ADR 0019)
-
-- The five invariants (the spine) → `living-docs skill living-docs --topic spine`.
+- The spine invariants → `living-docs skill living-docs --topic spine`.
 - Authoring mechanics — CLI owns every deterministic step, you write only the prose →
   `living-docs skill living-docs --topic procedure`.
+
+## The one rule that decides whether to write a record
+
+Write an **ADR** when a future reader would pay to rediscover *why* you chose this over the
+alternatives — i.e. the decision is expensive to reverse. Otherwise put the choice in the
+**issue** that carries the work. When in doubt, it is an issue. A record is earned by
+materiality, never by the fact that a change touched structure or behavior — do not manufacture
+a record per layer.
 
 ---
 
 ## When to invoke
 
-- Standing up documentation for a project (creating `docs/` structure, the docs index, ADR/issue/BDR/constitution directories) → `living-docs skill living-docs --topic procedure`.
-- **First time living-docs runs in a project** (no `## Living Docs` block in the project guide) → ask the enforcement-mode question and persist the answer → `living-docs skill living-docs --topic enforcement-modes`.
-- **Adopting living-docs in an existing/brownfield project** (decisions already made but undocumented) → run `living-docs migrate` for the ordered `ADOPT` plan (ADR 0037), then `living-docs skill living-docs --topic migration` and `--topic procedure` (*Adopting living docs in an existing project*): inventory the decisions, **confirm each with the user before recording any ADR**, never back-fill by inference alone.
-- **Adapting a bundle authored under an older Living Docs organization** (single `architecture.md`, kind-less views, ID-less PRD requirements, hand-maintained table indexes) → run `living-docs migrate` and execute its `RUN`/`AUTHOR` steps in the printed order → `living-docs skill living-docs --topic migration`.
-- Writing or editing an **ADR** (an architectural/implementation decision) → `living-docs skill living-docs --topic adr` (load `--topic procedure` first if not already loaded this session).
-- Writing or editing a **PRD** (a product/feature requirement spec) → `living-docs skill living-docs --topic prd` (load `--topic procedure` first if not already loaded this session).
-- Writing or editing a **BDR** (observable behavior — inputs, outputs, Given/When/Then scenarios, **and the Test Design matrix for how each is tested**) → `living-docs skill living-docs --topic bdr` (load `--topic procedure` first if not already loaded this session). A test-strategy *decision* (non-default level/technique, bar deviation) is an ADR `tags: [testing]`, not a new record type (no "TDR").
-- Specifying a **non-functional requirement** (performance, availability, security, scale) → a **quality-attribute scenario** bound to an instrument in the **PRD** (`living-docs skill living-docs --topic prd`, rule 9); the decision + fitness function go in an ADR. Not a new doc type.
-- Establishing or amending the **constitution** (foundational scope, data model, non-negotiables) → `living-docs skill living-docs --topic constitution` (load `--topic procedure` first if not already loaded this session).
-- Creating or editing an **issue/ticket** → `living-docs skill living-docs --topic issue-workflow` (load `--topic procedure` first if not already loaded this session).
-- Recording **research** (technology evaluation, external trade-offs) → load the **`research-artifacts`** skill. It owns the OKF research-note format (single file per note, no per-research subfolder), the source discipline, and the research → decision → issue traceable chain, and links back here for the ADR/BDR/issue artifacts. Pairs with the `deep-research` skill.
+- Standing up documentation for a project (creating `docs/` structure, the docs index, ADR/issue directories) → `living-docs skill living-docs --topic procedure`.
+- **Adopting living-docs in an existing/brownfield project** (decisions already made but undocumented) → run `living-docs migrate` for the ordered `ADOPT` plan (ADR 0037), then `living-docs skill living-docs --topic migration` and `--topic procedure`: inventory the decisions, **confirm each with the user before recording any ADR**, never back-fill by inference alone.
+- **Adapting a bundle authored under an older Living Docs organization** (single `architecture.md`, kind-less views, hand-maintained table indexes) → run `living-docs migrate` and execute its `RUN`/`AUTHOR` steps in the printed order → `living-docs skill living-docs --topic migration`.
+- Writing or editing an **ADR** (a decision expensive to reverse, with its rejected alternatives) → `living-docs skill living-docs --topic adr` (load `--topic procedure` first if not already loaded this session). A test-strategy *decision* (non-default level/technique, bar deviation) is an ADR `tags: [testing]`, not a new record type.
+- Writing or editing a **PRD** (an optional product/feature spec: who asked, what is out of scope, what success looks like) → `living-docs skill living-docs --topic prd` (load `--topic procedure` first). A PRD without who-asked/out-of-scope is just a large issue — keep it an issue.
+- Establishing or amending the **constitution** (foundational scope, non-negotiables) → `living-docs skill living-docs --topic constitution` (load `--topic procedure` first).
+- Creating or editing an **issue/ticket** (the unit of work; it carries any cheap-to-reverse decision inline) → `living-docs skill living-docs --topic issue-workflow` (load `--topic procedure` first).
+- Recording **research** (technology evaluation, external trade-offs) → load the **`research-artifacts`** skill. It owns the OKF research-note format, the source discipline, and the research → decision → issue traceable chain, and links back here for the ADR/issue artifacts. Pairs with the `deep-research` skill.
 - Drawing or updating an **architecture, data-flow, or tool-calling diagram** → `living-docs skill living-docs --topic architecture-diagrams`.
-- Defining a **term or acronym** the docs use → add it to the **glossary** (`docs/context/glossary.md`), one home per term → `living-docs skill living-docs --topic glossary`.
 - A doc has grown too large or mixes concerns → **split into a semantic index** → `living-docs skill living-docs --topic semantic-index`.
-- **Reading the corpus as an agent** (what governs X *now*) → run `living-docs effective` (active records only, chains collapsed, ranked, budget-capped — ADR 0050), **never `index.md` directly**; details → `living-docs skill living-docs --topic semantic-index`.
+- **Reading the corpus as an agent** (what governs X *now*) → run `living-docs effective` (active records only, supersede chains collapsed; `--topic <term>` to filter, `--full` for bodies — ADR 0050), **never `index.md` directly**.
 - Sizing a record's body (aim ~100 lines, `check` advises at 120; research exempt; never trim a load-bearing rationale) → `living-docs skill living-docs --topic size-targets`.
-- Enforcing the **no-drift maintenance rule** after any structural change → the rule is: run `living-docs check`; treat a non-zero exit as blocked; treat every advisory (`SIZE`/`LIVENESS`/`LEAK`/`DIAGRAM`/`DUPLICATE`) as work to schedule (ADR 0055). Detail → `living-docs skill living-docs --topic enforcement-modes`; the maintaining loop → `--topic procedure`.
+- Enforcing the **no-drift maintenance rule** after any structural change → run `living-docs check`; treat a non-zero exit as blocked; treat each advisory (`SIZE`, `LIVENESS stale-proposed`, `MOVED-SOURCE`) as work to schedule. Detail → `living-docs skill living-docs --topic check`; the maintaining loop → `--topic procedure`.
 - Authoring or checking the **OKF format** of any doc (frontmatter `type`, reserved `index.md`/`log.md`, bundle-relative links, `# References`) → `living-docs skill living-docs --topic okf-format`.
-- Deciding **which language** the docs are written in (default English; user may override at session start and pin it) → `living-docs skill living-docs --topic doc-language`.
-- Understanding the **doc trail** (constitution → PRD → ADR/BDR → issues → code) or the **document map** (where each doc type lives) → `living-docs skill living-docs --topic doc-trail`.
-- Understanding how this skill **composes** with `okf-knowledge-format`, `research-artifacts`, or optional companions, or its **provenance** → `living-docs skill living-docs --topic about`.
+- Understanding the **doc trail** (constitution → PRD → ADR → issues → code) and which record type answers which question → `living-docs skill living-docs --topic doc-trail`.

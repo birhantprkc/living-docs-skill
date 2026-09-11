@@ -3,7 +3,7 @@ type: ADR
 title: Teach record types by a decision test and a counterexample leak table, delivered in the template slot, with a LEAK advisory for the detectable cases
 description: each record type gets one decision test and a leak table of counterexamples in the served topics; the per-slot constraint travels in the judgment slot brief emits; check adds a regex/structure LEAK advisory for the five detectable leaks, exit code unchanged
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T12:52:15Z
 ---
 

@@ -10,23 +10,10 @@ fn store_of(files: &[(&str, &str)]) -> MapStore {
     MapStore { files: map }
 }
 
-fn options(topic: Option<&str>, tier: Tier, budget: Option<usize>, include_stale: bool) -> Options {
+fn options(topic: Option<&str>, full: bool) -> Options {
     Options {
         topic: topic.map(str::to_string),
-        tier,
-        budget,
-        include_stale,
-        ranked_topic: None,
-    }
-}
-
-fn ranked_options(paths: &[&str]) -> Options {
-    Options {
-        topic: Some("ignored-when-ranked".to_string()),
-        tier: Tier::Index,
-        budget: None,
-        include_stale: false,
-        ranked_topic: Some(paths.iter().map(|p| p.to_string()).collect()),
+        full,
     }
 }
 
@@ -45,17 +32,9 @@ fn a_supersede_chain_collapses_to_the_head_with_a_lineage_line() {
     let b = adr("0133", "Superseded", Some("0131"), "middle");
     let c = adr("0143", "Accepted", Some("0133"), "the rule in force");
     let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1), (&c.0, &c.1)]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &options(Some("rule"), Tier::Index, None, false),
-    );
+    let out = compile(&store, Path::new("docs"), &options(None, false));
 
     assert!(out.contains("ADR 0143"), "head must appear:\n{out}");
-    assert!(
-        !out.contains("ADR 0131") || out.contains("supersedes 0131"),
-        "ancestors only in lineage:\n{out}"
-    );
     assert!(
         out.contains("supersedes 0131 via 0133"),
         "lineage line:\n{out}"
@@ -68,122 +47,25 @@ fn a_supersede_chain_collapses_to_the_head_with_a_lineage_line() {
 }
 
 #[test]
-fn superseded_and_deprecated_records_are_excluded_by_default() {
+fn superseded_and_deprecated_records_are_excluded() {
     let a = adr("0001", "Superseded", None, "gone");
     let b = adr("0002", "Deprecated", None, "retired");
     let c = adr("0003", "Accepted", None, "live");
     let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1), (&c.0, &c.1)]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Index, None, false),
-    );
+    let out = compile(&store, Path::new("docs"), &options(None, false));
     assert!(out.contains("ADR 0003"));
     assert!(!out.contains("ADR 0001"));
     assert!(!out.contains("ADR 0002"));
 }
 
 #[test]
-fn a_stale_record_is_absent_by_default_and_present_under_include_stale() {
-    let proposed = adr("0001", "Proposed", None, "See [issue](/issues/0009-t.md).");
-    let issue = (
-        "docs/issues/0009-t.md",
-        "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb",
-    );
-    let store = store_of(&[(&proposed.0, &proposed.1), (issue.0, issue.1)]);
-
-    let default = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Index, None, false),
-    );
+fn a_proposed_record_stays_in_force() {
+    let proposed = adr("0001", "Proposed", None, "a live proposal");
+    let store = store_of(&[(&proposed.0, &proposed.1)]);
+    let out = compile(&store, Path::new("docs"), &options(None, false));
     assert!(
-        !default.contains("ADR 0001"),
-        "stale excluded by default:\n{default}"
-    );
-
-    let with_stale = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Index, None, true),
-    );
-    assert!(
-        with_stale.contains("ADR 0001"),
-        "included under --include-stale:\n{with_stale}"
-    );
-}
-
-#[test]
-fn a_ranked_topic_set_restricts_and_orders_by_fts5_rank() {
-    let a = adr("0001", "Accepted", None, "about widgets");
-    let b = adr("0002", "Accepted", None, "about widgets");
-    let c = adr("0003", "Accepted", None, "about widgets");
-    let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1), (&c.0, &c.1)]);
-    // FTS5 returned 0003 then 0001 (0002 did not match).
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &ranked_options(&["docs/adr/0003-x.md", "docs/adr/0001-x.md"]),
-    );
-    assert!(
-        out.contains("ADR 0003") && out.contains("ADR 0001"),
-        "both ranked hits present:\n{out}"
-    );
-    assert!(
-        !out.contains("ADR 0002"),
-        "a record absent from the ranked set is dropped:\n{out}"
-    );
-    assert!(
-        out.find("ADR 0003").unwrap() < out.find("ADR 0001").unwrap(),
-        "ranked-set order (relevance) is preserved:\n{out}"
-    );
-}
-
-#[test]
-fn a_stale_record_in_the_ranked_set_is_still_excluded_by_default() {
-    let proposed = adr(
-        "0001",
-        "Proposed",
-        None,
-        "See [issue](/issues/0009-t.md).\n\nwidgets",
-    );
-    let issue = (
-        "docs/issues/0009-t.md",
-        "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb",
-    );
-    let store = store_of(&[(&proposed.0, &proposed.1), (issue.0, issue.1)]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &ranked_options(&["docs/adr/0001-x.md"]),
-    );
-    assert!(
-        !out.contains("ADR 0001"),
-        "liveness still filters a stale FTS5 hit:\n{out}"
-    );
-}
-
-#[test]
-fn relevance_ranks_a_title_match_above_a_body_only_match() {
-    let body_only = adr(
-        "0001",
-        "Accepted",
-        None,
-        "the storage backend is discussed here at length",
-    );
-    let title_hit = (
-        "docs/adr/0002-x.md".to_string(),
-        "---\ntype: ADR\ntitle: Storage backend\ndescription: d\nstatus: Accepted\n---\n\nunrelated body".to_string(),
-    );
-    let store = store_of(&[(&body_only.0, &body_only.1), (&title_hit.0, &title_hit.1)]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &options(Some("storage"), Tier::Index, None, false),
-    );
-    assert!(
-        out.find("ADR 0002").unwrap() < out.find("ADR 0001").unwrap(),
-        "a title match outranks a body-only match:\n{out}"
+        out.contains("ADR 0001"),
+        "a proposal is still active:\n{out}"
     );
 }
 
@@ -192,17 +74,13 @@ fn topic_filters_by_case_insensitive_term_across_title_and_body() {
     let a = adr("0001", "Accepted", None, "concerns the STORAGE backend");
     let b = adr("0002", "Accepted", None, "about mermaid diagrams");
     let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1)]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &options(Some("storage"), Tier::Index, None, false),
-    );
+    let out = compile(&store, Path::new("docs"), &options(Some("storage"), false));
     assert!(out.contains("ADR 0001"));
     assert!(!out.contains("ADR 0002"));
 }
 
 #[test]
-fn constitution_and_prd_rank_above_adrs_at_the_index_tier() {
+fn constitution_and_prd_group_above_adrs() {
     let store = store_of(&[
         (
             "docs/adr/0001-x.md",
@@ -217,11 +95,7 @@ fn constitution_and_prd_rank_above_adrs_at_the_index_tier() {
             "---\ntype: Constitution\ntitle: C\ndescription: d\n---\n\nb",
         ),
     ]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Index, None, false),
-    );
+    let out = compile(&store, Path::new("docs"), &options(None, false));
     let c = out.find("[Constitution]").unwrap();
     let p = out.find("[PRD 0001]").unwrap();
     let a = out.find("[ADR 0001]").unwrap();
@@ -232,62 +106,19 @@ fn constitution_and_prd_rank_above_adrs_at_the_index_tier() {
 }
 
 #[test]
-fn a_contract_ranks_above_narrative_within_the_same_group() {
-    let narrative = adr("0001", "Accepted", None, "just prose");
-    let contract = adr("0002", "Accepted", None, "## Verification\n**x**");
-    let store = store_of(&[(&narrative.0, &narrative.1), (&contract.0, &contract.1)]);
-    let out = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Index, None, false),
-    );
-    assert!(
-        out.find("[ADR 0002]").unwrap() < out.find("[ADR 0001]").unwrap(),
-        "contract 0002 must precede narrative 0001:\n{out}"
-    );
-}
+fn full_prints_bodies_while_the_default_prints_one_line_entries() {
+    let a = adr("0001", "Accepted", None, "## Context\n\nthe whole story");
+    let store = store_of(&[(&a.0, &a.1)]);
 
-#[test]
-fn a_budget_is_a_hard_cap_and_degrades_tier_before_dropping_records() {
-    let big_body = "## H\n".to_string() + &"word ".repeat(400);
-    let a = adr("0001", "Accepted", None, &big_body);
-    let b = adr("0002", "Accepted", None, &big_body);
-    let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1)]);
-
-    let full = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Full, None, false),
-    );
-    let full_tokens = full.chars().count().div_ceil(4);
+    let index = compile(&store, Path::new("docs"), &options(None, false));
     assert!(
-        full_tokens > 50,
-        "fixture must exceed the budget at full tier"
+        !index.contains("the whole story"),
+        "index omits bodies:\n{index}"
     );
 
-    let capped = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Full, Some(50), false),
-    );
+    let full = compile(&store, Path::new("docs"), &options(None, true));
     assert!(
-        capped.chars().count().div_ceil(4) <= 50,
-        "budget is a hard cap:\n{capped}"
-    );
-}
-
-#[test]
-fn a_tiny_budget_drops_lowest_ranked_records_but_never_exceeds() {
-    let a = adr("0001", "Accepted", None, "## Verification\ncontract");
-    let b = adr("0002", "Accepted", None, "narrative body");
-    let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1)]);
-    let capped = compile(
-        &store,
-        Path::new("docs"),
-        &options(None, Tier::Index, Some(12), false),
-    );
-    assert!(
-        capped.chars().count().div_ceil(4) <= 12,
-        "hard cap:\n{capped}"
+        full.contains("the whole story"),
+        "full includes bodies:\n{full}"
     );
 }

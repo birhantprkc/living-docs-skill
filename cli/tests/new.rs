@@ -171,12 +171,12 @@ fn new_maps_issue_to_the_plural_issues_directory() {
 fn new_fills_type_status_and_an_iso8601_timestamp() {
     let docs = temp_dir("frontmatter");
 
-    let output = run_new(&docs, "bdr", "Search Autocomplete");
+    let output = run_new(&docs, "prd", "Search Autocomplete");
 
     assert!(output.status.success());
-    let contents = fs::read_to_string(docs.join("bdr/0001-search-autocomplete.md")).unwrap();
+    let contents = fs::read_to_string(docs.join("prd/0001-search-autocomplete.md")).unwrap();
 
-    assert!(contents.contains("type: BDR"));
+    assert!(contents.contains("type: PRD"));
     assert!(contents.contains("status: Draft"));
 
     let timestamp_line = contents
@@ -235,12 +235,7 @@ fn new_rejects_an_unsupported_doc_type() {
 /// title placeholder.
 #[test]
 fn new_fills_the_frontmatter_title_from_the_argument_for_every_doc_type() {
-    for (doc_type, dir_name) in [
-        ("adr", "adr"),
-        ("bdr", "bdr"),
-        ("prd", "prd"),
-        ("issue", "issues"),
-    ] {
+    for (doc_type, dir_name) in [("adr", "adr"), ("prd", "prd"), ("issue", "issues")] {
         let docs = temp_dir(&format!("title-{doc_type}"));
 
         let output = run_new(&docs, doc_type, "My Decision");
@@ -296,7 +291,7 @@ fn new_stdout_ends_with_the_body_only_instruction_after_the_created_path() {
     assert!(first_line.ends_with("adr/0001-instructed-decision.md"));
     let instruction_line = lines.next().expect("stdout has a second line");
     assert!(instruction_line.contains("Write ONLY the body below the closing"));
-    assert!(instruction_line.contains("living-docs status"));
+    assert!(instruction_line.contains("living-docs set"));
     assert!(instruction_line.contains("supersede"));
     assert!(instruction_line.contains("index"));
 

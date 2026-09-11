@@ -91,8 +91,9 @@ pub(crate) fn mixed_type_corpus() -> (MemoryStore, PathBuf) {
     let bundle = PathBuf::from("/bundle-mixed");
     let mut files = BTreeMap::new();
     files.insert(
-        bundle.join("bdr").join("0001-first-bdr.md"),
-        "---\ntype: BDR\ntitle: First BDR\ndescription: d.\n---\nBody.\n".to_owned(),
+        bundle.join("issues").join("0001-first-issue.md"),
+        "---\ntype: Issue\ntitle: First Issue\ndescription: d.\nstatus: open\n---\nBody.\n"
+            .to_owned(),
     );
     files.insert(
         bundle.join("adr").join("0002-second-adr.md"),

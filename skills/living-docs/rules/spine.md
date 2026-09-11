@@ -1,7 +1,7 @@
 # Core invariants (the spine)
 
-These five invariants hold across **every** document type — ADR, BDR, PRD, constitution, issue,
-research, glossary, architecture. Everything else in this skill is one of these five applied to a
+These five invariants hold across **every** document type — ADR, PRD, constitution, issue,
+research, architecture. Everything else in this skill is one of these five applied to a
 specific document type. When a rule seems unclear, re-derive the right action from these.
 
 1. **Docs-first.** Author the body in the repo (`docs/…`) *before* publishing anywhere external
@@ -15,7 +15,8 @@ specific document type. When a rule seems unclear, re-derive the right action fr
    something changes, mark the old record superseded and write a new one — never silently edit the
    past.
 5. **No structural change without its doc.** New module, moved files, schema change, new data flow
-   → update the relevant doc *and its diagram* in the same change. No "I'll document it later."
+   → update the relevant doc (and its diagram, if it has one) in the same change. No "I'll
+   document it later."
 
 When in doubt, re-derive the right action from these five. The other topics are just these
 invariants applied to each document type.

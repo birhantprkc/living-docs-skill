@@ -13,7 +13,7 @@ living-docs migrate [docs/] --apply   # transactionally applies the mechanical s
 ```
 
 The advisor is safe to run anywhere, any time. `--apply` (fs-mode only) snapshots every
-`.md` plus the seal ledger, runs `index` + `fmt`, and rolls back byte-for-byte on any
+`.md`, runs `index` + `fmt`, and rolls back byte-for-byte on any
 failure or `check` regression — then re-prints the remaining `AUTHOR` steps, which are
 **never** applied automatically. An `ADOPT` plan refuses `--apply`: bootstrap is judgment
 plus user confirmation. Each printed step carries a parseable prefix:
@@ -38,33 +38,24 @@ What the advisor detects, and how to repair each finding:
 - **View missing `kind:`** → set one of `context | container | component | flow |
   sequence | state | data-model | deployment` in its frontmatter (a freely editable key)
   so the generated index can rank it.
-- **Non-Draft PRD with no `FR-N`/`NFR-N` IDs** → rewrite each requirement as an EARS
-  statement under a stable ID and give NFR rows `NFR-N` IDs (ADR 0035); then make each
-  covering BDR link the PRD and cite the IDs it proves. Load `--topic prd`. Respect
-  PRD rule 6 (append-only once accepted): record the rewrite as an amendment, not a
-  silent history edit.
 - **Hand-maintained table index in a type directory** → just `living-docs index`; the
   generator migrates the listing in place, preserving the preamble.
 
 ## Scenario 2 — project entirely outside Living Docs
 
 The `ADOPT` sequence bootstraps in dependency order: root `index.md` → constitution →
-hooks → back-filled ADRs → first architecture view → `index` + `check`. Two hard rules
+hooks → back-filled ADRs → first architecture view → `index` + `check`. The one hard rule
 while executing it:
 
 1. **Brownfield back-fill is interview, not inference.** Inventory the standing decisions
    from the code, then **confirm each with the user before recording any ADR** — never
    back-fill by inference alone (`--topic procedure`).
-2. **Ask the enforcement-mode question first** if the project guide has no `## Living
-   Docs` block, and persist the answer (`--topic enforcement-modes`).
 
 ## After migrating (either scenario)
 
-Once the plan is empty, baseline provenance sealing: `living-docs seal init` (ADR 0039).
-From then on `check` catches records created or owned-key-edited outside the CLI on this
-clone; re-run `seal init` after any git merge/checkout that legitimately rewrites records.
-Author follow-up records in one call each with `new <type> "<title>" --json '{...}'`
-(ADR 0038) — section keys are the template's own headings.
+Once the plan is empty, author follow-up records in one call each with
+`new <type> "<title>" --json '{...}'` (ADR 0038) — section keys are the template's own
+headings — and run `living-docs check` as the gate that decides when migration is done.
 
 ## Anti-patterns
 

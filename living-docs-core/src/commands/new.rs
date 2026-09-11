@@ -31,7 +31,7 @@ pub struct NewOptions<'a> {
     pub owner: Option<&'a str>,
 }
 
-pub const BODY_ONLY_INSTRUCTION: &str = "Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`.";
+pub const BODY_ONLY_INSTRUCTION: &str = "Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs set` / `supersede` / `index`.";
 
 pub fn run(
     store: &dyn DocStore,

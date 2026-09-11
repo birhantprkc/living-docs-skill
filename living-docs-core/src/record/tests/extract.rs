@@ -45,7 +45,7 @@ fn extract_record_ignores_a_concept_id_frontmatter_key_and_derives_from_the_path
 
 #[test]
 fn extract_record_assigns_the_number_identity_kind_to_every_numbered_doc_type() {
-    for doc_type in ["ADR", "BDR", "PRD", "Issue"] {
+    for doc_type in ["ADR", "PRD", "Issue"] {
         let contents = format!("---\ntype: {doc_type}\n---\nBody.\n");
         let extracted = extract_record(Path::new("adr/0007-numbered.md"), &contents);
 

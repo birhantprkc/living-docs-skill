@@ -83,12 +83,13 @@ fn run_status(docs: &Path, number: &str, new_status: &str) -> Output {
         .args([
             "--docs-dir",
             docs.to_str().unwrap(),
-            "status",
+            "set",
             number,
+            "status",
             new_status,
         ])
         .output()
-        .expect("failed to run living-docs status")
+        .expect("failed to run living-docs set")
 }
 
 fn write_record(docs: &Path, dir: &str, filename: &str, title: &str, status: &str) {
@@ -229,8 +230,8 @@ fn index_uses_a_minimal_title_preamble_on_a_fresh_file() {
 
 #[test]
 #[allow(clippy::too_many_lines)]
-fn index_prd_and_bdr_split_active_above_superseded_like_adr() {
-    let docs = temp_dir("prd-bdr-split");
+fn index_prd_splits_active_above_superseded_like_adr() {
+    let docs = temp_dir("prd-split");
     write_record(&docs, "prd", "0001-draft.md", "Draft Feature", "Draft");
     write_record(
         &docs,
@@ -240,25 +241,9 @@ fn index_prd_and_bdr_split_active_above_superseded_like_adr() {
         "Implemented",
     );
     write_record(&docs, "prd", "0003-old.md", "Old Feature", "Superseded");
-    write_record(
-        &docs,
-        "bdr",
-        "0001-current.md",
-        "Current Behavior",
-        "Accepted",
-    );
-    write_record(
-        &docs,
-        "bdr",
-        "0002-retired.md",
-        "Retired Behavior",
-        "Deprecated",
-    );
 
     let prd_output = run_index(&docs, Some("prd"));
     assert!(prd_output.status.success());
-    let bdr_output = run_index(&docs, Some("bdr"));
-    assert!(bdr_output.status.success());
 
     let prd_contents = fs::read_to_string(docs.join("prd/index.md")).unwrap();
     let active_heading = prd_contents
@@ -281,18 +266,6 @@ fn index_prd_and_bdr_split_active_above_superseded_like_adr() {
     let old_row = prd_contents.find("0003-old.md").unwrap();
     assert!(draft_row < superseded_heading && implemented_row < superseded_heading);
     assert!(old_row > superseded_heading, "got: {prd_contents}");
-
-    let bdr_contents = fs::read_to_string(docs.join("bdr/index.md")).unwrap();
-    let bdr_active_heading = bdr_contents
-        .find("## Active")
-        .expect("missing ## Active heading");
-    let bdr_superseded_heading = bdr_contents
-        .find("## Superseded")
-        .expect("missing ## Superseded heading");
-    let current_row = bdr_contents.find("0001-current.md").unwrap();
-    let retired_row = bdr_contents.find("0002-retired.md").unwrap();
-    assert!(bdr_active_heading < current_row && current_row < bdr_superseded_heading);
-    assert!(retired_row > bdr_superseded_heading, "got: {bdr_contents}");
 
     let _ = fs::remove_dir_all(&docs);
 }
@@ -797,8 +770,8 @@ fn supersede_wires_status_and_both_links_bidirectionally() {
 #[test]
 fn supersede_inserts_a_missing_supersedes_key_into_the_frontmatter_block() {
     let docs = temp_dir("supersede-insert");
-    assert!(run_new(&docs, "bdr", "Old Behavior").status.success());
-    assert!(run_new(&docs, "bdr", "New Behavior").status.success());
+    assert!(run_new(&docs, "prd", "Old Behavior").status.success());
+    assert!(run_new(&docs, "prd", "New Behavior").status.success());
 
     let output = run_supersede(&docs, "0001", "0002");
     assert!(
@@ -807,7 +780,7 @@ fn supersede_inserts_a_missing_supersedes_key_into_the_frontmatter_block() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let new_contents = fs::read_to_string(docs.join("bdr/0002-new-behavior.md")).unwrap();
+    let new_contents = fs::read_to_string(docs.join("prd/0002-new-behavior.md")).unwrap();
     assert!(
         new_contents.contains("supersedes: 0001"),
         "got: {new_contents}"

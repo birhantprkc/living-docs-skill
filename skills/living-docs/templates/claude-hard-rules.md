@@ -6,22 +6,25 @@ Copy this block into the project's `CLAUDE.md` and fill in the `<placeholders>`.
 
 ## Living Docs
 
-```
-enforcement: strict   # strict | guided | lite
-onboarded: <YYYY-MM-DD>
-```
+Living Docs is a **decision log with a gate**. It records the engineering decisions a future reader would pay to rediscover, and refuses to let a record exist unindexed, untyped, or silently rewritten. It is not a per-layer paperwork requirement.
 
-The enforcement mode is set once, the first time living-docs runs in this project, and persisted here. `strict` (default) = the doc trail below is mandatory and the agent refuses a structural/behavioral task that ships without its doc; `guided` = the agent asks before skipping a step; `lite` = only the five core invariants are enforced, the doc trail is advisory. To change modes, edit this block. See the living-docs skill → *Enforcement modes*. The mode controls *completion enforcement* only — load-bearing decisions are always grilled and confirmed with you before an ADR/BDR is recorded; the agent never back-fills a decision by inference, in any mode.
+**The one rule that decides whether to write a record:**
+
+> Write an **ADR** when a future reader would pay to rediscover *why* you chose this over the alternatives — i.e. the decision is expensive to reverse. Otherwise put the choice in the **issue** that carries the work. When in doubt, it is an issue, not an ADR.
+
+Most changes need no new decision record. A record is earned by materiality (a choice that is expensive to reverse), never by the fact that a change touched structure or behavior. Do not manufacture a record per layer.
+
+Load-bearing decisions are always confirmed with you before an ADR is recorded; the agent never back-fills a decision by inference.
 
 ## Doc-trail
 
-Every change follows this chain:
+Records exist so a decision can be traced from its rationale to the code:
 
 ```
-constitution → PRD → ADR (how) + BDR (behavior) → issues → code
+constitution → PRD (optional) → ADR → issues → code
 ```
 
-No code change skips a link. A PR that changes behavior without a BDR, or architecture without an ADR, is incomplete (subject to the enforcement mode above).
+Only what the change earns: a routine change is just an issue and code. A material decision earns an ADR in the same change. A product/feature spec earns a PRD when there is a "who asked / what is out of scope" worth pinning; a PRD without that is just a large issue.
 
 ## Locations
 
@@ -29,20 +32,19 @@ Adapt this table to the project's actual paths before committing the rules.
 
 | Artifact | Location |
 |---|---|
-| Constitution | `docs/constitution/` |
+| Constitution | `docs/constitution.md` |
 | PRDs | `docs/prd/` |
-| ADRs | `docs/decisions/` |
-| BDRs | `docs/behavior/` |
+| ADRs | `docs/adr/` |
+| Issues | `docs/issues/` |
 | Research | `docs/research/` |
-| Issue drafts | `docs/issues/drafts/` |
 
 ---
 
 ## Hard rules
 
-### 1. Docs-first change policy
+### 1. Docs-first for material decisions
 
-Any change that alters behavior, architecture, flows, endpoints, or schema MUST update the corresponding docs in the same PR. A PR that changes code without updating its affected docs is incomplete and must not be merged.
+A change that makes a decision expensive to reverse — an architecture, dependency, schema, or public-contract choice — ships its ADR in the same PR. A routine change shipping without a new record is complete; a material decision shipping without its ADR is not.
 
 ### 2. Diagrams are always Mermaid
 
@@ -52,23 +54,28 @@ All diagrams in documentation must be Mermaid. Existing ASCII diagrams are conve
 
 Every directory of documentation is a semantic group and must contain an `index.md` (the OKF reserved listing — no frontmatter, except the bundle-root `docs/index.md`, which declares `okf_version: "0.1"`). Every concept document opens with OKF frontmatter carrying a non-empty `type`; `status` and supersession live in frontmatter, never a body line. Every new document is linked from its group's `index.md` with bundle-relative (`/…`) links, and new groups are linked from the root docs index. No orphan documents. See the `okf-knowledge-format` skill.
 
-### 4. Architectural decisions require an ADR; expected behavior requires a BDR
+### 4. The record types
 
-- A decision that changes structure, dependencies, or technical approach → write an ADR (`docs/decisions/NNNN-slug.md`).
-- A decision that defines or changes what the system must observably do → write or amend a BDR (`docs/behavior/NNNN-slug.md`). Every BDR carries a Mermaid diagram, a textual description, a Contract section (public signatures + agent tool schemas, observable-only), numbered Given/When/Then scenarios, and a Test Design matrix.
-- Research informing decisions goes in `docs/research/` in the OKF format (dated session directory with a `report.md` concept and a `references.md` registry; see the `research-artifacts` skill).
+Four types answer four distinct questions. If a candidate record does not answer one of these, it is not that type — do not open it:
+
+- **ADR** — *what did we choose, what did we reject, and why?* A decision expensive to reverse, with its alternatives. `docs/adr/NNNN-slug.md`.
+- **Issue** — *what is the change, and how do we know it is done?* The unit of work; it carries any cheap-to-reverse choice inline.
+- **Research** — *what does external evidence say?* Dated evaluation of outside sources, in the OKF format (see the `research-artifacts` skill).
+- **Constitution** — *what never changes here?* The singleton of scope and non-negotiables.
+
+A **PRD** is optional: a product/feature spec with who-asked and out-of-scope. Behavior is specified by tests, not by a separate record type. A test-strategy *decision* is an ADR `tags: [testing]`.
 
 ### 5. Issues local-first
 
-Draft the issue as `docs/issues/drafts/NNNN-slug.md` first, linked from the drafts index. Launch on the tracker, stripping the OKF frontmatter so only the body is sent. Backfill the tracker number into the issue's frontmatter (`tracker`) and the index. The local file is the trace; the tracker is execution state.
+Draft the issue as `docs/issues/NNNN-slug.md` first, linked from the issues index. Launch on the tracker, stripping the OKF frontmatter so only the body is sent. Backfill the tracker number into the issue's frontmatter (`tracker`) and the index. The local file is the trace; the tracker is execution state.
 
 ### 6. No comments in code
 
-Self-documenting names, small single-purpose functions, and extracted variables replace comments. A comment is permitted only for a constraint the code cannot express — a non-obvious external contract, a deliberate workaround with its reason. Never comment to narrate what the code does, restate history, or address a reviewer. No commented-out code. Never reference a project doc artifact from a docblock or comment - no ADR, PRD, BDR, issue, constitution article, research note, or delivery-slice name or number (for example `see ADR 0046` or `slice R2`); doc numbers change when records are superseded, so the reference rots - state the invariant itself and let the docs carry the numbering. External specification identifiers (an RFC, a CVE) are stable and remain allowed.
+Self-documenting names, small single-purpose functions, and extracted variables replace comments. A comment is permitted only for a constraint the code cannot express — a non-obvious external contract, a deliberate workaround with its reason. Never comment to narrate what the code does, restate history, or address a reviewer. No commented-out code. Never reference a project doc artifact from a docblock or comment — no ADR, PRD, issue, constitution article, research note, or delivery-slice name or number (for example `see ADR 0046` or `slice R2`); doc numbers change when records are superseded, so the reference rots — state the invariant itself and let the docs carry the numbering. External specification identifiers (an RFC, a CVE) are stable and remain allowed.
 
 ### 7. All internal artifacts in English
 
-Code, documentation, commit messages, ADRs, BDRs, and issue drafts are written in English. Conversation language follows the user.
+Code, documentation, commit messages, ADRs, and issue drafts are written in English. Conversation language follows the user.
 
 ### 8. Generated artifact names describe what they do
 
@@ -85,19 +92,19 @@ All of the following must pass on every PR. No exceptions, no deferrals.
 | Lint at zero warnings | `<lint command at zero warnings>` |
 | Mutation testing (changed code, per file) | `<mutation testing >= N% on changed code, per file>` |
 
-The docs-update rule from rule 1 is also a quality gate: a PR failing the docs check does not merge.
+The docs-update rule from rule 1 is also a quality gate: a PR failing `living-docs check` does not merge.
 
 ### 10. Author docs through the living-docs CLI — never hand-do deterministic steps
 
 The dividing line is determinism: any documentation step with a single correct output given its inputs goes through the `living-docs` CLI; only the judgment prose (the "why") is authored by hand, directly in the file.
 
-- Use the CLI verb for every mechanical step: `living-docs new <type> "<title>"` (number + frontmatter + skeleton), `living-docs supersede <old> <new>` (wires `supersedes`/`superseded_by` + status on both records), `living-docs index [type]` (regenerates the index), `living-docs check` (the doc-gate, must pass), `living-docs export`/`brief` (byte-stable materialization / pre-filled scaffold).
-- Write the body prose directly — there is no paragraph-editing verb, because wrapping a text edit in the CLI adds no determinism. Editing the body is a normal edit; hand-numbering a doc, hand-writing frontmatter, hand-maintaining an index row, or hand-wiring supersede links is a process error. Each paragraph is ONE line — never hard-wrap prose at a fixed column (`living-docs fmt` unwraps it, ADR 0046).
-- When a deterministic frontmatter mutation has no verb yet (e.g. set status, add a tag) and it keeps being done by hand, harden it into a new CLI verb rather than normalizing the hand-edit.
+- Use the CLI verb for every mechanical step: `living-docs new <type> "<title>"` (number + frontmatter + skeleton), `living-docs set <ref> <key> <value>` (sets `status`/`description`/`owner`), `living-docs supersede <old> <new>` (wires `supersedes`/`superseded_by` + status on both records), `living-docs index [type]` (regenerates the index), `living-docs check` (the doc-gate, must pass), `living-docs export` (byte-stable materialization).
+- Write the body prose directly — there is no paragraph-editing verb, because wrapping a text edit in the CLI adds no determinism. Editing the body is a normal edit; hand-numbering a doc, hand-writing frontmatter, hand-maintaining an index row, or hand-wiring supersede links is a process error. Each paragraph is ONE line — never hard-wrap prose at a fixed column (`living-docs fmt` unwraps it).
+- When a deterministic frontmatter mutation has no verb yet and it keeps being done by hand, harden it into a `living-docs set` key rather than normalizing the hand-edit.
 
 **Write ONLY the body below the closing `---`.** Numbering, frontmatter (`type`, `title`, `status`, `supersedes`, `superseded_by`, `timestamp`), and index rows are CLI-owned; `description` and `tags` are yours.
 
-This rule is enforced by gates, not prose (instructions never block; only gates block). Wire them once per project through either of two deterministic channels (ADR 0023):
+This rule is enforced by gates, not prose (instructions never block; only gates block). Wire them once per project through either of two deterministic channels:
 
 - **Claude Code plugin:** `/plugin marketplace add ejklock/living-docs-skill` then `/plugin install living-docs@living-docs` (`--scope project` to commit the choice). Installs the write-time gate (`PreToolUse` on `Write|Edit|MultiEdit`, blocking hand-writes to CLI-owned frontmatter keys, new `NNNN-*.md` records, and type `index.md` files, naming the correct verb) and the session-teaching hook (`SessionStart`, so every session receives this rule and the resolved CLI path at start).
 - **`living-docs hooks install [--dir <path>] [--docs-dir <bundle>] [--dry-run]`** (every harness): materializes the same write-gate and session-teaching scripts, wires them into `.claude/settings.json`, and installs a `pre-commit` hook running `living-docs check <bundle>` so a hand-written record fails in the session that authored it, not at CI. Remove everything it wrote with the sibling `living-docs hooks uninstall [--dir <path>] [--dry-run]`.

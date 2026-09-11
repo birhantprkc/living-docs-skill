@@ -15,5 +15,5 @@ enforced deterministically forever:
 - The **leak gate is the backstop**: even a mismarked-public doc is caught if it links to a withheld
   doc, or carries a secret.
 
-The AI's only role is at *authoring*: when it writes an ADR/PRD/BDR/research note, it proposes a
+The AI's only role is at *authoring*: when it writes an ADR/PRD/research note, it proposes a
 `visibility` (defaulting to private) for you to confirm — never to decide what ships at publish.

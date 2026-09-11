@@ -3,7 +3,7 @@ type: ADR
 title: "Materiality criterion for the doc trail: a record earns an ADR/BDR when the decision is expensive to reverse, with advisory inflation signals"
 description: the doc trail is gated by materiality, not by layer — a decision earns its own ADR/BDR only when it is expensive to reverse; strict refuses a missing MATERIAL record, not a record per behavioral diff; scorecard emits advisory inflation signals and check a ~300-word decision-prose budget
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 timestamp: 2026-09-11T12:34:31Z
 ---
 

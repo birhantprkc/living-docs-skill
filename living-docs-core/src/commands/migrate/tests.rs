@@ -28,12 +28,12 @@ fn a_missing_bundle_yields_the_adopt_sequence_and_nothing_else() {
 
     let steps = plan(&store, Path::new("/d"));
 
-    assert_eq!(steps.len(), 8);
+    assert_eq!(steps.len(), 7);
     assert!(steps.iter().all(|step| step.starts_with("ADOPT ")));
     assert!(steps[0].contains("no docs bundle at /d"));
     assert!(steps[2].contains("new constitution"));
-    assert!(steps[4].contains("seal init"));
-    assert!(steps[6].contains("--kind context"));
+    assert!(steps[4].contains("new adr"));
+    assert!(steps[5].contains("--kind context"));
 }
 
 #[test]
@@ -73,40 +73,6 @@ fn a_view_with_kind_and_the_architecture_index_are_not_findings() {
         "---\ntype: Architecture View\ntitle: Context\nkind: context\n---\n\n# Context\n",
     ));
     files.push(("/d/architecture/index.md", "# Architecture\n"));
-    let store = store_with(files);
-
-    assert!(plan(&store, Path::new("/d")).is_empty());
-}
-
-#[test]
-fn a_past_draft_prd_without_ids_is_an_author_step_and_a_draft_one_is_not() {
-    let prd = |status: &str| {
-        format!("---\ntype: PRD\ntitle: P\nstatus: {status}\n---\n\n1. The system shall respond.\n")
-    };
-    for (status, expected_steps) in [("Accepted", 3), ("Implemented", 3), ("Draft", 0)] {
-        let contents = prd(status);
-        let files: Vec<(&str, &str)> =
-            vec![("/d/index.md", "# Docs\n"), ("/d/prd/0001-p.md", &contents)];
-        let store = store_with(files);
-
-        let steps = plan(&store, Path::new("/d"));
-
-        assert_eq!(steps.len(), expected_steps, "status {status}");
-        if expected_steps > 0 {
-            assert!(steps[0].starts_with("AUTHOR /d/prd/0001-p.md"));
-            assert!(steps[0].contains("EARS"));
-            assert!(steps[0].contains("ADR 0035"));
-        }
-    }
-}
-
-#[test]
-fn a_prd_already_carrying_ids_is_not_a_finding() {
-    let mut files = current_bundle();
-    files.push((
-        "/d/prd/0001-p.md",
-        "---\ntype: PRD\ntitle: P\nstatus: Implemented\n---\n\n- **FR-1** — When x, the system shall y.\n",
-    ));
     let store = store_with(files);
 
     assert!(plan(&store, Path::new("/d")).is_empty());

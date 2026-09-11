@@ -52,7 +52,6 @@ mod tests {
     fn dir_for_maps_issue_to_the_plural_directory() {
         assert_eq!(dir_for("issue"), Some("issues"));
         assert_eq!(dir_for("adr"), Some("adr"));
-        assert_eq!(dir_for("bdr"), Some("bdr"));
         assert_eq!(dir_for("prd"), Some("prd"));
     }
 
@@ -84,7 +83,6 @@ mod tests {
     fn doc_type_for_dir_maps_the_plural_issues_directory_to_issue() {
         assert_eq!(doc_type_for_dir("issues"), Some("issue"));
         assert_eq!(doc_type_for_dir("adr"), Some("adr"));
-        assert_eq!(doc_type_for_dir("bdr"), Some("bdr"));
         assert_eq!(doc_type_for_dir("prd"), Some("prd"));
     }
 
@@ -110,7 +108,6 @@ mod tests {
     #[test]
     fn frontmatter_type_for_uses_canonical_casing() {
         assert_eq!(frontmatter_type_for("adr"), Some("ADR"));
-        assert_eq!(frontmatter_type_for("bdr"), Some("BDR"));
         assert_eq!(frontmatter_type_for("prd"), Some("PRD"));
         assert_eq!(frontmatter_type_for("issue"), Some("Issue"));
     }
