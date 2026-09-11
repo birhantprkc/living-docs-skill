@@ -5,7 +5,9 @@ use clap::{Parser, Subcommand};
 
 mod sub;
 use std::path::PathBuf;
-pub(crate) use sub::{DbCmd, EffectiveArgs, HooksCmd, SealCmd, SkillCmd, TierArg, WhyArgs};
+pub(crate) use sub::{
+    DbCmd, EffectiveArgs, HooksCmd, ScorecardArgs, SealCmd, SkillCmd, TierArg, WhyArgs,
+};
 
 #[derive(Parser)]
 #[command(
@@ -240,11 +242,7 @@ pub(crate) enum Command {
     /// the fixed Trusted/Contextual/Traceable/Governed attribute table,
     /// printing a table or (with `--json`) a deterministic JSON payload.
     /// Never mutates the tree and always exits zero — the grades never gate.
-    Scorecard {
-        /// Emits deterministic JSON instead of the human-readable table.
-        #[arg(long)]
-        json: bool,
-    },
+    Scorecard(ScorecardArgs),
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
     /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR

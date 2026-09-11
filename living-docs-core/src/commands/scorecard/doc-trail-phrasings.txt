@@ -1,0 +1,30 @@
+# Table-driven doc-trail finding phrasings (issue #58). One rule per line:
+#   <category>|<lowercase substring>
+# A finding's text is classified by the first matching substring, case-insensitive.
+# Categories: citation | index-row | frontmatter | envelope-protocol
+# Blank lines and lines starting with '#' are ignored. Edit this file to tune
+# the classifier; it is unit-tested against the phrasing samples in tests.rs.
+citation|cite an adr
+citation|cites an adr
+citation|adr reference in
+citation|references an adr
+citation|reference to adr
+citation|reference to bdr
+citation|doc-artifact reference
+citation|docblock references
+citation|comment references
+citation|provenance is a query
+index-row|index row
+index-row|not listed in index
+index-row|missing index entry
+index-row|index.md entry
+index-row|orphan record
+frontmatter|frontmatter key
+frontmatter|non-canonical frontmatter
+frontmatter|cli-owned frontmatter
+frontmatter|status frontmatter
+frontmatter|missing frontmatter
+envelope-protocol|envelope protocol
+envelope-protocol|response envelope
+envelope-protocol|protocol envelope
+envelope-protocol|message envelope

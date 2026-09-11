@@ -36,6 +36,20 @@ pub(crate) struct EffectiveArgs {
     pub(crate) include_stale: bool,
 }
 
+/// Arguments for the `scorecard` verb, in their own `Args` struct for the
+/// same file-size reason as [`EffectiveArgs`].
+#[derive(Args)]
+pub(crate) struct ScorecardArgs {
+    /// Emits deterministic JSON instead of the human-readable table.
+    #[arg(long)]
+    pub(crate) json: bool,
+    /// Consumption window, e.g. `7d` or `2w` (ADR 0053): summarize only doc
+    /// reads within it, measured back from the newest captured read. Omitted
+    /// spans the whole capture.
+    #[arg(long)]
+    pub(crate) since: Option<String>,
+}
+
 /// Arguments for the `why` verb (ADR 0051), in their own `Args` struct for the
 /// same file-size reason as [`EffectiveArgs`].
 #[derive(Args)]

@@ -10,6 +10,7 @@ use crate::doc_type::{self, Identity};
 use crate::store::DocStore;
 use std::path::Path;
 
+pub mod consumption;
 pub mod inflation;
 mod json;
 
