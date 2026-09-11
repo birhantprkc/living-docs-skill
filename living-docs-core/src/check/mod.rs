@@ -14,6 +14,7 @@
 
 pub(crate) mod canonical;
 mod graph;
+mod leak;
 pub mod liveness;
 pub(crate) mod links;
 mod mermaid;
@@ -47,9 +48,7 @@ pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: boo
 }
 
 /// `check --liveness`: every invariant [`run_require_owner`] validates, plus a
-/// trailing summary of the four record-liveness counts (ADR 0049). The
-/// per-record liveness advisories print unconditionally either way; only the
-/// summary block is gated on this flag.
+/// trailing summary of the four record-liveness counts (ADR 0049).
 pub fn run_liveness(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
     run_configured(store, bundle, require_owner, true)
 }
@@ -117,6 +116,7 @@ fn run_all_checks(
     seal::check_seals(store, bundle, &all_md, reporter);
     traceability::check_requirement_traceability(store, &all_md, reporter);
     liveness::check_liveness(store, bundle, &all_md, reporter);
+    leak::check_leak(store, &all_md, reporter);
 
     all_md.len()
 }
