@@ -85,10 +85,16 @@ fn main() -> ExitCode {
         Command::Check {
             paths,
             require_owner,
+            liveness,
             ..
-        } => {
-            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths, require_owner)
-        }
+        } => commands::check::run_check(
+            cli.backend,
+            cli.engine,
+            &cli.docs_dir,
+            paths,
+            require_owner,
+            liveness,
+        ),
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
         Command::Migrate { paths, apply } => {
             commands::migrate::run_migrate(cli.backend, cli.engine, &cli.docs_dir, paths, apply)
@@ -111,13 +117,17 @@ fn main() -> ExitCode {
         Command::Db {
             cmd: DbCmd::Sync { project },
         } => commands::db::run_db_sync(&cli.docs_dir, cli.engine, project),
+        Command::Effective(args) => {
+            commands::effective::run_effective(cli.backend, cli.engine, &cli.docs_dir, args)
+        }
+        Command::Why(args) => commands::why::run_why(cli.backend, cli.engine, &cli.docs_dir, args),
         Command::Search {
             query,
             project,
             strict,
         } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
-        Command::Scorecard { json } => {
-            commands::scorecard::run_scorecard(cli.backend, cli.engine, &cli.docs_dir, json)
+        Command::Scorecard(args) => {
+            commands::scorecard::run_scorecard(cli.backend, cli.engine, &cli.docs_dir, args)
         }
         Command::Skill {
             action:

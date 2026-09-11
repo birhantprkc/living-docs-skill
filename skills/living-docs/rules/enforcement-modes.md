@@ -6,7 +6,7 @@ The mode is chosen **once, by the user, the first time living-docs runs in the p
 
 | Mode | Doc trail | Agent behavior |
 |---|---|---|
-| `strict` (default) | Mandatory | Refuses to report a structural/behavioral task complete without its required doc (PRD/ADR/BDR/issue). Same hard-stop weight as the five invariants. |
+| `strict` (default) | Mandatory *for material decisions* | Refuses to report a task complete without the record a **material** decision earns (PRD/ADR/BDR; materiality per ADR 0052) — same hard-stop weight as the five invariants. A non-material decision recorded in its issue is compliant. |
 | `guided` | Prompted | Pauses and asks the user before skipping a doc-trail step. The user may waive a step per task; the waiver is not remembered. |
 | `lite` | Advisory | Only the five invariants are hard stops. The doc trail is recommended, never enforced (this is the pre-0.3 behavior). |
 
@@ -35,7 +35,7 @@ onboarded: <YYYY-MM-DD>
 
 **Absence of the block is the only first-run signal**; presence of any valid `enforcement` value means onboarded — never ask again, just read it and apply it. To change modes later, the user edits the block.
 
-Doc-trail enforcement is a **judgement** call (there is no sound oracle for "did this change need an ADR"), so it lives with the agent, not with `living-docs check`. The mechanical invariants (frontmatter, indexing, links, supersede) are checked the same way in every mode.
+Doc-trail *materiality* — "did this change need an ADR" — is a **judgement** call with no sound oracle, so it lives with the agent, not with `living-docs check`; the `scorecard` inflation signals and the `check` decision-prose budget (ADR 0052) make the cost of getting it wrong observable without deciding it. Record *currency*, unlike materiality, **does** have an oracle (the linked issue's status and the filesystem), so `check` emits `LIVENESS` advisories for it (ADR 0049). The mechanical invariants (frontmatter, indexing, links, supersede) are checked the same way in every mode.
 
 ## Agent enforcement (refusal triggers)
 
@@ -46,20 +46,31 @@ report a docs-touching task as complete if any of these hold — fix it or surfa
 
 1. **Orphan.** A new or moved concept file is not listed in its directory `index.md` (and that
    directory is not reachable from the bundle-root `docs/index.md`). *Indexed or it doesn't exist.*
-2. **Stale diagram.** A structural change (schema, module layout, data flow, new component)
-   landed without updating its Mermaid diagram in the **same** change.
+2. **Stale diagram** *(instrumented — advisory).* A structural change (schema, module layout,
+   data flow, new component) landed without updating its Mermaid diagram. `check` emits a
+   `DIAGRAM` advisory when an architecture diagram's nodes and the declared module list
+   (`docs/architecture/diagram-scope.txt`) disagree (ADR 0055); treat it as work to schedule.
 3. **Silent rewrite.** A decision/requirement was edited in place instead of superseded — or a
    record is `status: Superseded` with no `superseded_by`.
 4. **Untyped doc.** A non-reserved `.md` is missing frontmatter or a non-empty `type`; or an
    `index.md`/`log.md` carries frontmatter (except the bundle-root `index.md`).
 5. **Broken link.** A bundle-relative (`/…`) or relative link points at a file that does not exist.
-6. **Duplicate home.** The same fact now lives in two files (cross-reference instead).
-7. **Broken doc trail** *(mode-gated — see Enforcement modes)*. A structural change shipped without
-   its ADR, or a behavioral change without its BDR. Under `strict` this is a blocked task — refuse it
-   like an orphan. Under `guided`, pause and ask the user before proceeding. Under `lite` it is
-   advisory only.
+6. **Duplicate home** *(instrumented — advisory).* The same fact now lives in two files
+   (cross-reference instead). `check` emits a `DUPLICATE` advisory when two same-type records
+   are near-duplicates (ADR 0055); treat it as work to schedule.
+7. **Broken doc trail** *(mode-gated, materiality-scoped — see Enforcement modes)*. A **material**
+   decision shipped without its record — a structural change expensive to reverse without its ADR, or
+   a new/changed observable contract without its BDR (materiality per `adr-conventions.md` rule 10 and
+   `bdr-conventions.md` rule 8; ADR 0052). Under `strict` a missing *material* record is a blocked task
+   — refuse it like an orphan; a non-material decision recorded only in its issue's `## Decision` is
+   compliant in every mode. Under `guided`, pause and ask before skipping a material record. Under
+   `lite` it is advisory only. Falling back to `lite` is not the materiality filter — `lite` drops the
+   whole trail; the filter keeps `strict` and only stops requiring a record per layer.
 
-Triggers **1, 3, 4, 5** are mechanical — run `living-docs check` (below) and treat a non-zero
-exit as a blocked task, not a warning. Triggers **2**, **6**, and **7** are semantic (no sound oracle)
-and stay a judgement call: inspect the diff before declaring done. Trigger **7** additionally depends
-on the project's enforcement mode.
+Every trigger now has an instrument or a mode behind it — there are **no prose-only hard stops** (ADR 0055):
+
+- **Mechanical (checked):** 1 orphan, 3 silent rewrite, 4 untyped doc, 5 broken link — run `living-docs check` and treat a non-zero exit as a blocked task, not a warning.
+- **Instrumented-advisory:** 2 stale diagram (`DIAGRAM`), 6 duplicate home (`DUPLICATE`) — `check` emits the advisory; it never moves the exit code. Treat an advisory as work to schedule, not a blocker.
+- **Materiality-gated:** 7 broken doc trail — a *material* decision without its record is a blocked task under `strict` (ADR 0052); a non-material one is advice.
+
+The rule for the agent collapses to: **run `check`; treat a non-zero exit as blocked; treat every advisory (`SIZE`, `LIVENESS`, `LEAK`, `DIAGRAM`, `DUPLICATE`) as work to schedule.** No paragraph of refusal prose to adjudicate alone.

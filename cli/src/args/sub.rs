@@ -1,8 +1,71 @@
 //! Second-level subcommand enums for `seal`, `hooks`, `skill`, and `db`.
 
 use crate::skill_install::Harness;
-use clap::Subcommand;
+use clap::{Args, Subcommand, ValueEnum};
 use std::path::PathBuf;
+
+/// The `effective --tier` value, mapped to
+/// `living_docs_core::commands::effective::Tier` by the command wrapper.
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub(crate) enum TierArg {
+    Index,
+    Outline,
+    Full,
+}
+
+/// Arguments for the `effective` verb (ADR 0050), factored into their own
+/// `Args` struct so the top-level `Command` enum stays within the file-size
+/// ratchet (issue 0028).
+#[derive(Args)]
+pub(crate) struct EffectiveArgs {
+    /// Restrict the view to records whose title, description, or body
+    /// contains this term (case-insensitive). Omitted: everything active.
+    #[arg(long)]
+    pub(crate) topic: Option<String>,
+    /// How much of each record to show: `index` (the default), `outline`
+    /// (headings), or `full` (bodies).
+    #[arg(long, value_enum, default_value = "index")]
+    pub(crate) tier: TierArg,
+    /// Hard cap on output tokens (~4 chars each): truncation degrades the tier
+    /// first, then drops the lowest-ranked records — never exceeded.
+    #[arg(long)]
+    pub(crate) budget: Option<usize>,
+    /// Include records the liveness check (ADR 0049) flags stale, withheld by
+    /// default.
+    #[arg(long)]
+    pub(crate) include_stale: bool,
+}
+
+/// Arguments for the `scorecard` verb, in their own `Args` struct for the
+/// same file-size reason as [`EffectiveArgs`].
+#[derive(Args)]
+pub(crate) struct ScorecardArgs {
+    /// Emits deterministic JSON instead of the human-readable table.
+    #[arg(long)]
+    pub(crate) json: bool,
+    /// Consumption window, e.g. `7d` or `2w` (ADR 0053): summarize only doc
+    /// reads within it, measured back from the newest captured read. Omitted
+    /// spans the whole capture.
+    #[arg(long)]
+    pub(crate) since: Option<String>,
+}
+
+/// Arguments for the `why` verb (ADR 0051), in their own `Args` struct for the
+/// same file-size reason as [`EffectiveArgs`].
+#[derive(Args)]
+pub(crate) struct WhyArgs {
+    /// The repository path to trace. Omitted when `--from-diff` supplies the
+    /// paths instead.
+    pub(crate) path: Option<String>,
+    /// A git range (e.g. `HEAD~1..HEAD`) whose touched files are traced —
+    /// resolved by the front as `git diff --name-only <range>`.
+    #[arg(long)]
+    pub(crate) from_diff: Option<String>,
+    /// Include records the liveness check (ADR 0049) flags stale, withheld by
+    /// default.
+    #[arg(long)]
+    pub(crate) include_stale: bool,
+}
 
 #[derive(Subcommand)]
 pub(crate) enum SealCmd {

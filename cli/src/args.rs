@@ -5,7 +5,9 @@ use clap::{Parser, Subcommand};
 
 mod sub;
 use std::path::PathBuf;
-pub(crate) use sub::{DbCmd, HooksCmd, SealCmd, SkillCmd};
+pub(crate) use sub::{
+    DbCmd, EffectiveArgs, HooksCmd, ScorecardArgs, SealCmd, SkillCmd, TierArg, WhyArgs,
+};
 
 #[derive(Parser)]
 #[command(
@@ -148,6 +150,12 @@ pub(crate) enum Command {
         /// requires it (ADR, BDR) from a warning to an invariant violation.
         #[arg(long)]
         require_owner: bool,
+        /// Prints a trailing summary of the four record-liveness counts
+        /// (stale-proposed, stale-impact, contract, narrative — ADR 0049).
+        /// The per-record liveness advisories print either way; this only
+        /// adds the summary line. Never changes the exit code.
+        #[arg(long)]
+        liveness: bool,
     },
     /// Canonicalizes a concept record's frontmatter in place, leaving its
     /// body untouched — the remediation verb for `check`'s
@@ -210,6 +218,13 @@ pub(crate) enum Command {
         #[arg(long)]
         check_tier3: bool,
     },
+    /// Compiles the agent-facing effective view of the bundle (ADR 0050):
+    /// active records only, chains collapsed, ranked, at a progressive tier
+    /// under a hard token budget. Read this instead of `index.md`.
+    Effective(EffectiveArgs),
+    /// Answers which records govern a path (ADR 0051), most-specific match
+    /// first. Provenance is a query, never a code comment.
+    Why(WhyArgs),
     /// Full-text search the derived read-model, ranked best-match-first.
     Search {
         query: String,
@@ -227,11 +242,7 @@ pub(crate) enum Command {
     /// the fixed Trusted/Contextual/Traceable/Governed attribute table,
     /// printing a table or (with `--json`) a deterministic JSON payload.
     /// Never mutates the tree and always exits zero — the grades never gate.
-    Scorecard {
-        /// Emits deterministic JSON instead of the human-readable table.
-        #[arg(long)]
-        json: bool,
-    },
+    Scorecard(ScorecardArgs),
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
     /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR

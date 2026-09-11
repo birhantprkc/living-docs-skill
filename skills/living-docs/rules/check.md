@@ -13,8 +13,19 @@ constraint without an instrument is a vibe* — so the checkable invariants get 
 a docs PR that fails it does not merge. It does **not** check docs-first mirroring or "one home
 per fact" semantics — those have no sound oracle and stay with the reviewer.
 
+It also emits **record-liveness advisories** (ADR 0049) — currency has a sound oracle where
+materiality does not, so the checkable part lives in the tool. A `LIVENESS stale-proposed` line
+marks an ADR/BDR still at its seed status (`Proposed`/`Draft`) whose linked issue is already
+`closed`/`done`/`Superseded`; a `LIVENESS stale-impact` line marks an accepted record whose
+`**Implementation impact:**` names a repository path that no longer exists. Both are advisory —
+they never move the exit code — and `check --liveness` prints a trailing summary of the four
+counts (stale-proposed, stale-impact, contract, narrative). A record with a `## Verification`
+block is a *contract*; without one it is *narrative* — the read verbs rank contracts first and
+withhold stale records from what they serve.
+
 ```bash
-living-docs check docs          # check the project's bundle; exit 1 on any violation
+living-docs check docs             # check the project's bundle; exit 1 on any violation
+living-docs check docs --liveness  # same, plus the record-liveness summary line
 ```
 
 It is a native Rust binary (correct without shelling out to a hand-rolled markdown/YAML

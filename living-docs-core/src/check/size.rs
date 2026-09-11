@@ -1,8 +1,11 @@
 //! Advisory body-size check (issue 0009) — decision/execution records aim for
-//! ~100 body lines; past 120 the check prints a `SIZE` note. Advisory only:
-//! it never affects the exit code. Which doc types the target applies to is
-//! decided per-row by `doc_type::DocTypeSpec::body_size` (ADR 0027), not by
-//! this module.
+//! ~100 body lines; past 120 the check prints a `SIZE` note. It also carries
+//! a tighter word budget for ADR/BDR decision prose (ADR 0052): past ~300
+//! words across Context/Decision/Consequences (Verification and References
+//! excluded) a `SIZE` note fires, because decision quality comes from the
+//! grilling step, not from length. Advisory only: it never affects the exit
+//! code. Which doc types the line target applies to is decided per-row by
+//! `doc_type::DocTypeSpec::body_size` (ADR 0027), not by this module.
 
 use super::{file_name_str, records, Reporter};
 use crate::doc_type::{self, BodySize};
@@ -12,6 +15,7 @@ use std::path::PathBuf;
 
 const AIM_LINES: usize = 100;
 const WARN_LINES: usize = 120;
+const WORD_BUDGET: usize = 300;
 
 pub(crate) fn check_body_size(store: &dyn DocStore, all_md: &[PathBuf], reporter: &mut Reporter) {
     for f in all_md {
@@ -27,7 +31,50 @@ pub(crate) fn check_body_size(store: &dyn DocStore, all_md: &[PathBuf], reporter
                 format!("SIZE body {lines} lines exceeds the {WARN_LINES}-line advisory target (aim ~{AIM_LINES})"),
             );
         }
+        if let Some(words) = over_word_budget(&content) {
+            reporter.advise(
+                f,
+                format!("SIZE decision prose {words} words exceeds the ~{WORD_BUDGET}-word budget (Context+Decision+Consequences); length is not decision quality (ADR 0052)"),
+            );
+        }
     }
+}
+
+/// The word count of an ADR/BDR's decision prose when it exceeds the budget.
+/// `None` for any other type or a within-budget record.
+fn over_word_budget(content: &str) -> Option<usize> {
+    let doc_type = frontmatter::read_scalar_from_str(content, "type")?;
+    if !matches!(doc_type.as_str(), "ADR" | "BDR") {
+        return None;
+    }
+    let words = decision_prose(content).split_whitespace().count();
+    (words > WORD_BUDGET).then_some(words)
+}
+
+/// The body with the Verification block, the References section, and HTML
+/// comments removed — the Context/Decision/Consequences prose the word budget
+/// governs.
+fn decision_prose(content: &str) -> String {
+    let lines: Vec<&str> = content.lines().collect();
+    let start = body_start_index(&lines);
+    let mut out: Vec<&str> = Vec::new();
+    let mut in_comment = false;
+    for line in &lines[start..] {
+        let trimmed = line.trim();
+        if trimmed.starts_with("## Verification") || trimmed == "# References" {
+            break;
+        }
+        if in_comment {
+            in_comment = !trimmed.contains("-->");
+            continue;
+        }
+        if trimmed.starts_with("<!--") {
+            in_comment = !trimmed.contains("-->");
+            continue;
+        }
+        out.push(line);
+    }
+    out.join(" ")
 }
 
 fn over_target_body_lines(content: &str) -> Option<usize> {
@@ -98,6 +145,40 @@ mod tests {
             over_target_body_lines(&doc_with_body_lines("Research", 400)),
             None
         );
+    }
+
+    #[test]
+    fn a_short_adr_is_within_the_word_budget() {
+        assert_eq!(
+            over_word_budget("---\ntype: ADR\n---\n\n## Context\nA brief decision.\n"),
+            None
+        );
+    }
+
+    #[test]
+    fn a_long_adr_exceeds_the_word_budget() {
+        let prose = "word ".repeat(400);
+        let doc = format!("---\ntype: ADR\n---\n\n## Context\n{prose}");
+        assert!(over_word_budget(&doc).is_some_and(|w| w >= 400));
+    }
+
+    #[test]
+    fn verification_and_references_prose_is_excluded_from_the_word_budget() {
+        let prose = "word ".repeat(400);
+        let doc = format!(
+            "---\ntype: ADR\n---\n\n## Context\nshort.\n\n## Verification\n{prose}\n\n# References\n{prose}"
+        );
+        assert_eq!(over_word_budget(&doc), None);
+    }
+
+    #[test]
+    fn only_adr_and_bdr_carry_the_word_budget() {
+        let prose = "word ".repeat(400);
+        assert_eq!(
+            over_word_budget(&format!("---\ntype: PRD\n---\n\n{prose}")),
+            None
+        );
+        assert!(over_word_budget(&format!("---\ntype: BDR\n---\n\n{prose}")).is_some());
     }
 
     #[test]

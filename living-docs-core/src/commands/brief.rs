@@ -15,6 +15,8 @@ use crate::store::DocStore;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod constraints;
+
 /// The files a git range touched, resolved by the CLI front (`git diff
 /// --name-only <range>`) so the core stays I/O-free.
 pub struct DiffContext {
@@ -115,7 +117,7 @@ fn brief_content(
 ) -> String {
     let filled = fill_frontmatter(template, frontmatter_type, timestamp);
     let titled = fill_frontmatter_title(&filled, title);
-    let slotted = replace_judgment_sections(&titled, slots_for(doc_type));
+    let slotted = replace_judgment_sections(&titled, doc_type, slots_for(doc_type));
     let headed = fill_title_heading(&slotted, doc_type, number, title);
     match diff {
         Some(d) if !d.files.is_empty() => {
@@ -200,7 +202,7 @@ fn trail_comment_for(doc_type: &str) -> &'static str {
     }
 }
 
-fn replace_judgment_sections(content: &str, slots: &[(&str, &str)]) -> String {
+fn replace_judgment_sections(content: &str, doc_type: &str, slots: &[(&str, &str)]) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let mut out: Vec<String> = Vec::new();
     let mut i = 0;
@@ -212,6 +214,9 @@ fn replace_judgment_sections(content: &str, slots: &[(&str, &str)]) -> String {
         };
         out.push(String::new());
         out.push(format!("<!-- judgment: {marker} -->"));
+        if let Some(hint) = constraints::constraint_for(doc_type, marker) {
+            out.push(format!("<!-- hint: {hint} -->"));
+        }
         i = next_heading_index(&lines, i + 1);
         if i < lines.len() {
             out.push(String::new());

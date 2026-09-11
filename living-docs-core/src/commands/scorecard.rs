@@ -10,6 +10,12 @@ use crate::doc_type::{self, Identity};
 use crate::store::DocStore;
 use std::path::Path;
 
+pub mod consumption;
+pub mod inflation;
+mod json;
+
+pub use inflation::Inflation;
+
 /// Where a record stands in the readiness spectrum for one attribute, or an
 /// attribute whose signal source is entirely absent.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -67,6 +73,7 @@ pub struct Scorecard {
     pub traceable: Grade,
     pub governed: Grade,
     pub freshness: Option<Freshness>,
+    pub inflation: Inflation,
     pub overall: Grade,
 }
 
@@ -86,6 +93,7 @@ pub fn compute(store: &dyn DocStore, bundle: &Path, freshness: Option<Freshness>
         traceable,
         governed,
         freshness,
+        inflation: inflation::compute(store, bundle),
         overall,
     }
 }
@@ -223,6 +231,8 @@ pub fn render_table(scorecard: &Scorecard) -> String {
         row_line("Traceable", scorecard.traceable, None),
         row_line("Governed", scorecard.governed, None),
         row_line("Overall", scorecard.overall, None),
+        String::new(),
+        inflation::render_line(&scorecard.inflation),
     ]
     .join("\n")
 }
@@ -241,49 +251,10 @@ fn freshness_note(freshness: Option<Freshness>) -> Option<String> {
     })
 }
 
-#[derive(serde::Serialize)]
-struct AttributeJson {
-    grade: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    freshness: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct ScorecardJson {
-    trusted: AttributeJson,
-    contextual: AttributeJson,
-    traceable: AttributeJson,
-    governed: AttributeJson,
-    overall: String,
-}
-
-/// Deterministic JSON: field declaration order fixes the key order, so two
-/// computations over the same tree serialize byte-for-byte identically.
+/// Deterministic JSON, delegated to the `json` submodule so this file stays
+/// within the file-size ratchet.
 pub fn render_json(scorecard: &Scorecard) -> String {
-    let freshness = Some(match scorecard.freshness {
-        Some(freshness) => freshness.as_str().to_string(),
-        None => Grade::NotMeasured.as_str().to_string(),
-    });
-    let payload = ScorecardJson {
-        trusted: AttributeJson {
-            grade: scorecard.trusted.as_str().to_string(),
-            freshness,
-        },
-        contextual: AttributeJson {
-            grade: scorecard.contextual.as_str().to_string(),
-            freshness: None,
-        },
-        traceable: AttributeJson {
-            grade: scorecard.traceable.as_str().to_string(),
-            freshness: None,
-        },
-        governed: AttributeJson {
-            grade: scorecard.governed.as_str().to_string(),
-            freshness: None,
-        },
-        overall: scorecard.overall.as_str().to_string(),
-    };
-    serde_json::to_string(&payload).unwrap_or_default()
+    json::render(scorecard)
 }
 
 #[cfg(test)]
