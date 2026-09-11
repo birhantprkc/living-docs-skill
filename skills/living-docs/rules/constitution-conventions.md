@@ -2,7 +2,7 @@
 
 The Product Constitution is the **foundational source of truth** for a project: what the product is, what it is not, the data model it is built on, and the invariants that hold in all circumstances. Every other document in the doc trail sits under it and must be consistent with it.
 
-The doc trail flows: **constitution → PRD → ADR + BDR → issues → code**.
+The doc trail flows: **constitution → PRD → ADR → issues → code**.
 
 ## Format
 
@@ -22,7 +22,7 @@ The constitution is an **OKF concept** (`type: Constitution`) — see the `okf-k
 4. **Append-only once ratified.** After the constitution is ratified, changes are recorded as dated Amendment sections at the bottom (`## Amendment N — YYYY-MM-DD: <summary>`). The original sections above are never silently edited.
 5. **Diagrams are Mermaid only.** No ASCII art, no image attachments.
 6. **Non-negotiables are falsifiable.** "Be secure" is not a non-negotiable. "All user data at rest is encrypted with AES-256" is.
-7. **The constitution is the root of the trace.** When reviewing any PRD, ADR, BDR, or issue, the chain should resolve back to the constitution. Work that cannot be traced to the constitution is out of scope.
+7. **The constitution is the root of the trace.** When reviewing any PRD, ADR, or issue, the chain should resolve back to the constitution. Work that cannot be traced to the constitution is out of scope.
 8. **The doc language is a non-negotiable.** If the user has declared a documentation language (default English otherwise), pin it here as a non-negotiable line so it survives across sessions — see `rules/doc-language.md`.
 
 ## Anti-patterns

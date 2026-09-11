@@ -1,7 +1,7 @@
 # Doc Size Targets
 
 **Aim for ~100 body lines; the checker advises at 120.** The target is uniform across
-decision and execution records — ADR, BDR, PRD, issue. Exempt: research (long-form dated
+decision and execution records — ADR, PRD, issue. Exempt: research (long-form dated
 evidence), the constitution, context and architecture docs, and the reserved
 `index.md`/`log.md` listings.
 

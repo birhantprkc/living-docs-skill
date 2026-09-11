@@ -81,7 +81,7 @@ fn body_carries_the_body_only_instruction_matching_new_and_help() {
 
     assert!(
         stdout.contains(
-            "Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs status` / `supersede` / `index`."
+            "Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs set` / `supersede` / `index`."
         ),
         "got:\n{stdout}"
     );

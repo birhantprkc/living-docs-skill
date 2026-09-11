@@ -16,7 +16,6 @@ The headword is the acronym **as-is**; the expansion is the spelled-out form (ma
 | Acronym | Expansion | Definition |
 |---|---|---|
 | ADR | Architecture Decision Record | <one-line definition in the project doc language> |
-| BDR | Behavior Decision Record | <one-line definition in the project doc language> |
 | PRD | Product Requirements Document | <one-line definition in the project doc language> |
 | OKF | Open Knowledge Format | <one-line definition in the project doc language> |
 

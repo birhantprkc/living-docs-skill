@@ -2,30 +2,26 @@
 
 ## living-docs check — the deterministic instrument
 
-`living-docs check [docs/]` mechanically validates invariants 2, 3, and 4 (the ones a
-machine checks better than prose): frontmatter/`type`, directory-index membership + root
-reachability, link resolution, supersede integrity, requirement traceability — every
-`FR-N` / `NFR-N` a non-Draft PRD defines must be cited by a BDR that links that PRD
-(advisory at `Accepted`, violation at `Implemented`; ADR 0035) — and, once `living-docs
-seal init` has baselined the clone, provenance: a record created or owned-key-edited
-outside the CLI fails with a `SEAL` violation (fail-open before init; ADR 0039). *A
-constraint without an instrument is a vibe* — so the checkable invariants get a checker. Wire it into the project's quality gate / CI;
-a docs PR that fails it does not merge. It does **not** check docs-first mirroring or "one home
-per fact" semantics — those have no sound oracle and stay with the reviewer.
+`living-docs check [docs/]` mechanically validates the invariants a machine checks better than
+prose: frontmatter/`type`, directory-index membership + root reachability, link resolution,
+supersede integrity, Mermaid fences, and **unfilled `{{PLACEHOLDER}}` slots** (a violation — a
+scaffold left half-authored fails the gate). *A constraint without an instrument is a vibe* — so
+the checkable invariants get a checker. Wire it into the project's quality gate / CI; a docs PR
+that fails it does not merge. It does **not** check docs-first mirroring or "one home per fact"
+semantics — those have no sound oracle and stay with the reviewer.
 
-It also emits **record-liveness advisories** (ADR 0049) — currency has a sound oracle where
-materiality does not, so the checkable part lives in the tool. A `LIVENESS stale-proposed` line
-marks an ADR/BDR still at its seed status (`Proposed`/`Draft`) whose linked issue is already
-`closed`/`done`/`Superseded`; a `LIVENESS stale-impact` line marks an accepted record whose
-`**Implementation impact:**` names a repository path that no longer exists. Both are advisory —
-they never move the exit code — and `check --liveness` prints a trailing summary of the four
-counts (stale-proposed, stale-impact, contract, narrative). A record with a `## Verification`
-block is a *contract*; without one it is *narrative* — the read verbs rank contracts first and
-withhold stale records from what they serve.
+It also emits **advisories** — findings that never move the exit code, surfaced as work to
+schedule:
+
+- `SIZE` — a decision/execution body past the ~120-line target (aim ~100; research exempt).
+- `MOVED-SOURCE` — a record whose linked source path moved.
+- `LIVENESS stale-proposed` (ADR 0049) — an ADR still at its seed status (`Proposed`) whose
+  linked issue is already `closed`/`done`/`Superseded`: the work landed but the record never
+  left its birth state. Currency has a sound oracle where materiality does not, so the checkable
+  part lives in the tool; the exit code stays put.
 
 ```bash
-living-docs check docs             # check the project's bundle; exit 1 on any violation
-living-docs check docs --liveness  # same, plus the record-liveness summary line
+living-docs check docs   # check the project's bundle; exit 1 on any violation
 ```
 
 It is a native Rust binary (correct without shelling out to a hand-rolled markdown/YAML
@@ -40,22 +36,18 @@ A worked, lint-clean corpus lives in [`examples/linkly/`](../../examples/linkly/
 
 ## Quality checks
 
-Before considering a docs change complete. The frontmatter, indexing, link-resolution, and
-supersede items are enforced by `living-docs check` — run it rather than eyeballing them; the
-rest are judgement:
+Before considering a docs change complete. The frontmatter, indexing, link-resolution,
+supersede, and placeholder items are enforced by `living-docs check` — run it rather than
+eyeballing them; the rest are judgement:
 
 - [ ] Every concept doc opens with OKF frontmatter carrying a non-empty `type`; `status` is in frontmatter, not a body line.
 - [ ] Directory listings are `index.md` with no frontmatter (except the bundle-root `docs/index.md` → `okf_version`); cross-links are bundle-relative (`/…`).
 - [ ] Every new doc is linked from its directory `index.md` **and** the bundle-root `docs/index.md`.
 - [ ] No concept appears in two files (cross-reference instead).
-- [ ] Every acronym the docs use has a glossary entry with its expansion **and** a definition in the doc language; the headword is the acronym as-is. Term names, identifiers, and acronym headwords/expansions stay in their original form — only the explanation is in the doc language.
-- [ ] Each term is defined once (in the glossary); other docs link to it rather than redefine.
-- [ ] Superseded ADRs/PRDs/BDRs carry frontmatter `status: Superseded` + `superseded_by: NNNN`; the superseding record sets `supersedes` and links back.
-- [ ] Any structural code change in the same task updated its doc **and its Mermaid diagram(s)**.
-- [ ] Architecture diagrams use Mermaid (in-repo text), match the code, and use context-index vocabulary for node/participant names.
-- [ ] Every BDR has a Mermaid diagram, a textual description, **a Contract section** (public signatures + agent tool schemas, observable-only), numbered Given/When/Then scenarios, **and a Test Design matrix** (each row names what it proves); an execution issue links the matrix rather than copying it.
-- [ ] Every NFR is a quality-attribute scenario in the PRD bound to a verifying instrument (not a freeform "should be fast" line); a structural architecture view names whether it is checked or inspection-only.
-- [ ] Every requirement a non-Draft PRD defines (`FR-N` / `NFR-N`, EARS-patterned) is cited by a BDR that links that PRD — enforced by `check` (advisory at `Accepted`, violation at `Implemented`).
+- [ ] No unfilled `{{PLACEHOLDER}}` slot remains in any record.
+- [ ] Superseded ADRs/PRDs carry frontmatter `status: Superseded` + `superseded_by: NNNN`; the superseding record sets `supersedes` and links back.
+- [ ] Any structural code change in the same task updated its doc, including its Mermaid diagram(s).
+- [ ] Architecture diagrams use Mermaid (in-repo text) and match the code.
 - [ ] The constitution is singular (`docs/constitution.md`) — no NNNN prefix, no index entry.
 - [ ] Each index file's links all resolve (no dangling references).
 - [ ] Any doc declaring `visibility` uses `private | public | showcase` (check enforces the domain); absent ⇒ private, and a doc meant for a public bundle carries `visibility: public | showcase`.

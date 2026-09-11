@@ -1,72 +1,55 @@
-# Doc trail & document map
+# Doc trail & record types
 
 ## Doc trail
 
-Every change follows this chain, from foundational source of truth down to code:
+A decision is traceable from its rationale down to the code. Only what a change earns appears — a routine change is just an issue and code; a material decision earns an ADR; a PRD appears only when there is a spec worth pinning.
 
 ```mermaid
 flowchart LR
-  C[constitution] --> P[PRD]
+  C[constitution] --> P[PRD optional]
   P --> A[ADR]
-  P --> B[BDR]
   A --> I[issues]
-  B --> I
+  C --> I
   I --> K[code]
 ```
 
-| Artifact | Role |
-|---|---|
-| **constitution** | Foundational source of truth: what the product is, core data model, non-negotiables. All other docs sit under it. |
-| **PRD** | What the system must do and why — feature/product requirement spec. |
-| **ADR** | How the system is structured — architectural/implementation decision and rationale. |
-| **BDR** | What the system must observably do — inputs, outputs, side effects, Given/When/Then scenarios — **and how each is tested** (the Test Design matrix; single home for "how to test", an execution issue links it). |
-| **issues** | Execution slices — discrete units of work that trace back to ADRs/BDRs. |
-| **code** | Implementation — every behavior, structure, and interface specified above, realized. |
+## The record types — one question each
 
----
+Four types answer four genuinely different questions, plus an optional PRD. Term overlap is what makes an agent write two records for one change, so each type is defined by the *one question it answers* and by when it is **not** that type.
 
-## The decision test — which record, by one question (ADR 0054)
-
-Definitions don't stop content from leaking across types; a single **decision test** per type does. Answer the question before writing; if the answer is empty, the content belongs elsewhere.
-
-| Type | The question | If the answer is empty |
+| Type | The one question it answers | When it is NOT this type |
 |---|---|---|
-| **ADR** | Which alternative was rejected, and what would a future engineer do differently without this record? | Not an ADR — the decision goes in the issue's `## Decision`. |
-| **BDR** | Which test fails if this behavior breaks? | Not a BDR — it is prose. |
-| **PRD** | Who asked, and what is explicitly out of scope? | Not a PRD — it is a large issue. |
-| **Issue** | What is the diff? | Not an issue — it is research. |
-| **Research** | Which external source backs the claim? | Not research — it is opinion. |
+| **ADR** | What did we choose, what did we reject, and why? (a decision expensive to reverse) | If no alternative was rejected and a future engineer would do nothing differently without it → put the choice in the issue, not an ADR. |
+| **Issue** | What is the change, and how do we know it is done? | If there is no diff to make, only a claim about the outside world → it is research. |
+| **Research** | What does external evidence say? | If no external source backs it → it is opinion, not research. |
+| **Constitution** | What never changes here? | If it can change per feature → it is a PRD or an ADR, not the constitution. |
+| **PRD** (optional) | Who asked, what is out of scope, what does success look like? | If there is no who-asked / out-of-scope worth pinning → it is a large issue. |
 
-## The leak table — content in the wrong record (counterexamples)
+There is no separate record for behavior: behavior is specified by tests, and a test-strategy *decision* is an ADR `tags: [testing]`. Rationale for a choice is the ADR; the change that realizes it is the issue; the evidence behind it is research. One fact, one home.
 
-Agents learn boundaries from counterexamples better than from definitions. Each row is content that leaked, the type it landed in, and where it belongs. `check` emits a `LEAK` advisory for the **detectable** cases (marked ✓); the rest are judgement and never a hard stop (same posture as the semantic triggers).
+## The leak table — content in the wrong record
 
-| Leaked content | Landed in | Belongs in | `check` |
-|---|---|---|---|
-| Target behavior — "the system shall…", Given/When/Then | ADR / PRD | BDR | ✓ |
-| Test results, benchmark numbers, JSON output | ADR | issue (or research if externally sourced) | ✓ (JSON/data block) |
-| Implementation checkpoints / a delivery plan | ADR | issue | — |
-| "Needs an ADR" / "Needs a BDR" (a deferred decision) | issue | decide in the issue now, or open the record now | ✓ |
-| A scenario with no `Proves:` line | BDR | add the `Proves:` requirement id | ✓ |
-| Rationale for a choice ("we chose X because…") | BDR | ADR | — |
-| A source-less claim about the industry | ADR Context | research, or delete | — |
-| An unfilled `{{PLACEHOLDER}}` | any record | fill it, or remove the slot | ✓ |
+Agents learn boundaries from counterexamples better than from definitions. Each row is content that commonly leaks, the type it lands in, and where it belongs.
 
----
+| Leaked content | Landed in | Belongs in |
+|---|---|---|
+| Test results, benchmark numbers, JSON output | ADR | issue (or research if externally sourced) |
+| Implementation checkpoints / a delivery plan | ADR | issue |
+| A deferred decision ("Needs an ADR") | issue | decide in the issue now, or open the ADR now |
+| A source-less claim about the industry | ADR Context | research, or delete |
+| A cheap, easily-reversed choice given its own ADR | ADR | the issue's body |
+| An unfilled `{{PLACEHOLDER}}` | any record | fill it, or remove the slot (`check` fails on it) |
 
 ## Document map
 
 | Type | Lives in | Purpose | Mutability |
 |---|---|---|---|
 | Project guide | `CLAUDE.md` / `README.md` (root) | Entry point: scope, stack, docs index, mandatory workflows | Live — edit freely |
-| Constitution | `docs/constitution.md` | Foundational source of truth: product scope, data model, non-negotiables | Append-only once ratified (amendment log) |
-| Context index | `docs/context/index.md` + group files | Domain & module vocabulary, semantically grouped | Live — edit freely |
-| Glossary | `docs/context/glossary.md` | Terms & acronyms defined once, in the doc language (acronym headwords as-is) | Live — edit freely |
-| Architecture | `docs/architecture.md` or `docs/architecture/` + index | Living Mermaid diagrams: structure, data model, flows, tool-calling | Live — must match code |
-| ADR | `docs/adr/NNNN-slug.md` | One architectural/implementation decision | Append-only (supersede) |
-| BDR | `docs/bdr/NNNN-slug.md` | One observable-behavior decision | Append-only (supersede or amend) |
+| Constitution | `docs/constitution.md` | Foundational source of truth: product scope, non-negotiables | Amend-only once ratified (amendment log) |
+| Architecture | `docs/architecture/` + index | Living Mermaid views: structure, data model, flows | Live — must match code |
+| ADR | `docs/adr/NNNN-slug.md` | One decision expensive to reverse, with its alternatives | Append-only (supersede) |
 | PRD | `docs/prd/NNNN-slug.md` | One feature/product requirement spec | Append-only once accepted |
-| Issue | `docs/issues/NNNN-slug.md` | Tracker mirror (body), one per ticket | Body editable; published copy follows |
-| Research | `docs/research/NNNN-<slug>.md` (single file, no subfolder; sequential number leads, date in frontmatter `timestamp`; ends in `# References`) | External evidence with sourced claims | Append-only (evidence is dated) |
+| Issue | `docs/issues/NNNN-slug.md` | Tracker mirror (body), one per ticket; carries cheap decisions inline | Body editable; published copy follows |
+| Research | `docs/research/NNNN-<slug>.md` | External evidence with sourced claims | Append-only (evidence is dated) |
 
 Each directory carries its own `index.md` listing (OKF §6, no frontmatter). The project guide's "Docs index" links to the bundle-root `docs/index.md`. See `rules/semantic-index.md` for the indexing contract.

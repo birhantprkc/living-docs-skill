@@ -34,33 +34,12 @@ timestamp: <ISO 8601 datetime>
 
 ## Requirements
 
-<!-- Functional requirements in EARS patterns (ADR 0035): ubiquitous "The system shall ...";
-     event-driven "When {trigger}, the system shall ..."; state-driven "While {state}, the
-     system shall ..."; unwanted behavior "If {condition}, then the system shall ...";
-     optional "Where {feature}, the system shall ...". Each statement must be testable and
-     carries a stable PRD-scoped ID (FR-1, FR-2, ...). IDs never renumber; a dropped
-     requirement leaves a gap. BDRs cite the IDs they prove; `check` traces coverage once
-     this PRD leaves Draft. -->
+<!-- Testable statements of what the system must do. Each must be falsifiable — a condition
+     you could write a test for — not "should be fast". A quality requirement (performance,
+     availability, scale, security) states its measure and how it is verified (a load test, a
+     CI floor, a security check); one without a way to verify it is a vibe. -->
 
-- **FR-1** — When {{TRIGGER}}, the system shall {{RESPONSE}}.
-- **FR-2** — The system shall {{REQUIREMENT}}.
-
-## Quality requirements (NFRs)
-
-Non-functional requirements as **quality-attribute scenarios** (six-part: source →
-stimulus → artifact → environment → response → response-measure), each bound to a
-verifying instrument. A quality requirement without an instrument is a vibe.
-
-<!-- e.g. Performance: a client issues a read to the API under 10x peak load, returns
-     successfully in < 200 ms at p99, verified by a load test or CI floor. -->
-
-| ID | Quality attribute | Scenario (source · stimulus · artifact · environment · response · measure) | Verified by |
-|---|---|---|---|
-| NFR-1 | {{QUALITY_ATTRIBUTE}} | {{SCENARIO}} | {{INSTRUMENT}} |
-| NFR-2 | {{QUALITY_ATTRIBUTE}} | {{SCENARIO}} | {{INSTRUMENT}} |
-
-<!-- Measure before committing to the complexity that meets the NFR; lock the measured
-     floor in CI; record the decision + fitness function in an ADR. -->
+- {{REQUIREMENT}}
 
 ## Acceptance criteria
 
@@ -76,26 +55,12 @@ verifying instrument. A quality requirement without an instrument is a vibe.
 
 - {{SUCCESS_METRIC}}
 
-## Behavior (BDRs)
-
-<!-- Link each BDR that specifies observable behavior this PRD defines or changes,
-     bundle-relative: [BDR](/bdr/NNNN-<slug>.md). BDRs carry Mermaid diagrams, textual
-     descriptions, and Given/When/Then scenarios. -->
-
-- {{BDR_LINK}}
-
 ## Open questions
 
-<!-- Each ideally headed toward an ADR (how/architecture) or a BDR (what the system
-     must observably do). -->
+<!-- Each headed toward an ADR when its resolution is a decision expensive to reverse;
+     a cheap resolution goes in the issue that carries the work. -->
 
 - {{OPEN_QUESTION}}
-
-## Decision log
-
-<!-- Link to the ADR(s) and BDR(s) that resolved the open questions, once made. -->
-
-- {{DECISION_LOG_ENTRY}}
 
 ## Related
 

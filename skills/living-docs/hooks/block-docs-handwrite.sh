@@ -10,7 +10,7 @@
 #   - any direct write to a type index.md        -> `living-docs index`
 #   - a Write/Edit/MultiEdit whose result changes a CLI-owned frontmatter key
 #     (type, title, status, supersedes, superseded_by, timestamp)
-#                                                -> `living-docs status`/`supersede`/`fmt`
+#                                                -> `living-docs set`/`supersede`/`fmt`
 # The frontmatter guard simulates the change and compares the CLI-owned key
 # lines before vs after, so body prose, `description`, and `tags` stay freely
 # editable — including CLI-owned key names quoted inside body code fences.
@@ -36,7 +36,7 @@ deny() {
 }
 
 deny_frontmatter() {
-  deny "frontmatter keys (${CLI_OWNED_KEYS//|/, }) are CLI-owned — use \`living-docs status <NNNN> <Status>\`, \`living-docs supersede <old> <new>\`, or \`living-docs fmt\`. Edit ONLY the body below the closing ---."
+  deny "frontmatter keys (${CLI_OWNED_KEYS//|/, }) are CLI-owned — use \`living-docs set <NNNN> <key> <value>\`, \`living-docs supersede <old> <new>\`, or \`living-docs fmt\`. Edit ONLY the body below the closing ---."
 }
 
 json_field() {

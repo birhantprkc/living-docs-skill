@@ -16,9 +16,9 @@ The top-level `docs/research/index.md` (OKF reserved listing) indexes every note
 
 Every accepted recommendation must be traceable forward to a work item and backward to its evidence:
 
-1. **Research → decision:** an accepted recommendation that changes architecture becomes an ADR; one that changes expected observable behavior becomes or amends a BDR (both authored via `living-docs`). Ask the user before decisions that change constitution-level positions.
-2. **Decision → issue:** each ADR or BDR spawns one or more issues through the `living-docs` issue workflow. The issue links the ADR/BDR; the ADR/BDR links the research artifact.
-3. **Chain completeness:** an orphan recommendation (not yet an ADR/BDR) is incomplete; an ADR/BDR without issues is unplanned; an issue without an ADR/BDR or research reference is ungrounded. All three gaps are valid review findings.
+1. **Research → decision:** an accepted recommendation that changes architecture or a design that is expensive to reverse becomes an ADR (authored via `living-docs`). Ask the user before decisions that change constitution-level positions.
+2. **Decision → issue:** each ADR spawns one or more issues through the `living-docs` issue workflow. The issue links the ADR; the ADR links the research artifact.
+3. **Chain completeness:** an orphan recommendation (not yet an ADR) is incomplete; an ADR without issues is unplanned; an issue without an ADR or research reference is ungrounded. All three gaps are valid review findings.
 
 ---
 
@@ -27,12 +27,12 @@ Every accepted recommendation must be traceable forward to a work item and backw
 Research informs ADRs and BDRs. The typical flow:
 
 1. A decision is unclear → run `deep-research` → artifacts land in `docs/research/`.
-2. The decision is made → write an ADR (architecture/how) or BDR (observable behavior/what) via `living-docs`, whose Context links the research artifact.
-3. Later, the research is reference material, not a requirement — it explains *why the decision looked right at the time*, even if a future ADR or BDR supersedes it.
+2. The decision is made → write an ADR via `living-docs`, whose Context links the research artifact.
+3. Later, the research is reference material, not a requirement — it explains *why the decision looked right at the time*, even if a future ADR supersedes it.
 
 ---
 
 ## Anti-patterns
 
 - Treating research as a living opinion doc that gets edited as views change. That destroys the audit trail. Each session is a dated snapshot; evolution is expressed as a *new* session, not an edit.
-- Breaking the traceable chain by accepting a recommendation without writing its ADR/BDR, or writing a BDR/ADR without spawning issues, or opening issues without linking their source decisions.
+- Breaking the traceable chain by accepting a recommendation without writing its ADR, or writing a ADR without spawning issues, or opening issues without linking their source decisions.
