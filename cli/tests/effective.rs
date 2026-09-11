@@ -37,6 +37,12 @@ fn effective_topic_returns_the_head_only_with_a_lineage_line() {
     let stdout = stdout_of(&effective(&bundle, &["--topic", "widget"]));
 
     assert!(stdout.contains("[ADR 0002]"), "head present:\n{stdout}");
-    assert!(stdout.contains("supersedes 0001"), "lineage present:\n{stdout}");
-    assert!(!stdout.contains("[ADR 0001]"), "superseded record absent:\n{stdout}");
+    assert!(
+        stdout.contains("supersedes 0001"),
+        "lineage present:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("[ADR 0001]"),
+        "superseded record absent:\n{stdout}"
+    );
 }

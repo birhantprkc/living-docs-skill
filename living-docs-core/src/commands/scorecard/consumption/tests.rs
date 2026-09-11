@@ -30,7 +30,10 @@ fn since_filters_to_the_window_ending_at_the_newest_read() {
     ]
     .join("\n");
     let c = summarize(&jsonl, None, Some(30));
-    assert_eq!(c.reads, 2, "only the two September reads fall within 30 days of the newest");
+    assert_eq!(
+        c.reads, 2,
+        "only the two September reads fall within 30 days of the newest"
+    );
     assert_eq!(c.tokens_sum, 500);
 }
 
@@ -44,7 +47,10 @@ fn missing_capture_reads_as_zero_not_an_error() {
 
 #[test]
 fn a_malformed_line_is_skipped_rather_than_failing() {
-    let jsonl = format!("not json\n{}", read_line("2026-09-01T00:00:00Z", 42, "Accepted"));
+    let jsonl = format!(
+        "not json\n{}",
+        read_line("2026-09-01T00:00:00Z", 42, "Accepted")
+    );
     let c = summarize(&jsonl, None, None);
     assert_eq!(c.reads, 1);
     assert_eq!(c.tokens_sum, 42);

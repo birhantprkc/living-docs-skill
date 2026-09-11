@@ -40,6 +40,8 @@ mod tests {
 
     #[test]
     fn the_bdr_scenarios_hint_names_the_proves_line() {
-        assert!(constraint_for("bdr", "scenarios").unwrap().contains("Proves:"));
+        assert!(constraint_for("bdr", "scenarios")
+            .unwrap()
+            .contains("Proves:"));
     }
 }

@@ -8,7 +8,9 @@ use crate::args::ScorecardArgs;
 use crate::commands::db::derive_project_slug;
 use crate::config::{is_default_local_sqlite, Backend, Engine, SQLITE_READ_MODEL_PATH};
 use crate::store::{build_backend_store, build_runtime, report_failure};
-use living_docs_core::commands::scorecard::{compute, consumption, render_json, render_table, Freshness};
+use living_docs_core::commands::scorecard::{
+    compute, consumption, render_json, render_table, Freshness,
+};
 use std::fs;
 use std::path::Path;
 use std::process::ExitCode;

@@ -16,7 +16,11 @@ fn run_check(bundle: &Path) -> Output {
 }
 
 fn root_index(bundle: &Path) {
-    write(bundle, "index.md", "---\nokf_version: \"1.0\"\n---\n# Docs\n\n* [ADRs](adr/index.md)\n");
+    write(
+        bundle,
+        "index.md",
+        "---\nokf_version: \"1.0\"\n---\n# Docs\n\n* [ADRs](adr/index.md)\n",
+    );
 }
 
 fn accepted_adr(bundle: &Path, n: &str, prose: &str) {
@@ -38,7 +42,11 @@ fn near_duplicate_records_print_a_duplicate_advisory_without_gating() {
 
     let output = run_check(&bundle);
     let stdout = stdout_of(&output);
-    assert_eq!(output.status.code(), Some(0), "advisory must not gate; got:\n{stdout}");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "advisory must not gate; got:\n{stdout}"
+    );
     assert!(stdout.contains("DUPLICATE"), "got:\n{stdout}");
 }
 
@@ -50,7 +58,11 @@ fn a_diagram_scope_mismatch_prints_a_diagram_advisory_without_gating() {
         "index.md",
         "---\nokf_version: \"1.0\"\n---\n# Docs\n\n* [Architecture](architecture/index.md)\n",
     );
-    write(&bundle, "architecture/index.md", "# Architecture\n\n* [Context](context.md)\n");
+    write(
+        &bundle,
+        "architecture/index.md",
+        "# Architecture\n\n* [Context](context.md)\n",
+    );
     write(&bundle, "architecture/diagram-scope.txt", "core\nweb\n");
     write(
         &bundle,
@@ -60,6 +72,13 @@ fn a_diagram_scope_mismatch_prints_a_diagram_advisory_without_gating() {
 
     let output = run_check(&bundle);
     let stdout = stdout_of(&output);
-    assert_eq!(output.status.code(), Some(0), "advisory must not gate; got:\n{stdout}");
-    assert!(stdout.contains("DIAGRAM") && stdout.contains("ghost"), "got:\n{stdout}");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "advisory must not gate; got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("DIAGRAM") && stdout.contains("ghost"),
+        "got:\n{stdout}"
+    );
 }

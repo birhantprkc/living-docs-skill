@@ -17,7 +17,9 @@ fn adr_with_impact(number: &str, status: &str, impact: &str, criteria: &str) -> 
     );
     (
         format!("docs/adr/{number}-x.md"),
-        format!("---\ntype: ADR\ntitle: ADR {number}\ndescription: d\nstatus: {status}\n---\n\n{body}"),
+        format!(
+            "---\ntype: ADR\ntitle: ADR {number}\ndescription: d\nstatus: {status}\n---\n\n{body}"
+        ),
     )
 }
 
@@ -37,9 +39,15 @@ fn compile_of(files: &[(&str, &str)], q: &Query) -> String {
 fn exact_match_ranks_before_a_glob_match_for_the_same_path() {
     let exact = adr_with_impact("0001", "Accepted", "`src/store.rs`", "keeps the port");
     let glob = adr_with_impact("0002", "Accepted", "`src/**`", "covers the tree");
-    let out = compile_of(&[(&exact.0, &exact.1), (&glob.0, &glob.1)], &query(&["src/store.rs"], true));
+    let out = compile_of(
+        &[(&exact.0, &exact.1), (&glob.0, &glob.1)],
+        &query(&["src/store.rs"], true),
+    );
 
-    assert!(out.contains("[ADR 0001]") && out.contains("[ADR 0002]"), "both match:\n{out}");
+    assert!(
+        out.contains("[ADR 0001]") && out.contains("[ADR 0002]"),
+        "both match:\n{out}"
+    );
     assert!(
         out.find("[ADR 0001]").unwrap() < out.find("[ADR 0002]").unwrap(),
         "exact match must come first:\n{out}"
@@ -55,9 +63,17 @@ fn a_directory_prefix_entry_matches_a_file_under_it() {
 
 #[test]
 fn verification_criteria_are_listed_under_the_record() {
-    let a = adr_with_impact("0001", "Accepted", "`src/store.rs`", "the port stays stable");
+    let a = adr_with_impact(
+        "0001",
+        "Accepted",
+        "`src/store.rs`",
+        "the port stays stable",
+    );
     let out = compile_of(&[(&a.0, &a.1)], &query(&["src/store.rs"], true));
-    assert!(out.contains("- the port stays stable"), "criteria listed:\n{out}");
+    assert!(
+        out.contains("- the port stays stable"),
+        "criteria listed:\n{out}"
+    );
 }
 
 #[test]
@@ -80,14 +96,23 @@ fn a_stale_record_appears_only_under_include_stale() {
         "docs/adr/0001-x.md",
         "---\ntype: ADR\ntitle: ADR 0001\ndescription: d\nstatus: Proposed\n---\n\nSee [issue](/issues/0009-t.md).\n\n**Implementation impact:** `src/store.rs`.\n",
     );
-    let issue = ("docs/issues/0009-t.md", "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb");
+    let issue = (
+        "docs/issues/0009-t.md",
+        "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb",
+    );
     let files = [proposed, issue];
 
     let default = compile_of(&files, &query(&["src/store.rs"], false));
-    assert!(default.is_empty(), "stale excluded by default:\n{default:?}");
+    assert!(
+        default.is_empty(),
+        "stale excluded by default:\n{default:?}"
+    );
 
     let with_stale = compile_of(&files, &query(&["src/store.rs"], true));
-    assert!(with_stale.contains("[ADR 0001]"), "included under --include-stale:\n{with_stale}");
+    assert!(
+        with_stale.contains("[ADR 0001]"),
+        "included under --include-stale:\n{with_stale}"
+    );
 }
 
 #[test]
@@ -96,7 +121,10 @@ fn from_diff_style_multiple_paths_union_the_matching_records() {
     let b = adr_with_impact("0002", "Accepted", "`src/b.rs`", "y");
     let files = [(a.0.as_str(), a.1.as_str()), (b.0.as_str(), b.1.as_str())];
     let out = compile_of(&files, &query(&["src/a.rs", "src/b.rs"], true));
-    assert!(out.contains("[ADR 0001]") && out.contains("[ADR 0002]"), "both touched:\n{out}");
+    assert!(
+        out.contains("[ADR 0001]") && out.contains("[ADR 0002]"),
+        "both touched:\n{out}"
+    );
 }
 
 #[test]
@@ -105,4 +133,3 @@ fn glob_star_stays_within_a_segment_but_double_star_crosses() {
     assert!(!glob_matches("src/*.rs", "src/deep/a.rs"));
     assert!(glob_matches("src/**", "src/deep/a.rs"));
 }
-

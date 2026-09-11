@@ -36,7 +36,11 @@ struct Read {
 /// Summarizes a doc-read JSONL (and optional findings JSONL) over the window
 /// `since_days` — measured back from the newest captured read, so the summary
 /// is deterministic without a wall clock.
-pub fn summarize(reads_jsonl: &str, findings_jsonl: Option<&str>, since_days: Option<i64>) -> Consumption {
+pub fn summarize(
+    reads_jsonl: &str,
+    findings_jsonl: Option<&str>,
+    since_days: Option<i64>,
+) -> Consumption {
     let reads = within_window(parse_reads(reads_jsonl), since_days);
     let mut tokens: Vec<u64> = reads.iter().map(|r| r.tokens).collect();
     tokens.sort_unstable();
@@ -56,12 +60,21 @@ fn parse_reads(jsonl: &str) -> Vec<Read> {
 
 fn parse_read_line(line: &str) -> Option<Read> {
     let value: serde_json::Value = serde_json::from_str(line.trim()).ok()?;
-    let tokens = value.get("tokens").and_then(serde_json::Value::as_u64).unwrap_or(0);
-    let status = value.get("status").and_then(serde_json::Value::as_str).unwrap_or("");
+    let tokens = value
+        .get("tokens")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let status = value
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
     Some(Read {
         tokens,
         stale: is_stale_status(status),
-        day: value.get("ts").and_then(serde_json::Value::as_str).and_then(day_number),
+        day: value
+            .get("ts")
+            .and_then(serde_json::Value::as_str)
+            .and_then(day_number),
     })
 }
 
@@ -83,7 +96,10 @@ fn within_window(reads: Vec<Read>, since_days: Option<i64>) -> Vec<Read> {
     };
     reads
         .into_iter()
-        .filter(|r| r.day.is_none_or(|day| newest - day <= since && newest - day >= 0))
+        .filter(|r| {
+            r.day
+                .is_none_or(|day| newest - day <= since && newest - day >= 0)
+        })
         .collect()
 }
 

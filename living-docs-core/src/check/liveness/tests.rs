@@ -97,7 +97,10 @@ fn an_accepted_adr_without_a_verification_block_is_narrative() {
 
 #[test]
 fn liveness_is_scoped_to_adr_and_bdr_records() {
-    let report = classify_of(&[("docs/prd/0001-x.md", "---\ntype: PRD\nstatus: Draft\n---\n\nb")]);
+    let report = classify_of(&[(
+        "docs/prd/0001-x.md",
+        "---\ntype: PRD\nstatus: Draft\n---\n\nb",
+    )]);
     assert!(report.shape(Path::new("docs/prd/0001-x.md")).is_none());
 }
 
@@ -122,4 +125,3 @@ fn terminal_issue_status_covers_closed_done_and_superseded_only() {
     assert!(!is_terminal_issue_status("open"));
     assert!(!is_terminal_issue_status("in-progress"));
 }
-

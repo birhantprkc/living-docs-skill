@@ -10,7 +10,13 @@ fn store_of(files: &[(&str, &str)]) -> MapStore {
     MapStore { files: map }
 }
 
-fn record(doc_type: &str, dir: &str, number: &str, status: &str, timestamp: &str) -> (String, String) {
+fn record(
+    doc_type: &str,
+    dir: &str,
+    number: &str,
+    status: &str,
+    timestamp: &str,
+) -> (String, String) {
     (
         format!("docs/{dir}/{number}-x.md"),
         format!("---\ntype: {doc_type}\ntitle: t\ndescription: d\nstatus: {status}\ntimestamp: {timestamp}\n---\n\nbody"),
@@ -51,9 +57,16 @@ fn recent_adrs_are_counted_within_thirty_days_of_the_newest() {
     let old = record("ADR", "adr", "0001", "Accepted", "2026-01-01T00:00:00Z");
     let recent = record("ADR", "adr", "0002", "Accepted", "2026-03-01T00:00:00Z");
     let newest = record("ADR", "adr", "0003", "Accepted", "2026-03-20T00:00:00Z");
-    let inflation = compute_of(&[(&old.0, &old.1), (&recent.0, &recent.1), (&newest.0, &newest.1)]);
+    let inflation = compute_of(&[
+        (&old.0, &old.1),
+        (&recent.0, &recent.1),
+        (&newest.0, &newest.1),
+    ]);
     assert_eq!(inflation.adrs, 3);
-    assert_eq!(inflation.adrs_recent, 2, "0002 and 0003 fall within 30d of 0003");
+    assert_eq!(
+        inflation.adrs_recent, 2,
+        "0002 and 0003 fall within 30d of 0003"
+    );
 }
 
 #[test]
@@ -62,7 +75,10 @@ fn proposed_stale_reflects_liveness() {
         "docs/adr/0001-x.md",
         "---\ntype: ADR\ntitle: t\ndescription: d\nstatus: Proposed\ntimestamp: 2026-01-01T00:00:00Z\n---\n\nSee [issue](/issues/0009-t.md).",
     );
-    let issue = ("docs/issues/0009-t.md", "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb");
+    let issue = (
+        "docs/issues/0009-t.md",
+        "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb",
+    );
     let inflation = compute_of(&[adr, issue]);
     assert_eq!(inflation.proposed_stale, 1);
 }

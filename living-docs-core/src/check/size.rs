@@ -149,7 +149,10 @@ mod tests {
 
     #[test]
     fn a_short_adr_is_within_the_word_budget() {
-        assert_eq!(over_word_budget("---\ntype: ADR\n---\n\n## Context\nA brief decision.\n"), None);
+        assert_eq!(
+            over_word_budget("---\ntype: ADR\n---\n\n## Context\nA brief decision.\n"),
+            None
+        );
     }
 
     #[test]
@@ -171,7 +174,10 @@ mod tests {
     #[test]
     fn only_adr_and_bdr_carry_the_word_budget() {
         let prose = "word ".repeat(400);
-        assert_eq!(over_word_budget(&format!("---\ntype: PRD\n---\n\n{prose}")), None);
+        assert_eq!(
+            over_word_budget(&format!("---\ntype: PRD\n---\n\n{prose}")),
+            None
+        );
         assert!(over_word_budget(&format!("---\ntype: BDR\n---\n\n{prose}")).is_some());
     }
 

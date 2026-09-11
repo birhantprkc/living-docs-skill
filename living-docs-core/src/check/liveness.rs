@@ -72,14 +72,18 @@ impl LivenessReport {
     /// absent path (a non-ADR/BDR record) is never stale.
     pub fn is_stale(&self, path: &Path) -> bool {
         matches!(
-            self.entries.get(&path.display().to_string()).map(|r| r.liveness),
+            self.entries
+                .get(&path.display().to_string())
+                .map(|r| r.liveness),
             Some(Liveness::StaleProposed | Liveness::StaleImpact)
         )
     }
 
     /// The record's shape, `None` for a non-ADR/BDR record.
     pub fn shape(&self, path: &Path) -> Option<Shape> {
-        self.entries.get(&path.display().to_string()).map(|r| r.shape)
+        self.entries
+            .get(&path.display().to_string())
+            .map(|r| r.shape)
     }
 
     /// The four summary counts across every classified record.

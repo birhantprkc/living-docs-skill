@@ -77,7 +77,10 @@ mod tests {
     #[test]
     fn segment_ignores_the_template_guidance_comment_example() {
         let contents = "<!-- Implementation impact: files, e.g. `src/store.py`. -->\n\n**Implementation impact:** `src/real.rs`.";
-        let texts: Vec<String> = tokens(&segment(contents)).into_iter().map(|t| t.text).collect();
+        let texts: Vec<String> = tokens(&segment(contents))
+            .into_iter()
+            .map(|t| t.text)
+            .collect();
         assert_eq!(texts, vec!["src/real.rs".to_string()]);
     }
 

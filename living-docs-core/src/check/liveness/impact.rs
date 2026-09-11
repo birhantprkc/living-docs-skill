@@ -48,9 +48,18 @@ mod tests {
         let bundle = root.join("docs");
         let bundle_str = bundle.to_string_lossy();
 
-        assert!(!has_dead_impact_path("**Implementation impact:** `src/real.rs`.", &bundle_str));
-        assert!(has_dead_impact_path("**Implementation impact:** `src/ghost.rs`.", &bundle_str));
-        assert!(!has_dead_impact_path("**Implementation impact:** `src/ghost.rs` (removed).", &bundle_str));
+        assert!(!has_dead_impact_path(
+            "**Implementation impact:** `src/real.rs`.",
+            &bundle_str
+        ));
+        assert!(has_dead_impact_path(
+            "**Implementation impact:** `src/ghost.rs`.",
+            &bundle_str
+        ));
+        assert!(!has_dead_impact_path(
+            "**Implementation impact:** `src/ghost.rs` (removed).",
+            &bundle_str
+        ));
 
         std::fs::remove_dir_all(&root).ok();
     }

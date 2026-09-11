@@ -48,12 +48,17 @@ pub fn compute(store: &dyn DocStore, bundle: &Path) -> Inflation {
         adrs_with_matching_bdr: adr_numbers.intersection(&bdr_numbers).count(),
         adrs_recent: recent_adr_count(&records, newest),
         superseded: records.iter().filter(|r| is_superseded(r)).count(),
-        proposed_stale: liveness::classify(store, bundle, &all_md).counts().stale_proposed,
+        proposed_stale: liveness::classify(store, bundle, &all_md)
+            .counts()
+            .stale_proposed,
     }
 }
 
 fn read_record(store: &dyn DocStore, path: &Path) -> Option<ExtractedRecord> {
-    if matches!(path.file_name().and_then(|n| n.to_str()), Some("index.md") | Some("log.md")) {
+    if matches!(
+        path.file_name().and_then(|n| n.to_str()),
+        Some("index.md") | Some("log.md")
+    ) {
         return None;
     }
     let contents = store.read(path).ok()?;

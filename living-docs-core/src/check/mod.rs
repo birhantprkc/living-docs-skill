@@ -15,13 +15,13 @@
 pub(crate) mod canonical;
 mod graph;
 mod leak;
-pub mod liveness;
 pub(crate) mod links;
+pub mod liveness;
 mod mermaid;
 mod moved_source;
 mod records;
-mod semantic;
 mod seal;
+mod semantic;
 mod size;
 pub(crate) mod traceability;
 

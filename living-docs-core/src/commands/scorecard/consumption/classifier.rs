@@ -44,10 +44,7 @@ pub fn classify(text: &str) -> Category {
 }
 
 fn rules() -> Vec<(Category, String)> {
-    PHRASINGS
-        .lines()
-        .filter_map(parse_rule)
-        .collect()
+    PHRASINGS.lines().filter_map(parse_rule).collect()
 }
 
 fn parse_rule(line: &str) -> Option<(Category, String)> {
@@ -65,22 +62,34 @@ mod tests {
 
     #[test]
     fn a_citation_phrasing_classifies_as_citation() {
-        assert_eq!(classify("This comment cites an ADR, remove it"), Category::Citation);
+        assert_eq!(
+            classify("This comment cites an ADR, remove it"),
+            Category::Citation
+        );
     }
 
     #[test]
     fn an_index_phrasing_classifies_as_index_row() {
-        assert_eq!(classify("record is an orphan record, add its index row"), Category::IndexRow);
+        assert_eq!(
+            classify("record is an orphan record, add its index row"),
+            Category::IndexRow
+        );
     }
 
     #[test]
     fn a_frontmatter_phrasing_classifies_as_frontmatter() {
-        assert_eq!(classify("non-canonical frontmatter, run fmt"), Category::Frontmatter);
+        assert_eq!(
+            classify("non-canonical frontmatter, run fmt"),
+            Category::Frontmatter
+        );
     }
 
     #[test]
     fn an_envelope_phrasing_classifies_as_envelope_protocol() {
-        assert_eq!(classify("the response envelope is malformed"), Category::EnvelopeProtocol);
+        assert_eq!(
+            classify("the response envelope is malformed"),
+            Category::EnvelopeProtocol
+        );
     }
 
     #[test]

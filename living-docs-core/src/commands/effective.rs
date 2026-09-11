@@ -142,7 +142,10 @@ fn supersede_chain(record: &ExtractedRecord, all: &[(PathBuf, ExtractedRecord)])
         .collect();
     let mut chain = Vec::new();
     let mut current = record.supersedes.clone();
-    while let Some(number) = current.as_deref().and_then(|s| s.trim().parse::<i32>().ok()) {
+    while let Some(number) = current
+        .as_deref()
+        .and_then(|s| s.trim().parse::<i32>().ok())
+    {
         if chain.contains(&format!("{number:04}")) {
             break;
         }

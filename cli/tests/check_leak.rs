@@ -40,6 +40,13 @@ fn a_given_when_then_scenario_in_an_adr_prints_a_leak_advisory_without_gating() 
     let output = run_check(&bundle);
     let stdout = stdout_of(&output);
 
-    assert_eq!(output.status.code(), Some(0), "LEAK must not gate; got:\n{stdout}");
-    assert!(stdout.contains("LEAK") && stdout.contains("Given/When/Then"), "got:\n{stdout}");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "LEAK must not gate; got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("LEAK") && stdout.contains("Given/When/Then"),
+        "got:\n{stdout}"
+    );
 }

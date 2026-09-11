@@ -31,8 +31,14 @@ fn why_reports_the_governing_record_and_its_criteria() {
 
     let stdout = stdout_of(&why(&bundle, &["--include-stale", "src/store.rs"]));
 
-    assert!(stdout.contains("[ADR 0001]"), "governing record present:\n{stdout}");
-    assert!(stdout.contains("- the port stays stable"), "criteria present:\n{stdout}");
+    assert!(
+        stdout.contains("[ADR 0001]"),
+        "governing record present:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("- the port stays stable"),
+        "criteria present:\n{stdout}"
+    );
 }
 
 #[test]
