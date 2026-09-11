@@ -30,7 +30,7 @@ The corpus is append-only (supersede, never rewrite): right for history, wrong a
 **Agents read `living-docs effective`, never `index.md` directly** (ADR 0050). It compiles the in-force view: active records only (superseded/deprecated and stale records — ADR 0049 — withheld), supersede chains collapsed to the head with a one-line lineage (`supersedes 0131 via 0133`), ranked **constitution and PRDs first, then contracts (records with a `## Verification` block) above narrative**, so the reader orients before drilling in.
 
 - `living-docs effective` — the whole active view at the `index` tier (title + description per record).
-- `living-docs effective --topic <term>` — only records matching the term.
+- `living-docs effective --topic <term>` — only records matching the term, ranked by FTS5 relevance when a fresh search projection exists, else by a deterministic term-frequency rank (ADR 0056).
 - `living-docs effective --tier outline|full` — headings, or full bodies.
 - `living-docs effective --budget <tokens>` — a hard cap: truncation degrades the tier (full → outline → index), then drops the lowest-ranked records, so the response never overflows the window.
 - `living-docs effective --include-stale` — restore the records liveness withholds.

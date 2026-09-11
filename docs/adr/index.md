@@ -60,6 +60,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0053 — Scorecard measures consumption, not only corpus shape: a fail-open capture hook feeds docs-tokens-read, stale-reads, and a table-driven doc-trail finding classifier](0053-scorecard-measures-consumption-not-only-corpus-shape-a-fail-open-capture-hook-feeds-docs-tokens-read-stale-reads-and-a-table-driven-doc-trail-finding-classifier.md) - Accepted
 * [0054 — Teach record types by a decision test and a counterexample leak table, delivered in the template slot, with a LEAK advisory for the detectable cases](0054-teach-record-types-by-a-decision-test-and-a-counterexample-leak-table-delivered-in-the-template-slot-with-a-leak-advisory-for-the-detectable-cases.md) - Accepted
 * [0055 — Semantic refusal triggers become instruments or advisory: DIAGRAM and DUPLICATE checks, and no prose-only hard stops](0055-semantic-refusal-triggers-become-instruments-or-advisory-diagram-and-duplicate-checks-and-no-prose-only-hard-stops.md) - Accepted
+* [0056 — effective --topic ranks by the FTS5 read-model when a fresh projection exists, falling back to a deterministic relevance rank](0056-effective-topic-ranks-by-the-fts5-read-model-when-a-fresh-projection-exists-falling-back-to-a-deterministic-relevance-rank.md) - Accepted
 
 ## Superseded
 

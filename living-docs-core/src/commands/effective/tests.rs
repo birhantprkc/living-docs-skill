@@ -16,6 +16,17 @@ fn options(topic: Option<&str>, tier: Tier, budget: Option<usize>, include_stale
         tier,
         budget,
         include_stale,
+        ranked_topic: None,
+    }
+}
+
+fn ranked_options(paths: &[&str]) -> Options {
+    Options {
+        topic: Some("ignored-when-ranked".to_string()),
+        tier: Tier::Index,
+        budget: None,
+        include_stale: false,
+        ranked_topic: Some(paths.iter().map(|p| p.to_string()).collect()),
     }
 }
 
@@ -99,6 +110,80 @@ fn a_stale_record_is_absent_by_default_and_present_under_include_stale() {
     assert!(
         with_stale.contains("ADR 0001"),
         "included under --include-stale:\n{with_stale}"
+    );
+}
+
+#[test]
+fn a_ranked_topic_set_restricts_and_orders_by_fts5_rank() {
+    let a = adr("0001", "Accepted", None, "about widgets");
+    let b = adr("0002", "Accepted", None, "about widgets");
+    let c = adr("0003", "Accepted", None, "about widgets");
+    let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1), (&c.0, &c.1)]);
+    // FTS5 returned 0003 then 0001 (0002 did not match).
+    let out = compile(
+        &store,
+        Path::new("docs"),
+        &ranked_options(&["docs/adr/0003-x.md", "docs/adr/0001-x.md"]),
+    );
+    assert!(
+        out.contains("ADR 0003") && out.contains("ADR 0001"),
+        "both ranked hits present:\n{out}"
+    );
+    assert!(
+        !out.contains("ADR 0002"),
+        "a record absent from the ranked set is dropped:\n{out}"
+    );
+    assert!(
+        out.find("ADR 0003").unwrap() < out.find("ADR 0001").unwrap(),
+        "ranked-set order (relevance) is preserved:\n{out}"
+    );
+}
+
+#[test]
+fn a_stale_record_in_the_ranked_set_is_still_excluded_by_default() {
+    let proposed = adr(
+        "0001",
+        "Proposed",
+        None,
+        "See [issue](/issues/0009-t.md).\n\nwidgets",
+    );
+    let issue = (
+        "docs/issues/0009-t.md",
+        "---\ntype: Issue\ntitle: t\nstatus: closed\n---\n\nb",
+    );
+    let store = store_of(&[(&proposed.0, &proposed.1), (issue.0, issue.1)]);
+    let out = compile(
+        &store,
+        Path::new("docs"),
+        &ranked_options(&["docs/adr/0001-x.md"]),
+    );
+    assert!(
+        !out.contains("ADR 0001"),
+        "liveness still filters a stale FTS5 hit:\n{out}"
+    );
+}
+
+#[test]
+fn relevance_ranks_a_title_match_above_a_body_only_match() {
+    let body_only = adr(
+        "0001",
+        "Accepted",
+        None,
+        "the storage backend is discussed here at length",
+    );
+    let title_hit = (
+        "docs/adr/0002-x.md".to_string(),
+        "---\ntype: ADR\ntitle: Storage backend\ndescription: d\nstatus: Accepted\n---\n\nunrelated body".to_string(),
+    );
+    let store = store_of(&[(&body_only.0, &body_only.1), (&title_hit.0, &title_hit.1)]);
+    let out = compile(
+        &store,
+        Path::new("docs"),
+        &options(Some("storage"), Tier::Index, None, false),
+    );
+    assert!(
+        out.find("ADR 0002").unwrap() < out.find("ADR 0001").unwrap(),
+        "a title match outranks a body-only match:\n{out}"
     );
 }
 
