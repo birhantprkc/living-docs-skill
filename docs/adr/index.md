@@ -56,6 +56,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0049 — Mechanical record liveness: check derives stale-proposed and stale-impact from the linked issue and Verification paths](0049-mechanical-record-liveness-check-derives-stale-proposed-and-stale-impact-from-the-linked-issue-and-verification-paths.md) - Accepted
 * [0050 — Effective view: a read verb compiling active records with supersede chains collapsed, progressive tiers, and a hard token budget](0050-effective-view-a-read-verb-compiling-active-records-with-supersede-chains-collapsed-progressive-tiers-and-a-hard-token-budget.md) - Accepted
 * [0051 — why <path>: a reverse index from Implementation-impact lists so provenance is a query, not a code comment](0051-why-path-a-reverse-index-from-implementation-impact-lists-so-provenance-is-a-query-not-a-code-comment.md) - Accepted
+* [0052 — Materiality criterion for the doc trail: a record earns an ADR/BDR when the decision is expensive to reverse, with advisory inflation signals](0052-materiality-criterion-for-the-doc-trail-a-record-earns-an-adr-bdr-when-the-decision-is-expensive-to-reverse-with-advisory-inflation-signals.md) - Accepted
 
 ## Superseded
 

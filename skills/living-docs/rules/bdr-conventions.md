@@ -47,6 +47,9 @@ Each BDR is an **OKF concept** (`type: BDR`) — see the `okf-knowledge-format` 
 5. **Diagrams are Mermaid only.** No ASCII art, no image attachments.
 6. **Numbered sequentially:** `docs/bdr/NNNN-slug.md`. Index in `docs/bdr/index.md` (OKF reserved listing, no frontmatter) with a one-line summary and a link per record.
 7. **Append-only once accepted.** After a BDR is accepted, changes to specified behavior are recorded as dated Amendment sections appended to the file, or the BDR is superseded by a new one (frontmatter `status: Superseded`, `superseded_by: NNNN`). Silent in-place edits are not allowed.
+8. **Materiality — a BDR is earned by a new or changed observable contract, not by every behavioral diff (ADR 0052).** Write a BDR when a new observable contract is introduced, or an existing one changes for consumers — not for every scenario a change happens to touch. `strict` (`enforcement-modes.md` trigger 7) refuses a *material* behavioral change shipped without its BDR; a behavioral tweak that alters no consumer-observable contract is recorded in its issue, and is compliant in every mode. The 1:1 ADR:BDR pairing that materiality removes is a rule executing faithfully, not comprehension — see the `scorecard` inflation signal (ADR 0052) that makes a pairing ratio near 1.0 visible.
+    - *Stays in the issue:* a log message reworded, an internal helper split — observable to no consumer. No BDR.
+    - *Earns a BDR:* `check` gains a new `LIVENESS` advisory line a consumer can assert on — a new observable contract. Write the BDR (or amend the governing one).
 
 ## Anti-patterns
 
