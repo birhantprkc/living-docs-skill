@@ -20,3 +20,4 @@ pub(crate) mod search;
 pub(crate) mod skill_cmd;
 pub(crate) mod status;
 pub(crate) mod supersede;
+pub(crate) mod why;

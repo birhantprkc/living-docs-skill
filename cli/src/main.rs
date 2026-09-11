@@ -123,6 +123,9 @@ fn main() -> ExitCode {
             &cli.docs_dir,
             args,
         ),
+        Command::Why(args) => {
+            commands::why::run_why(cli.backend, cli.engine, &cli.docs_dir, args)
+        }
         Command::Search {
             query,
             project,

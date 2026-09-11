@@ -55,6 +55,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0048 — CLI mutation verbs emit canonical frontmatter so check never routes a user to fmt](0048-cli-mutation-verbs-emit-canonical-frontmatter-so-check-never-routes-a-user-to-fmt.md) - Accepted
 * [0049 — Mechanical record liveness: check derives stale-proposed and stale-impact from the linked issue and Verification paths](0049-mechanical-record-liveness-check-derives-stale-proposed-and-stale-impact-from-the-linked-issue-and-verification-paths.md) - Accepted
 * [0050 — Effective view: a read verb compiling active records with supersede chains collapsed, progressive tiers, and a hard token budget](0050-effective-view-a-read-verb-compiling-active-records-with-supersede-chains-collapsed-progressive-tiers-and-a-hard-token-budget.md) - Accepted
+* [0051 — why <path>: a reverse index from Implementation-impact lists so provenance is a query, not a code comment](0051-why-path-a-reverse-index-from-implementation-impact-lists-so-provenance-is-a-query-not-a-code-comment.md) - Accepted
 
 ## Superseded
 

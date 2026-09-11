@@ -36,6 +36,23 @@ pub(crate) struct EffectiveArgs {
     pub(crate) include_stale: bool,
 }
 
+/// Arguments for the `why` verb (ADR 0051), in their own `Args` struct for the
+/// same file-size reason as [`EffectiveArgs`].
+#[derive(Args)]
+pub(crate) struct WhyArgs {
+    /// The repository path to trace. Omitted when `--from-diff` supplies the
+    /// paths instead.
+    pub(crate) path: Option<String>,
+    /// A git range (e.g. `HEAD~1..HEAD`) whose touched files are traced —
+    /// resolved by the front as `git diff --name-only <range>`.
+    #[arg(long)]
+    pub(crate) from_diff: Option<String>,
+    /// Include records the liveness check (ADR 0049) flags stale, withheld by
+    /// default.
+    #[arg(long)]
+    pub(crate) include_stale: bool,
+}
+
 #[derive(Subcommand)]
 pub(crate) enum SealCmd {
     /// Generates a fresh per-clone key and seals the current bundle as the
