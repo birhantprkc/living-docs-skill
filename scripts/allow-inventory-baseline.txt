@@ -1,7 +1,6 @@
 1 cli/src/hooks.rs
 1 cli/src/main.rs
 3 cli/tests/db_authoring.rs
-1 cli/tests/describe.rs
 1 cli/tests/hooks_install.rs
 8 cli/tests/index_supersede.rs
 2 cli/tests/new.rs
@@ -11,7 +10,6 @@
 2 db-store/tests/authoring.rs
 1 db-store/tests/ingestion.rs
 1 db-store/tests/parity.rs
-1 living-docs-core/src/commands/brief.rs
 3 living-docs-core/src/commands/leak_gate.rs
 1 living-docs-core/src/pii/brazil.rs
 2 living-docs-core/src/pii/contextual.rs
