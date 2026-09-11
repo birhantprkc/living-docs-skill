@@ -20,6 +20,7 @@ pub(crate) mod links;
 mod mermaid;
 mod moved_source;
 mod records;
+mod semantic;
 mod seal;
 mod size;
 pub(crate) mod traceability;
@@ -97,11 +98,9 @@ fn run_all_checks(
 ) -> usize {
     let all_md = store.list(bundle).unwrap_or_default();
     let root_index = bundle.join("index.md");
-
     if !root_index.is_file() {
         reporter.report(&root_index, "missing bundle-root index.md (invariant 3)");
     }
-
     records::check_frontmatter_and_format(store, &all_md, &root_index, reporter);
     graph::check_directory_membership(bundle, &all_md, reporter);
     graph::check_reachability(bundle, &root_index, &all_md, reporter);
@@ -110,13 +109,13 @@ fn run_all_checks(
     moved_source::check_moved_source(store, bundle, &all_md, reporter);
     records::check_owner_requirement(store, &all_md, require_owner, reporter);
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
-
     mermaid::check_bundle(&all_md, reporter);
     size::check_body_size(store, &all_md, reporter);
     seal::check_seals(store, bundle, &all_md, reporter);
     traceability::check_requirement_traceability(store, &all_md, reporter);
     liveness::check_liveness(store, bundle, &all_md, reporter);
     leak::check_leak(store, &all_md, reporter);
+    semantic::check_semantic(store, bundle, &all_md, reporter);
 
     all_md.len()
 }

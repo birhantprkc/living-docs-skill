@@ -59,6 +59,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0052 — Materiality criterion for the doc trail: a record earns an ADR/BDR when the decision is expensive to reverse, with advisory inflation signals](0052-materiality-criterion-for-the-doc-trail-a-record-earns-an-adr-bdr-when-the-decision-is-expensive-to-reverse-with-advisory-inflation-signals.md) - Accepted
 * [0053 — Scorecard measures consumption, not only corpus shape: a fail-open capture hook feeds docs-tokens-read, stale-reads, and a table-driven doc-trail finding classifier](0053-scorecard-measures-consumption-not-only-corpus-shape-a-fail-open-capture-hook-feeds-docs-tokens-read-stale-reads-and-a-table-driven-doc-trail-finding-classifier.md) - Accepted
 * [0054 — Teach record types by a decision test and a counterexample leak table, delivered in the template slot, with a LEAK advisory for the detectable cases](0054-teach-record-types-by-a-decision-test-and-a-counterexample-leak-table-delivered-in-the-template-slot-with-a-leak-advisory-for-the-detectable-cases.md) - Accepted
+* [0055 — Semantic refusal triggers become instruments or advisory: DIAGRAM and DUPLICATE checks, and no prose-only hard stops](0055-semantic-refusal-triggers-become-instruments-or-advisory-diagram-and-duplicate-checks-and-no-prose-only-hard-stops.md) - Accepted
 
 ## Superseded
 
