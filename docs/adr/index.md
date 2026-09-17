@@ -51,6 +51,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0047 — living-docs fmt is frontmatter-only and the record body stays byte-identical](0047-living-docs-fmt-is-frontmatter-only-and-the-record-body-stays-byte-identical.md) - Accepted
 * [0048 — CLI mutation verbs emit canonical frontmatter so check never routes a user to fmt](0048-cli-mutation-verbs-emit-canonical-frontmatter-so-check-never-routes-a-user-to-fmt.md) - Accepted
 * [0057 — Refocus living-docs on a decision log: delete BDR, cut peripheral verbs and check advisories, and consolidate the rule corpus](0057-refocus-living-docs-on-a-decision-log-delete-bdr-cut-peripheral-verbs-and-check-advisories-and-consolidate-the-rule-corpus.md) - Accepted
+* [0058 — Retired records declare themselves: a CLI-written callout in the body, successor-bearing index rows, and effective as the agent read verb](0058-retired-records-declare-themselves-a-cli-written-callout-in-the-body-successor-bearing-index-rows-and-effective-as-the-agent-read-verb.md) - Accepted
 
 ## Superseded
 
