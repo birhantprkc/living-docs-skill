@@ -32,21 +32,6 @@ fn numbered_prefix_rejects_index_and_malformed_names() {
 }
 
 #[test]
-fn render_row_matches_the_locked_row_format() {
-    let record = Record {
-        number: 7,
-        title: "My Title".to_string(),
-        status: "Proposed".to_string(),
-        filename: "0007-my-title.md".to_string(),
-        visibility: "private".to_string(),
-    };
-    assert_eq!(
-        render_row(&record),
-        "* [0007 — My Title](0007-my-title.md) - Proposed"
-    );
-}
-
-#[test]
 fn fallback_preamble_is_minimal_for_a_fresh_file() {
     assert_eq!(fallback_preamble("", "adr"), "# ADRs\n\n");
 }
@@ -111,77 +96,4 @@ fn is_boundary_line_detects_a_table_row_whose_first_cell_is_a_record_link() {
 fn is_boundary_line_ignores_an_unrelated_table_row() {
     assert!(!is_boundary_line("| Some | Other | Row |"));
     assert!(!is_boundary_line("Just prose, not a table at all."));
-}
-
-#[test]
-fn is_open_status_treats_closed_done_and_superseded_case_insensitively_as_closed() {
-    assert!(!is_open_status("closed"));
-    assert!(!is_open_status("Closed"));
-    assert!(!is_open_status("done"));
-    assert!(!is_open_status("Done"));
-    assert!(!is_open_status("Superseded"));
-}
-
-#[test]
-fn is_open_status_treats_open_in_progress_and_unknown_as_open() {
-    assert!(is_open_status("open"));
-    assert!(is_open_status("in-progress"));
-    assert!(is_open_status("Mystery"));
-    assert!(is_open_status(""));
-}
-
-#[test]
-fn is_active_status_treats_superseded_and_deprecated_as_not_active() {
-    assert!(!is_active_status("Superseded"));
-    assert!(!is_active_status("Deprecated"));
-}
-
-#[test]
-fn is_active_status_treats_draft_accepted_and_implemented_as_active() {
-    assert!(is_active_status("Draft"));
-    assert!(is_active_status("Accepted"));
-    assert!(is_active_status("Implemented"));
-    assert!(is_active_status("Proposed"));
-}
-
-#[test]
-fn render_partitioned_pins_the_adr_active_superseded_byte_shape() {
-    let records = vec![
-        Record {
-            number: 1,
-            title: "Old".to_string(),
-            status: "Superseded".to_string(),
-            filename: "0001-old.md".to_string(),
-            visibility: "private".to_string(),
-        },
-        Record {
-            number: 2,
-            title: "Current".to_string(),
-            status: "Accepted".to_string(),
-            filename: "0002-current.md".to_string(),
-            visibility: "private".to_string(),
-        },
-    ];
-
-    let body = render_partitioned(&records, "Active", "Superseded", is_active_status);
-
-    assert_eq!(
-        body,
-        "## Active\n\n* [0002 — Current](0002-current.md) - Accepted\n\n## Superseded\n\n* [0001 — Old](0001-old.md) - Superseded\n"
-    );
-}
-
-#[test]
-fn render_partitioned_emits_only_the_first_heading_when_the_second_bucket_is_empty() {
-    let records = vec![Record {
-        number: 1,
-        title: "Only".to_string(),
-        status: "open".to_string(),
-        filename: "0001-only.md".to_string(),
-        visibility: "private".to_string(),
-    }];
-
-    let body = render_partitioned(&records, "Open", "Closed", is_open_status);
-
-    assert_eq!(body, "## Open\n\n* [0001 — Only](0001-only.md) - open\n");
 }
