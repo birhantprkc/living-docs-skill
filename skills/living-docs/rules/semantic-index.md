@@ -35,6 +35,8 @@ The corpus is append-only (supersede, never rewrite): right for history, wrong a
 
 `index.md` remains the generated on-disk artifact and the human/browser entry point; `effective` is the agent's read surface over the same records.
 
+A raw record opened directly still carries its own stop signal: a body that opens with a `SUPERSEDED` or `DEPRECATED` callout is history. Follow the successor link or discard the record; never plan on it; read `living-docs effective` for what is in force.
+
 ## Heading discipline
 
 Each group file is a standalone document: it leads with a single `#` H1 title, then `##` sections. Do not carry over `##`-as-top-level headings from the section you extracted — promote them to H1 so the file reads as its own document.

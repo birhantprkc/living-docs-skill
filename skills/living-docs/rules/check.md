@@ -46,6 +46,7 @@ eyeballing them; the rest are judgement:
 - [ ] No concept appears in two files (cross-reference instead).
 - [ ] No unfilled `{{PLACEHOLDER}}` slot remains in any record.
 - [ ] Superseded ADRs/PRDs carry frontmatter `status: Superseded` + `superseded_by: NNNN`; the superseding record sets `supersedes` and links back.
+- [ ] A Superseded or Deprecated record's body opens with its exact CLI-written callout above the heading, and no active record opens with one; `living-docs fmt` is the remediation.
 - [ ] Any structural code change in the same task updated its doc, including its Mermaid diagram(s).
 - [ ] Architecture diagrams use Mermaid (in-repo text) and match the code.
 - [ ] The constitution is singular (`docs/constitution.md`) — no NNNN prefix, no index entry.
