@@ -1,3 +1,4 @@
+use crate::callout;
 use crate::doc_type::{self, Identity};
 use crate::frontmatter::frontmatter_block;
 use crate::paths;
@@ -36,6 +37,7 @@ pub fn supersede(
             ("superseded_by", format!("{new_number:04}")),
         ],
     )?;
+    callout::reconcile(store, &old_path)?;
     set_frontmatter_fields(
         store,
         &new_path,

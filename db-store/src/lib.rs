@@ -2346,6 +2346,7 @@ mod tests {
 
     const OLD_SUPERSEDE_ADR: &str = "---\ntype: ADR\ntitle: Old Decision\ndescription: d.\nstatus: Proposed\nsupersedes:\nsuperseded_by:\ntags: []\ntimestamp: 2026-07-21T00:00:00Z\n---\n\n# Old Decision\n\nBody.\n";
     const NEW_SUPERSEDE_ADR: &str = "---\ntype: ADR\ntitle: New Decision\ndescription: d.\nstatus: Proposed\nsupersedes:\nsuperseded_by:\ntags: []\ntimestamp: 2026-07-21T00:00:00Z\n---\n\n# New Decision\n\nBody.\n";
+    const SUPERSEDED_CALLOUT: &str = "> **SUPERSEDED — do not act on this record.** Replaced by [0002](0002-new-decision.md). Run `living-docs effective` for what is in force.";
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -2366,6 +2367,8 @@ mod tests {
                 NEW_SUPERSEDE_ADR,
             )
             .expect("seed new record");
+        std::fs::write(root.join("adr").join("0001-old-decision.md"), "").expect("stub old file");
+        std::fs::write(root.join("adr").join("0002-new-decision.md"), "").expect("stub new file");
 
         store
             .supersede_checked("1", "2")
@@ -2379,16 +2382,12 @@ mod tests {
             .expect("new record readable");
         assert!(old.contains("status: Superseded"), "got: {old}");
         assert!(old.contains("superseded_by: 0002"), "got: {old}");
+        assert!(old.contains(SUPERSEDED_CALLOUT), "got: {old}");
         assert!(new.contains("supersedes: 0001"), "got: {new}");
 
-        assert_eq!(
-            stored_record(&db_url, "adr/0001-old-decision.md").revision,
-            2
-        );
-        assert_eq!(
-            stored_record(&db_url, "adr/0002-new-decision.md").revision,
-            2
-        );
+        let old_revision = stored_record(&db_url, "adr/0001-old-decision.md").revision;
+        let new_revision = stored_record(&db_url, "adr/0002-new-decision.md").revision;
+        assert_eq!((old_revision, new_revision), (2, 2));
 
         cleanup_write_checked_fixture(&root, &db_path);
     }

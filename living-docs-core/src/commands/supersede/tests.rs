@@ -121,6 +121,36 @@ fn supersede_persists_status_and_both_links_through_the_store_read_modify_write(
 }
 
 #[test]
+fn supersede_writes_the_superseded_callout_on_the_old_record_naming_the_new_records_filename_and_leaves_the_new_record_without_one(
+) {
+    let store = MapStore::seeded(&[
+        ("/bundle/adr/0001-old.md", OLD_RECORD),
+        ("/bundle/adr/0002-new.md", NEW_RECORD),
+    ]);
+
+    supersede(&store, Path::new("/bundle"), "0001", "0002").expect("supersede should succeed");
+
+    let old = store
+        .read(Path::new("/bundle/adr/0001-old.md"))
+        .expect("old record still present");
+    let new = store
+        .read(Path::new("/bundle/adr/0002-new.md"))
+        .expect("new record still present");
+
+    assert!(
+        old.contains(
+            "> **SUPERSEDED — do not act on this record.** Replaced by [0002](0002-new.md). \
+             Run `living-docs effective` for what is in force.\n\n# Old"
+        ),
+        "got: {old}"
+    );
+    assert!(
+        !new.contains("SUPERSEDED") && !new.contains("DEPRECATED"),
+        "got: {new}"
+    );
+}
+
+#[test]
 fn supersede_fails_when_the_store_lists_no_record_for_a_number() {
     let store = MapStore::seeded(&[("/bundle/adr/0001-old.md", OLD_RECORD)]);
 

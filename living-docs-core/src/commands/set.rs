@@ -1,3 +1,4 @@
+use crate::callout;
 use crate::commands::supersede::{find_record, set_frontmatter_fields};
 use crate::doc_type::{self, DocTypeSpec};
 use crate::record::{extract_record, format_scalar};
@@ -38,7 +39,9 @@ fn set(
 ) -> Result<(), String> {
     let path = find_record(store, docs_dir, reference)?;
     let field = resolve_field(store, &path, key, value)?;
-    set_frontmatter_fields(store, &path, &[field])
+    set_frontmatter_fields(store, &path, &[field])?;
+    callout::reconcile(store, &path)?;
+    Ok(())
 }
 
 fn resolve_field(
