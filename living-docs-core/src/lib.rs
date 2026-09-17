@@ -3,6 +3,7 @@
 //! `supersede` commands, and the `check` invariant suite. Depends on no
 //! adapter or front — `cli` is a thin arg-parsing shell over this crate.
 
+pub mod callout;
 pub mod check;
 pub mod commands;
 pub mod doc_type;
