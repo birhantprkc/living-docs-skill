@@ -43,6 +43,10 @@ pub fn compile(store: &dyn DocStore, bundle: &Path, options: &Options) -> String
     let all_md = store.list(bundle).unwrap_or_default();
     let records = read_records(store, &all_md);
     let topic = options.topic.as_deref().map(str::to_lowercase);
+    let withheld = records
+        .iter()
+        .filter(|(_, record)| !is_in_force(record.status.as_deref()))
+        .count();
 
     let mut active: Vec<&Entry> = records
         .iter()
@@ -55,7 +59,7 @@ pub fn compile(store: &dyn DocStore, bundle: &Path, options: &Options) -> String
         .iter()
         .map(|(_, record)| view_of(record, &records))
         .collect();
-    render::render(&views, options.full)
+    render::render(&views, options.full, withheld)
 }
 
 fn read_records(store: &dyn DocStore, all_md: &[PathBuf]) -> Vec<(PathBuf, ExtractedRecord)> {

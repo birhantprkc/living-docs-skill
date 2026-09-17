@@ -106,6 +106,32 @@ fn constitution_and_prd_group_above_adrs() {
 }
 
 #[test]
+fn withheld_retired_records_open_the_view_with_their_count() {
+    let a = adr("0001", "Superseded", None, "gone");
+    let b = adr("0002", "Deprecated", None, "retired");
+    let c = adr("0003", "Accepted", None, "live");
+    let store = store_of(&[(&a.0, &a.1), (&b.0, &b.1), (&c.0, &c.1)]);
+    let out = compile(&store, Path::new("docs"), &options(None, false));
+    assert!(
+        out.starts_with(
+            "_Withheld 2 retired record(s) (superseded or deprecated): history only, never act on them._\n\n"
+        ),
+        "must open with the withheld count and a blank line:\n{out}"
+    );
+}
+
+#[test]
+fn no_withheld_records_leaves_the_view_unchanged() {
+    let a = adr("0001", "Accepted", None, "live");
+    let store = store_of(&[(&a.0, &a.1)]);
+    let out = compile(&store, Path::new("docs"), &options(None, false));
+    assert!(
+        !out.contains("Withheld"),
+        "no retired records means no withheld line:\n{out}"
+    );
+}
+
+#[test]
 fn full_prints_bodies_while_the_default_prints_one_line_entries() {
     let a = adr("0001", "Accepted", None, "## Context\n\nthe whole story");
     let store = store_of(&[(&a.0, &a.1)]);
