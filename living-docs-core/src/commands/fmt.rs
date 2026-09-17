@@ -1,15 +1,17 @@
 //! `living-docs fmt` canonicalizes a concept record's frontmatter in
-//! place, and leaves the body below the closing `---` byte-for-byte
-//! unchanged. `target` accepts either a bundle root (canonicalizes every
-//! record under it, enumerated through the same `DocStore::list` call
-//! `check::run` reads from — no second directory walker) or a single
-//! record path (canonicalizes only that record). With `check_only`, no
-//! record is written: the command reports which records are pending
-//! instead.
+//! place, and reconciles the retired-record callout at the top of its
+//! body to match the status that frontmatter carries — the rest of the
+//! body below the closing `---` stays byte-for-byte unchanged. `target`
+//! accepts either a bundle root (canonicalizes every record under it,
+//! enumerated through the same `DocStore::list` call `check::run` reads
+//! from — no second directory walker) or a single record path
+//! (canonicalizes only that record). With `check_only`, no record is
+//! written: the command reports which records are pending instead.
 //! File-mode only: db-mode is canonical by construction on export, so
 //! this verb never runs against `--backend db`.
 
-use crate::record::{extract_record, to_canonical_markdown};
+use crate::callout;
+use crate::record::{extract_record, to_canonical_markdown, ExtractedRecord};
 use crate::store::DocStore;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -121,8 +123,9 @@ fn canonical_form_if_pending(store: &dyn DocStore, path: &Path) -> Option<String
     if !has_frontmatter(&contents) {
         return None;
     }
-    let normalized = normalize_frontmatter_gap(&contents);
-    let record = extract_record(path, &normalized);
+    let normalized = callout::normalize_frontmatter_gap(&contents);
+    let mut record = extract_record(path, &normalized);
+    record.body = reconciled_body(store, path, &record);
     let canonical = to_canonical_markdown(&record);
     if canonical == contents {
         None
@@ -131,31 +134,20 @@ fn canonical_form_if_pending(store: &dyn DocStore, path: &Path) -> Option<String
     }
 }
 
-fn has_frontmatter(contents: &str) -> bool {
-    contents.lines().next() == Some("---")
+/// The body `record` should carry once its retired-record callout matches
+/// its status: unchanged when `record` is active and carries none, gains
+/// or loses one otherwise.
+fn reconciled_body(store: &dyn DocStore, path: &Path, record: &ExtractedRecord) -> String {
+    let successor = record
+        .superseded_by
+        .as_deref()
+        .map(|superseded_by| callout::successor_filename(store, path, superseded_by));
+    let expected = callout::expected(record.status.as_deref(), successor.as_deref());
+    callout::reconcile_body(&record.body, expected.as_deref())
 }
 
-/// Collapses any blank line(s) between the closing frontmatter fence and
-/// the body down to a single newline, before `contents` reaches
-/// [`crate::record::extract_record`]. Without this, an already-canonical
-/// file (whose fence is followed by exactly one blank line, since
-/// [`crate::record::to_canonical_markdown`] always inserts one) would
-/// extract a body carrying a leftover leading newline — `extract_record`
-/// strips only one newline after the fence — and re-canonicalizing it would
-/// grow the gap by one newline on every run instead of reproducing the same
-/// file, breaking `fmt`'s idempotency. Reducing the gap to a single newline
-/// first makes the extracted body identical to a freshly hand-written
-/// record's, so re-serialization reproduces the file it read.
-fn normalize_frontmatter_gap(contents: &str) -> String {
-    let Some(rest) = contents.strip_prefix("---\n") else {
-        return contents.to_owned();
-    };
-    let Some(close_at) = rest.find("\n---") else {
-        return contents.to_owned();
-    };
-    let fence_end = "---\n".len() + close_at + "\n---".len();
-    let tail = contents[fence_end..].trim_start_matches('\n');
-    format!("{}\n{tail}", &contents[..fence_end])
+fn has_frontmatter(contents: &str) -> bool {
+    contents.lines().next() == Some("---")
 }
 
 #[cfg(test)]
