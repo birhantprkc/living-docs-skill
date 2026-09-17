@@ -34,6 +34,13 @@ fn run_new(docs_dir: &Path, doc_type: &str, title: &str) -> Output {
     run_authoring_verb("new", docs_dir, doc_type, title)
 }
 
+/// The exact retired-record callout line a Superseded fixture must open
+/// with, sourced from the same module `living-docs fmt` writes through.
+fn superseded_callout(successor: &str) -> String {
+    living_docs_core::callout::expected(Some("superseded"), Some(successor))
+        .expect("a superseded status always yields a callout")
+}
+
 /// The fixture's `type` value is spread across three files as a double-quoted,
 /// single-quoted, and trailing-commented scalar to prove the type-extraction
 /// invariant tolerates all three forms. Its docs sit at the bundle root, so
@@ -240,7 +247,10 @@ fn supersede_status_is_case_insensitive_and_a_valid_chain_is_clean() {
     write(
         &bundle,
         "0001-old.md",
-        "---\ntype: ADR\ntitle: Old\ndescription: \"\"\nstatus: superseded\nsuperseded_by: 0002\n---\n\n# Old\n",
+        &format!(
+            "---\ntype: ADR\ntitle: Old\ndescription: \"\"\nstatus: superseded\nsuperseded_by: 0002\n---\n\n{}\n\n# Old\n",
+            superseded_callout("0002-new.md")
+        ),
     );
     write(
         &bundle,

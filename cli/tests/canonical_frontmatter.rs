@@ -47,8 +47,15 @@ fn run_owner_verb(docs: &Path, reference: &str, value: &str) -> Output {
 fn body_of(path: &Path) -> String {
     let contents = fs::read_to_string(path).unwrap();
     let after_open = contents.strip_prefix("---\n").unwrap();
-    let close = after_open.find("\n---").unwrap();
-    after_open[close..].to_string()
+    let close = after_open.find("\n---\n\n").unwrap();
+    after_open[close + "\n---\n\n".len()..].to_string()
+}
+
+/// The exact retired-record callout line a Superseded record must open
+/// with, sourced from the same module `living-docs fmt` writes through.
+fn superseded_callout(successor: &str) -> String {
+    living_docs_core::callout::expected(Some("superseded"), Some(successor))
+        .expect("a superseded status always yields a callout")
 }
 
 /// AC1: `supersede` inserting the previously-absent `supersedes`/
@@ -92,9 +99,11 @@ fn status_describe_and_owner_each_leave_the_record_with_no_non_canonical_finding
     let _ = fs::remove_dir_all(&docs);
 }
 
-/// AC3: for `supersede`, `status`, `describe`, and `owner`, the body below
-/// the closing `---` stays byte-identical before and after the verb runs —
-/// only the frontmatter block may change.
+/// For `status`, `describe`, and `owner`, the body below the frontmatter
+/// stays byte-identical before and after the verb runs. For `supersede`,
+/// the old record's body gains its retired-record callout above the
+/// previously untouched body, while the new record's body stays
+/// byte-identical.
 #[test]
 fn mutation_verbs_leave_the_body_below_the_frontmatter_byte_identical() {
     let docs = temp_dir("mutation-body-preserved");
@@ -112,10 +121,14 @@ fn mutation_verbs_leave_the_body_below_the_frontmatter_byte_identical() {
         .success());
     assert!(run_owner_verb(&docs, "0002", "alice").status.success());
 
+    let expected_old_body = format!(
+        "{}\n\n{old_body_before}",
+        superseded_callout("0002-new-decision.md")
+    );
     assert_eq!(
         body_of(&old_path),
-        old_body_before,
-        "supersede must not touch the body"
+        expected_old_body,
+        "supersede must prepend the retired-record callout to the old body"
     );
     assert_eq!(
         body_of(&new_path),

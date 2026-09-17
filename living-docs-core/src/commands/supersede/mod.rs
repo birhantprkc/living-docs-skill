@@ -246,4 +246,6 @@ fn set_targeted_value(line: &str, prefix: &str, new_value: &str) -> String {
 }
 
 #[cfg(test)]
+mod store_tests;
+#[cfg(test)]
 mod tests;

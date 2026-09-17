@@ -9,6 +9,8 @@ tags: [storage]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
+> **SUPERSEDED — do not act on this record.** Replaced by [0002](0002-sqlite-store.md). Run `living-docs effective` for what is in force.
+
 # 0001. In-memory store for minted links
 
 <!-- This record is history. It is NOT edited — it is superseded by 0002. Kept so a

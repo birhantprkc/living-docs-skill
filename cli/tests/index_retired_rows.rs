@@ -21,10 +21,11 @@ fn run_index(docs: &Path, doc_type: &str) -> std::process::Output {
         .expect("failed to run living-docs index")
 }
 
-#[test]
-#[allow(clippy::too_many_lines)]
-fn retired_rows_name_the_successor_and_open_with_the_history_note() {
-    let docs = temp_bundle("e2e");
+/// Scaffolds one resolvable-successor, one unresolvable-successor, one
+/// Deprecated, and one Accepted (non-retired) ADR record, runs `index`
+/// over the bundle, and returns the regenerated `adr/index.md` contents.
+fn indexed_adr_index_contents(label: &str) -> String {
+    let docs = temp_bundle(label);
     write(
         &docs,
         "adr/0001-old.md",
@@ -54,15 +55,42 @@ fn retired_rows_name_the_successor_and_open_with_the_history_note() {
     );
 
     let contents = fs::read_to_string(docs.join("adr/index.md")).unwrap();
-    let expected_rows = [
-        "* [0001 — Old Decision](0001-old.md) - Superseded by [0002](0002-current.md)",
-        "* [0003 — Orphan Decision](0003-orphan.md) - Superseded by 0009",
-        "* [0004 — Legacy Decision](0004-legacy.md) - Deprecated (no successor)",
-    ];
-    for row in expected_rows {
-        assert!(contents.contains(row), "got: {contents}");
-    }
+    let _ = fs::remove_dir_all(docs.parent().unwrap());
+    contents
+}
 
+#[test]
+fn resolvable_successor_row_names_the_successor_file() {
+    let contents = indexed_adr_index_contents("resolvable");
+    assert!(
+        contents.contains(
+            "* [0001 — Old Decision](0001-old.md) - Superseded by [0002](0002-current.md)"
+        ),
+        "got: {contents}"
+    );
+}
+
+#[test]
+fn unresolvable_successor_row_names_the_bare_number() {
+    let contents = indexed_adr_index_contents("unresolvable");
+    assert!(
+        contents.contains("* [0003 — Orphan Decision](0003-orphan.md) - Superseded by 0009"),
+        "got: {contents}"
+    );
+}
+
+#[test]
+fn deprecated_row_has_no_successor() {
+    let contents = indexed_adr_index_contents("deprecated");
+    assert!(
+        contents.contains("* [0004 — Legacy Decision](0004-legacy.md) - Deprecated (no successor)"),
+        "got: {contents}"
+    );
+}
+
+#[test]
+fn history_note_sits_between_the_superseded_heading_and_the_first_retired_row() {
+    let contents = indexed_adr_index_contents("history-note");
     let note = "_History only. Do not act on these records — run `living-docs effective` for what is in force._";
     let note_offset = contents.find(note).expect("missing history note");
     let superseded_heading = contents.find("## Superseded").unwrap();
@@ -71,8 +99,6 @@ fn retired_rows_name_the_successor_and_open_with_the_history_note() {
         superseded_heading < note_offset && note_offset < first_retired_row,
         "got: {contents}"
     );
-
-    let _ = fs::remove_dir_all(docs.parent().unwrap());
 }
 
 #[test]

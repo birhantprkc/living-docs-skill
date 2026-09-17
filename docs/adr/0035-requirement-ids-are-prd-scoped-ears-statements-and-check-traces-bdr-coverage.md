@@ -7,6 +7,8 @@ status: Deprecated
 timestamp: 2026-08-14T07:37:50Z
 ---
 
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs effective` for what is in force.
+
 # 0035. Requirement IDs are PRD-scoped EARS statements and check traces BDR coverage
 
 ## Context
