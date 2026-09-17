@@ -120,8 +120,9 @@ fn file_name(path: &Path) -> Option<&str> {
 /// [`to_canonical_markdown`] always inserts would extract with a leftover
 /// leading newline — [`extract_record`] strips only one newline after the
 /// fence — so re-serializing it would grow the gap by one newline on
-/// every call instead of reaching a fixed point.
-fn normalize_frontmatter_gap(contents: &str) -> String {
+/// every call instead of reaching a fixed point. Shared by every call site
+/// that reads a record ahead of [`extract_record`] (`reconcile`, `fmt`).
+pub(crate) fn normalize_frontmatter_gap(contents: &str) -> String {
     let Some(rest) = contents.strip_prefix("---\n") else {
         return contents.to_owned();
     };

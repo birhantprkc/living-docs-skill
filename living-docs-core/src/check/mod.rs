@@ -11,6 +11,7 @@
 //! `index.md`/`log.md` are excluded from the record domain by design (never
 //! synced to `db-store`); `check::graph` reads them straight from disk.
 
+mod callout;
 pub(crate) mod canonical;
 mod graph;
 pub(crate) mod links;
@@ -83,6 +84,7 @@ fn run_all_checks(
     graph::check_reachability(bundle, &root_index, &all_md, reporter);
     links::check_links(store, bundle, &all_md, reporter);
     records::check_supersede_chain(store, &all_md, reporter);
+    callout::check_callouts(store, &all_md, reporter);
     moved_source::check_moved_source(store, bundle, &all_md, reporter);
     records::check_owner_requirement(store, &all_md, require_owner, reporter);
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);

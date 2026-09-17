@@ -215,6 +215,75 @@ fn run_check_on_a_non_canonical_record_writes_nothing_and_reports_it() {
     let _ = std::fs::remove_dir_all(root);
 }
 
+fn superseded_record(body_heading: &str) -> String {
+    format!(
+        "---\ntype: ADR\ntitle: Old\ndescription: d\nstatus: Superseded\nsuperseded_by: 0002\n---\n\n# {body_heading}\n\nBody text.\n"
+    )
+}
+
+#[test]
+fn canonicalize_record_adds_a_missing_callout_to_a_retired_record() {
+    let store = MapStore::seeded(&[
+        ("/bundle/adr/0001-old.md", &superseded_record("Old")),
+        (
+            "/bundle/adr/0002-new-record.md",
+            "---\ntype: ADR\ntitle: New\ndescription: d\n---\n\n# New\n",
+        ),
+    ]);
+
+    let rewritten = canonicalize_record(&store, Path::new("/bundle/adr/0001-old.md"));
+
+    assert!(rewritten);
+    let contents = store.contents("/bundle/adr/0001-old.md");
+    assert!(contents.contains(
+        "> **SUPERSEDED — do not act on this record.** Replaced by [0002](0002-new-record.md)."
+    ));
+    assert!(contents.contains("# Old"));
+}
+
+#[test]
+fn canonicalize_record_removes_a_stale_callout_from_an_active_record() {
+    let stale = "---\ntype: ADR\ntitle: Active\ndescription: d\nstatus: Accepted\n---\n\n\
+                 > **SUPERSEDED — do not act on this record.** Replaced by [0002](0002.md). \
+                 Run `living-docs effective` for what is in force.\n\n# Active\n\nBody text.\n";
+    let store = MapStore::seeded(&[("/bundle/adr/0003-active.md", stale)]);
+
+    let rewritten = canonicalize_record(&store, Path::new("/bundle/adr/0003-active.md"));
+
+    assert!(rewritten);
+    let contents = store.contents("/bundle/adr/0003-active.md");
+    assert!(!contents.contains("SUPERSEDED"));
+    assert!(contents.contains("# Active"));
+}
+
+#[test]
+fn run_check_reports_a_retired_record_missing_its_callout_as_pending() {
+    let root = real_temp_tree("check-callout", &["adr/0001-old.md"]);
+    let target = root.join("adr/0001-old.md");
+    let store = MapStore::seeded(&[(target.to_str().unwrap(), &superseded_record("Old"))]);
+
+    let code = run(&store, &root, true);
+
+    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::from(1)));
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn a_second_canonicalize_after_reconciling_the_callout_rewrites_nothing() {
+    let store = MapStore::seeded(&[
+        ("/bundle/adr/0001-old.md", &superseded_record("Old")),
+        (
+            "/bundle/adr/0002-new-record.md",
+            "---\ntype: ADR\ntitle: New\ndescription: d\n---\n\n# New\n",
+        ),
+    ]);
+
+    canonicalize_record(&store, Path::new("/bundle/adr/0001-old.md"));
+    let rewritten_again = canonicalize_record(&store, Path::new("/bundle/adr/0001-old.md"));
+
+    assert!(!rewritten_again);
+}
+
 #[test]
 fn run_check_on_a_canonical_bundle_exits_zero() {
     let canonical = "---\ntype: ADR\ntitle: Quokka Caching\ndescription: Adopt quokka caching.\n---\n\n# Quokka Caching\n\nBody.\n";
