@@ -22,6 +22,18 @@ fn assert_clean(bundle: &Path) {
     let _ = fs::remove_dir_all(bundle);
 }
 
+/// The exact retired-record callout line a fixture record must open with,
+/// sourced from the same module `living-docs fmt` writes through.
+fn superseded_callout(successor: &str) -> String {
+    living_docs_core::callout::expected(Some("superseded"), Some(successor))
+        .expect("a superseded status always yields a callout")
+}
+
+fn deprecated_callout() -> String {
+    living_docs_core::callout::expected(Some("deprecated"), None)
+        .expect("a deprecated status always yields a callout")
+}
+
 fn write_moved_source_tree(bundle: &Path, dependent_body: &str) {
     write(
         bundle,
@@ -36,7 +48,10 @@ fn write_moved_source_tree(bundle: &Path, dependent_body: &str) {
     write(
         bundle,
         "b.md",
-        "---\ntype: Reference\ntitle: B\ndescription: Moved source.\nstatus: Superseded\nsuperseded_by: c\n---\n# B\n",
+        &format!(
+            "---\ntype: Reference\ntitle: B\ndescription: Moved source.\nstatus: Superseded\nsuperseded_by: c\n---\n{}\n\n# B\n",
+            superseded_callout("c.md")
+        ),
     );
     write(
         bundle,
@@ -87,7 +102,10 @@ fn a_done_issue_linking_a_superseded_record_is_clean() {
     write(
         &bundle,
         "b.md",
-        "---\ntype: Issue\ntitle: B\ndescription: Moved source.\nstatus: Deprecated\n---\n# B\n",
+        &format!(
+            "---\ntype: Issue\ntitle: B\ndescription: Moved source.\nstatus: Deprecated\n---\n{}\n\n# B\n",
+            deprecated_callout()
+        ),
     );
 
     assert_clean(&bundle);
@@ -109,7 +127,10 @@ fn a_record_linking_its_own_predecessor_is_clean() {
     write(
         &bundle,
         "old.md",
-        "---\ntype: ADR\ntitle: Old\ndescription: Superseded by New.\nstatus: Superseded\nsuperseded_by: new\n---\n# Old\n",
+        &format!(
+            "---\ntype: ADR\ntitle: Old\ndescription: Superseded by New.\nstatus: Superseded\nsuperseded_by: new\n---\n{}\n\n# Old\n",
+            superseded_callout("new.md")
+        ),
     );
 
     assert_clean(&bundle);

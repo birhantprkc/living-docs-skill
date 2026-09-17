@@ -11,7 +11,9 @@ timestamp: <ISO 8601 datetime>
 <!-- Status lives in frontmatter (`status`), not a body line. Settable values are
      exactly Draft | Accepted | Implemented. `superseded_by` is absent by default;
      `living-docs supersede` sets Superseded on this record -- never by hand --
-     when a later PRD replaces it. -->
+     when a later PRD replaces it. A Superseded or Deprecated record also carries
+     a callout above this heading naming its successor -- written by `supersede`,
+     `set`, or `fmt`, never by hand. -->
 
 ## Problem / Motivation
 

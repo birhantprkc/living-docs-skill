@@ -23,6 +23,7 @@ one slice per fresh context, starting from the skeleton.
 * [0032 — check validates the artifact file manifest: missing listed file fails, unlisted orphan file warns](0032-check-validates-the-artifact-file-manifest-missing-listed-file-fails-unlisted-orphan-file-warns.md) - open
 * [0033 — index renders the Artifacts partition and the db-store projection indexes the artifact README body](0033-index-renders-the-artifacts-partition-and-the-db-store-projection-indexes-the-artifact-readme-body.md) - open
 * [0042 — Test suite duplication exceeds the jscpd five percent ratchet; extract shared helpers across db-store and command tests](0042-test-suite-duplication-exceeds-the-jscpd-five-percent-ratchet-extract-shared-helpers-across-db-store-and-command-tests.md) - open
+* [0043 — Retired-record callout: supersede/set/fmt write it, check enforces it, index rows name the successor, effective reports withheld count, skill rules teach the stop](0043-retired-record-callout-supersede-set-fmt-write-it-check-enforces-it-index-rows-name-the-successor-effective-reports-withheld-count-skill-rules-teach-the-stop.md) - open
 
 ## Closed
 

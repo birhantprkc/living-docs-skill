@@ -11,7 +11,9 @@ timestamp: <ISO 8601 datetime, e.g. 2026-06-13T00:00:00Z>
 <!-- Status lives in frontmatter (`status`), not a body line. Settable values are
      exactly Proposed | Accepted | Deprecated. When superseding a prior ADR, set
      `supersedes` here; `living-docs supersede` sets Superseded on the old record
-     -- never set it by hand. -->
+     -- never set it by hand. A Superseded or Deprecated record also carries a
+     callout above this heading naming its successor -- written by `supersede`,
+     `set`, or `fmt`, never by hand. -->
 
 ## Context
 

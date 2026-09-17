@@ -5,9 +5,10 @@
 
 use super::View;
 
-pub(super) fn render(views: &[View], full: bool) -> String {
+pub(super) fn render(views: &[View], full: bool, withheld: usize) -> String {
+    let prefix = withheld_line(withheld);
     if views.is_empty() {
-        return String::new();
+        return prefix;
     }
     let blocks: Vec<String> = views
         .iter()
@@ -20,7 +21,18 @@ pub(super) fn render(views: &[View], full: bool) -> String {
         })
         .collect();
     let separator = if full { "\n\n" } else { "\n" };
-    format!("{}\n", blocks.join(separator))
+    format!("{prefix}{}\n", blocks.join(separator))
+}
+
+/// The withheld-count callout that opens the view above the first block,
+/// blank afterward. Empty when nothing was withheld.
+fn withheld_line(withheld: usize) -> String {
+    if withheld == 0 {
+        return String::new();
+    }
+    format!(
+        "_Withheld {withheld} retired record(s) (superseded or deprecated): history only, never act on them._\n\n"
+    )
 }
 
 fn index_line(view: &View) -> String {

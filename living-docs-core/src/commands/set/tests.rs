@@ -89,6 +89,34 @@ fn set_status_reserves_superseded_for_the_supersede_verb() {
 }
 
 #[test]
+fn set_status_deprecated_adds_the_deprecated_callout() {
+    let store = store();
+    set(&store, Path::new("/bundle"), "0001", "status", "Deprecated").expect("valid status");
+    let contents = store.contents("/bundle/adr/0001-a-decision.md");
+    assert!(
+        contents.contains(
+            "> **DEPRECATED — do not act on this record.** It has no successor. \
+             Run `living-docs effective` for what is in force.\n\n# A Decision"
+        ),
+        "got: {contents}"
+    );
+}
+
+#[test]
+fn set_status_back_to_active_removes_the_callout_and_leaves_the_body_byte_identical() {
+    let store = store();
+    set(&store, Path::new("/bundle"), "0001", "status", "Deprecated").expect("valid status");
+    set(&store, Path::new("/bundle"), "0001", "status", "Accepted").expect("valid status");
+
+    let contents = store.contents("/bundle/adr/0001-a-decision.md");
+    let original_body = extract_record(Path::new("/bundle/adr/0001-a-decision.md"), ADR).body;
+    let final_body = extract_record(Path::new("/bundle/adr/0001-a-decision.md"), &contents).body;
+
+    assert!(!contents.contains("DEPRECATED"), "got: {contents}");
+    assert_eq!(final_body, original_body, "got: {contents}");
+}
+
+#[test]
 fn set_description_quotes_and_replaces_the_placeholder() {
     let store = store();
     set(

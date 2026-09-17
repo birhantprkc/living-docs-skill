@@ -137,8 +137,21 @@ fn setup_synced_db(url: &str, store: &dyn DocStore, bundle: &Path) {
     });
 }
 
-const OLD_DOC: &str = "---\ntype: ADR\ntitle: Quokka Caching Strategy\ndescription: d.\nstatus: Superseded\nsuperseded_by: 0002\n---\n# 0001. Quokka Caching Strategy\n\nBody.\n";
 const NEW_DOC: &str = "---\ntype: ADR\ntitle: Improved Caching Strategy\ndescription: d.\nstatus: Accepted\nsupersedes: 0001\n---\n# 0002. Improved Caching Strategy\n\nBody.\n";
+
+/// The exact retired-record callout line the Superseded fixture must open
+/// with, sourced from the same module `living-docs fmt` writes through.
+fn superseded_callout(successor: &str) -> String {
+    living_docs_core::callout::expected(Some("superseded"), Some(successor))
+        .expect("a superseded status always yields a callout")
+}
+
+fn old_doc(successor: &str) -> String {
+    format!(
+        "---\ntype: ADR\ntitle: Quokka Caching Strategy\ndescription: d.\nstatus: Superseded\nsuperseded_by: 0002\n---\n{}\n\n# 0001. Quokka Caching Strategy\n\nBody.\n",
+        superseded_callout(successor)
+    )
+}
 
 /// A clean, complete two-record bundle: both records exist, the supersede
 /// chain resolves, directory membership and reachability are satisfied.
@@ -151,7 +164,10 @@ fn clean_supersede_bundle(root: &Path) {
         &root.join("adr").join("index.md"),
         "# ADR Index\n\n- [Quokka](/adr/0001-quokka-caching.md)\n- [Improved](/adr/0002-improved-caching.md)\n",
     );
-    write_scratch_doc(&root.join("adr").join("0001-quokka-caching.md"), OLD_DOC);
+    write_scratch_doc(
+        &root.join("adr").join("0001-quokka-caching.md"),
+        &old_doc("0002-improved-caching.md"),
+    );
     write_scratch_doc(&root.join("adr").join("0002-improved-caching.md"), NEW_DOC);
 }
 
