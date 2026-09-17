@@ -1,5 +1,5 @@
 use crate::commands::new::unsupported_type_message;
-use crate::doc_type::{self, Identity, IndexPartition};
+use crate::doc_type::{self, Identity};
 use crate::frontmatter;
 use crate::store::DocStore;
 use std::fs;
@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod named;
+mod rows;
 
 /// Every registry token with a directory to index — Numbered and Named
 /// identities alike (ADR 0026, ADR 0036) — in [`doc_type::DOC_TYPES`]
@@ -120,7 +121,7 @@ fn body_for(
         .into_iter()
         .filter(|record| record_visible(record, visibility_filter))
         .collect();
-    Ok(render_body(doc_type, &records))
+    Ok(rows::render_body(doc_type, &records))
 }
 
 /// Resolves the numbered-series directory `index` regenerates for
@@ -151,6 +152,7 @@ struct Record {
     status: String,
     filename: String,
     visibility: String,
+    superseded_by: Option<String>,
 }
 
 /// The default-deny fallback effective visibility for a record whose
@@ -200,12 +202,14 @@ fn record_from_path(store: &dyn DocStore, path: &Path) -> Option<Record> {
     let status = frontmatter::read_scalar_from_str(&contents, "status").unwrap_or_default();
     let visibility = frontmatter::read_scalar_from_str(&contents, "visibility")
         .unwrap_or_else(|| DEFAULT_VISIBILITY.to_string());
+    let superseded_by = frontmatter::read_scalar_from_str(&contents, "superseded_by");
     Some(Record {
         number,
         title,
         status,
         filename,
         visibility,
+        superseded_by,
     })
 }
 
@@ -271,103 +275,6 @@ fn numbered_prefix(filename: &str) -> Option<u32> {
         return None;
     }
     prefix.parse().ok()
-}
-
-/// Renders `records` along the partition axis `doc_type`'s registry spec
-/// declares (ADR 0026): [`IndexPartition::OpenClosed`] for work-in-progress
-/// types, [`IndexPartition::ActiveSuperseded`] for types that track what is
-/// in force, and [`IndexPartition::Flat`] — also the fallback for an
-/// unrecognized `doc_type`, unreachable in practice since every caller
-/// already validated it — as a single flat listing (`render_flat_body`).
-fn render_body(doc_type: &str, records: &[Record]) -> String {
-    match doc_type::spec_for(doc_type).map(|spec| &spec.index_partition) {
-        Some(IndexPartition::OpenClosed) => {
-            render_partitioned(records, "Open", "Closed", is_open_status)
-        }
-        Some(IndexPartition::ActiveSuperseded) => {
-            render_partitioned(records, "Active", "Superseded", is_active_status)
-        }
-        Some(IndexPartition::Flat) | None => render_flat_body(records),
-    }
-}
-
-fn render_flat_body(records: &[Record]) -> String {
-    if records.is_empty() {
-        return String::new();
-    }
-    render_rows(records) + "\n"
-}
-
-/// Splits records into a `first_heading` section above a `second_heading`
-/// section, keyed by `in_first`, so a reader sees what matters now without
-/// scrolling through history — see
-/// `skills/living-docs/rules/adr-conventions.md` rule 7 for the decision-type
-/// case this generalizes from. The first heading is always emitted; either
-/// section's rows are omitted (heading only) when that bucket is empty.
-fn render_partitioned(
-    records: &[Record],
-    first_heading: &str,
-    second_heading: &str,
-    in_first: fn(&str) -> bool,
-) -> String {
-    let (first, second): (Vec<&Record>, Vec<&Record>) =
-        records.iter().partition(|record| in_first(&record.status));
-
-    let mut body = format!("## {first_heading}\n");
-    if !first.is_empty() {
-        body.push('\n');
-        body.push_str(&render_rows_ref(&first));
-        body.push('\n');
-    }
-
-    if !second.is_empty() {
-        body.push_str(&format!("\n## {second_heading}\n\n"));
-        body.push_str(&render_rows_ref(&second));
-        body.push('\n');
-    }
-
-    body
-}
-
-/// The decision-type axis (adr/bdr/prd): everything not explicitly retired
-/// is still in force, so new decision statuses (e.g. a future vocabulary
-/// entry) default to Active without special-casing each type's own words.
-fn is_active_status(status: &str) -> bool {
-    !matches!(status, "Superseded" | "Deprecated")
-}
-
-/// The issue work axis: matched case-insensitively so `done` and `Done` both
-/// land in Closed alongside `closed`/`superseded` — the repo's real tracker
-/// uses `done` as its closed value. An unknown/empty status is presumed not
-/// done yet, so it defaults to Open.
-fn is_open_status(status: &str) -> bool {
-    !matches!(
-        status.to_ascii_lowercase().as_str(),
-        "closed" | "done" | "superseded"
-    )
-}
-
-fn render_rows(records: &[Record]) -> String {
-    render_rows_ref(&records.iter().collect::<Vec<_>>())
-}
-
-fn render_rows_ref(records: &[&Record]) -> String {
-    records
-        .iter()
-        .map(|record| render_row(record))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn render_row(record: &Record) -> String {
-    let Record {
-        number,
-        title,
-        filename,
-        status,
-        visibility: _,
-    } = record;
-    format!("* [{number:04} — {title}]({filename}) - {status}")
 }
 
 /// Everything above the first generator-managed heading survives byte-for-byte —

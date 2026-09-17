@@ -228,6 +228,7 @@ fn record_with_visibility(visibility: &str) -> Record {
         status: "Accepted".to_string(),
         filename: "0001-title.md".to_string(),
         visibility: visibility.to_string(),
+        superseded_by: None,
     }
 }
 
