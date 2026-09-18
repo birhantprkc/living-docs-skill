@@ -162,7 +162,7 @@ pub(crate) fn asset(path: &str) -> Option<Cow<'static, [u8]>> {
     SkillAssets::get(path).map(|file| file.data)
 }
 
-fn skill_names() -> BTreeSet<String> {
+pub(crate) fn skill_names() -> BTreeSet<String> {
     SkillAssets::iter()
         .filter_map(|path| path.split('/').next().map(str::to_owned))
         .collect()

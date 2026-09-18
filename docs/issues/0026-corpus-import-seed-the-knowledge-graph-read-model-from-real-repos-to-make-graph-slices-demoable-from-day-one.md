@@ -2,7 +2,7 @@
 type: Issue
 title: "Corpus import: seed the knowledge graph read-model from real repos to make graph slices demoable from day one"
 description: Sync real repos into one read-model (multi-project sync exists; verify it) and add a deterministic `import` verb for non-conformant bundles, so every knowledge-graph slice demos against a real corpus instead of fixtures.
-status: open
+status: closed
 timestamp: 2026-08-05T20:25:27Z
 ---
 

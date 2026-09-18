@@ -9,9 +9,9 @@ use super::Record;
 
 /// The reminder rendered above the `## Superseded` section's rows: a
 /// retired record is history, not something to act on — `living-docs
-/// effective` is the read verb for what is currently in force.
+/// read` is the read verb for what is currently in force.
 pub(super) const RETIRED_SECTION_NOTE: &str = "_History only. Do not act on these records — run \
-     `living-docs effective` for what is in force._";
+     `living-docs read` for what is in force._";
 
 /// Renders `records` along the partition axis `doc_type`'s registry spec
 /// declares: [`IndexPartition::OpenClosed`] for work-in-progress types,
@@ -78,7 +78,7 @@ pub(super) fn render_partitioned(
     body
 }
 
-/// The decision-type axis (adr/bdr/prd): everything not explicitly retired
+/// The decision-type axis (adr/prd): everything not explicitly retired
 /// is still in force, so new decision statuses (e.g. a future vocabulary
 /// entry) default to Active without special-casing each type's own words.
 pub(super) fn is_active_status(status: &str) -> bool {
@@ -114,7 +114,6 @@ pub(super) fn render_row(record: &Record, all: &[Record]) -> String {
         filename,
         status,
         superseded_by,
-        visibility: _,
     } = record;
     let rendered_status =
         retirement_suffix(status, superseded_by.as_deref(), all).unwrap_or_else(|| status.clone());

@@ -42,7 +42,7 @@ fn compute_returns_the_index_path_and_content_regenerate_would_write_without_tou
     let store = MapStore { files };
 
     let (index_path, content) =
-        compute(&store, Path::new("/bundle"), "adr", None).expect("compute should succeed");
+        compute(&store, Path::new("/bundle"), "adr").expect("compute should succeed");
 
     assert_eq!(index_path, PathBuf::from("/bundle/adr/index.md"));
     assert_eq!(
@@ -67,7 +67,7 @@ fn regenerate_is_a_no_op_when_the_type_directory_does_not_exist() {
     let type_dir = docs_dir.join("research");
     assert!(!type_dir.exists());
 
-    let result = regenerate(&store, &docs_dir, "research", None);
+    let result = regenerate(&store, &docs_dir, "research");
 
     assert!(result.is_ok());
     assert!(
@@ -82,7 +82,7 @@ fn compute_rejects_an_unsupported_doc_type() {
         files: BTreeMap::new(),
     };
 
-    let result = compute(&store, Path::new("/bundle"), "glossary", None);
+    let result = compute(&store, Path::new("/bundle"), "glossary");
 
     assert!(result.is_err());
 }
@@ -96,7 +96,7 @@ fn compute_rejects_an_explicit_constitution_index_with_its_own_message() {
         files: BTreeMap::new(),
     };
 
-    let err = compute(&store, Path::new("/bundle"), "constitution", None)
+    let err = compute(&store, Path::new("/bundle"), "constitution")
         .expect_err("constitution has no directory index");
 
     assert!(err.contains("constitution.md"), "got: {err}");
@@ -188,84 +188,4 @@ fn collect_records_on_an_empty_store_returns_no_records() {
         .expect("collect_records should succeed on an empty store");
 
     assert!(records.is_empty());
-}
-
-#[test]
-fn collect_records_defaults_to_private_when_visibility_is_absent() {
-    let mut files = BTreeMap::new();
-    files.insert(
-        PathBuf::from("/bundle/adr/0001-first.md"),
-        "---\ntype: ADR\ntitle: First\nstatus: Accepted\n---\n# First\n".to_string(),
-    );
-    let store = MapStore { files };
-
-    let records = collect_records(&store, Path::new("/bundle"), &PathBuf::from("/bundle/adr"))
-        .expect("collect_records should succeed");
-
-    assert_eq!(records[0].visibility, "private");
-}
-
-#[test]
-fn collect_records_reads_an_explicit_visibility_value() {
-    let mut files = BTreeMap::new();
-    files.insert(
-        PathBuf::from("/bundle/adr/0001-first.md"),
-        "---\ntype: ADR\ntitle: First\nstatus: Accepted\nvisibility: public\n---\n# First\n"
-            .to_string(),
-    );
-    let store = MapStore { files };
-
-    let records = collect_records(&store, Path::new("/bundle"), &PathBuf::from("/bundle/adr"))
-        .expect("collect_records should succeed");
-
-    assert_eq!(records[0].visibility, "public");
-}
-
-fn record_with_visibility(visibility: &str) -> Record {
-    Record {
-        number: 1,
-        title: "Title".to_string(),
-        status: "Accepted".to_string(),
-        filename: "0001-title.md".to_string(),
-        visibility: visibility.to_string(),
-        superseded_by: None,
-    }
-}
-
-#[test]
-fn record_visible_passes_every_record_when_the_filter_is_none() {
-    assert!(record_visible(&record_with_visibility("private"), None));
-    assert!(record_visible(&record_with_visibility("public"), None));
-}
-
-#[test]
-fn record_visible_excludes_a_record_outside_the_filter_set() {
-    let filter = vec!["public".to_string(), "showcase".to_string()];
-    assert!(!record_visible(
-        &record_with_visibility("private"),
-        Some(&filter)
-    ));
-}
-
-#[test]
-fn record_visible_includes_a_record_inside_the_filter_set() {
-    let filter = vec!["public".to_string(), "showcase".to_string()];
-    assert!(record_visible(
-        &record_with_visibility("public"),
-        Some(&filter)
-    ));
-    assert!(record_visible(
-        &record_with_visibility("showcase"),
-        Some(&filter)
-    ));
-}
-
-#[test]
-fn record_visible_default_deny_only_admits_private_when_explicitly_requested() {
-    let private_filter = vec!["private".to_string()];
-    let public_filter = vec!["public".to_string()];
-    let absent_visibility = record_with_visibility(DEFAULT_VISIBILITY);
-
-    assert!(record_visible(&absent_visibility, Some(&private_filter)));
-    assert!(!record_visible(&absent_visibility, Some(&public_filter)));
 }

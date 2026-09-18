@@ -41,10 +41,6 @@ original and never breaks.
 
 - ≥99% of mint requests for valid URLs succeed within 100ms (single region, Phase 1).
 
-## Behavior (BDRs)
-
-- [BDR 0001 — Shorten & redirect](/bdr/0001-shorten-and-redirect.md)
-
 ## Open questions
 
 - Where are links stored, and does that survive a restart? → resolved by

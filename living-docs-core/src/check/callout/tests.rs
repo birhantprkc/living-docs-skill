@@ -27,7 +27,7 @@ fn check_callouts_reports_a_retired_record_without_its_callout() {
 
     check_callouts(&store, &all_md, &mut reporter);
 
-    let code = reporter.finish(2);
+    let code = reporter.finish();
     assert!(!exit_code_is_success(code));
 }
 
@@ -56,7 +56,7 @@ fn check_callouts_passes_a_retired_record_whose_callout_matches_expected() {
 
     check_callouts(&store, &all_md, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(2)));
+    assert!(exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn check_callouts_reports_an_active_record_opening_with_a_retired_callout() {
 
     check_callouts(&store, &all_md, &mut reporter);
 
-    assert!(!exit_code_is_success(reporter.finish(1)));
+    assert!(!exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -89,5 +89,5 @@ fn check_callouts_passes_an_active_record_without_a_callout() {
 
     check_callouts(&store, &all_md, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(1)));
+    assert!(exit_code_is_success(reporter.finish()));
 }

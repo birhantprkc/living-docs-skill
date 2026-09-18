@@ -110,9 +110,9 @@ fn a_real_violation_still_fails_and_the_size_advisory_still_prints_alongside_it(
 #[test]
 fn the_size_targets_skill_topic_is_served_from_the_embedded_corpus() {
     let output = living_docs()
-        .args(["skill", "living-docs", "--topic", "size-targets", "--plain"])
+        .args(["guide", "size-targets", "--plain"])
         .output()
-        .expect("failed to run living-docs skill");
+        .expect("failed to run living-docs guide");
 
     assert!(output.status.success());
     let stdout = stdout_of(&output);

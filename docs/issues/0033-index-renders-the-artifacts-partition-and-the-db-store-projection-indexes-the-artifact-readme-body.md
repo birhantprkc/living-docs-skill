@@ -2,7 +2,7 @@
 type: Issue
 title: index renders the Artifacts partition and the db-store projection indexes the artifact README body
 description: Render an Artifacts partition in index and index each artifact README body in the db-store projection and FTS.
-status: open
+status: closed
 timestamp: 2026-08-07T14:38:11Z
 ---
 

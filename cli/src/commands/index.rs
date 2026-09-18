@@ -1,20 +1,36 @@
-//! `index` verb wrapper: delegates to `living_docs_core::commands::index::run`.
+//! `index` verb wrapper: delegates to `living_docs_core::commands::index::write`,
+//! rendering the written paths as colored text or JSON (ADR 0060).
 
-use crate::config::{Backend, Engine};
-use crate::store::{build_backend_store, report_failure};
+use crate::output::{self, OutputMode};
+use crate::store::build_store;
 use living_docs_core::commands;
-use std::path::Path;
+use serde::Serialize;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-pub(crate) fn run_index(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    doc_type: Option<String>,
-    visibility: Option<Vec<String>>,
-) -> ExitCode {
-    match build_backend_store(backend, engine, docs_dir) {
-        Ok(store) => commands::index::run(store.as_ref(), docs_dir, doc_type, visibility),
-        Err(err) => report_failure(&err),
+#[derive(Serialize)]
+struct FilesJson<'a> {
+    files: Vec<&'a Path>,
+}
+
+pub(crate) fn run_index(docs_dir: &Path, doc_type: Option<String>, mode: OutputMode) -> ExitCode {
+    match commands::index::write(build_store().as_ref(), docs_dir, doc_type) {
+        Ok(written) => render(&written, mode),
+        Err(message) => {
+            eprintln!("living-docs index: {message}");
+            ExitCode::from(2)
+        }
     }
+}
+
+fn render(written: &[PathBuf], mode: OutputMode) -> ExitCode {
+    if mode.is_json() {
+        let files = written.iter().map(PathBuf::as_path).collect();
+        println!("{}", output::to_json(&FilesJson { files }));
+    } else {
+        for path in written {
+            println!("{}", path.display());
+        }
+    }
+    ExitCode::SUCCESS
 }

@@ -7,9 +7,10 @@
 //! liveness (ADR 0049, `stale-proposed` only) is advisory.
 //!
 //! Every record's content (`records`, `links`) is read through
-//! `DocStore::read`, so `check` validates whichever backend `run` is given.
-//! `index.md`/`log.md` are excluded from the record domain by design (never
-//! synced to `db-store`); `check::graph` reads them straight from disk.
+//! `DocStore::read`, so `check` validates whichever backend `compile` is
+//! given. `index.md`/`log.md` are excluded from the record domain by design
+//! (never synced to `db-store`); `check::graph` reads them straight from
+//! disk.
 
 mod callout;
 pub(crate) mod canonical;
@@ -24,49 +25,42 @@ mod size;
 
 use crate::doc_type::{self, Identity};
 use crate::store::DocStore;
+use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(test)]
 use std::process::ExitCode;
 
-/// `check --mermaid-only [paths...]` — validates ONLY the mermaid fences under
-/// `paths`, skipping every other invariant. See `mermaid::run_mermaid_only`.
-pub fn run_mermaid_only(paths: &[PathBuf]) -> ExitCode {
-    mermaid::run_mermaid_only(paths)
+pub use mermaid::{MermaidError, MermaidReport};
+
+/// `check --mermaid-only [paths...]` — validates ONLY the mermaid fences
+/// under `paths`, skipping every other invariant, without printing or
+/// choosing an exit code, so the CLI front can render it as colored text or
+/// JSON (ADR 0060). See `mermaid::compile`.
+pub fn compile_mermaid_only(paths: &[PathBuf]) -> MermaidReport {
+    mermaid::compile(paths)
 }
 
-pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
-    run_require_owner(store, bundle, false)
-}
-
-/// `check --require-owner`: promotes a missing `owner` on a doctype whose
-/// registry row requires it from an advisory to an invariant violation.
-/// Every other invariant behaves exactly as [`run`].
-pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
+/// Compiles `check`'s full report — every invariant plus the placeholder
+/// pass — without printing or choosing an exit code, so the CLI front can
+/// render it as colored text or JSON (ADR 0060). `None` when `bundle` is not
+/// a directory (the CLI front turns that into its own usage error).
+pub fn compile(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> Option<Report> {
     if !bundle.is_dir() {
-        eprintln!(
-            "living-docs check: bundle root not found: {}",
-            bundle.display()
-        );
-        eprintln!(
-            "       run from the repo root, or pass the docs directory: living-docs check path/to/docs"
-        );
-        return ExitCode::from(2);
+        return None;
     }
-
-    println!("Living Docs lint — bundle: {}", bundle.display());
-    println!();
-
     let mut reporter = Reporter::new();
     let doc_count = run_all_checks(store, bundle, &mut reporter, require_owner, true);
-    reporter.finish(doc_count)
+    Some(reporter.into_report(bundle, doc_count))
 }
 
 /// Every invariant `check` validates, without the surrounding
 /// `bundle.is_dir()` guard, header, or verdict rendering — shared by
-/// [`run`] (which prints the verdict) and [`check_violations`] (which
-/// returns the raw list, for a caller like `db_store::DbDocStore::write_checked`
-/// that gates a write on the same invariants without printing anything).
-/// Returns the number of docs `store` enumerated under `bundle`.
+/// [`compile`] (which builds the full [`Report`]) and [`check_violations`]
+/// (which returns the raw list, for a caller like
+/// `db_store::DbDocStore::write_checked` that gates a write on the same
+/// invariants without printing anything). Returns the number of docs
+/// `store` enumerated under `bundle`.
 fn run_all_checks(
     store: &dyn DocStore,
     bundle: &Path,
@@ -110,7 +104,11 @@ fn run_all_checks(
 pub fn check_violations(store: &dyn DocStore, bundle: &Path) -> Vec<(String, String)> {
     let mut reporter = Reporter::new();
     run_all_checks(store, bundle, &mut reporter, false, false);
-    reporter.into_violations()
+    reporter
+        .violations
+        .into_iter()
+        .map(|violation| (violation.file, violation.message))
+        .collect()
 }
 
 pub(crate) fn file_name_str(path: &Path) -> String {
@@ -159,12 +157,42 @@ pub(crate) fn is_bundle_singleton(bundle: &Path, path: &Path) -> bool {
     })
 }
 
-/// Collects violations and renders the final report + exit code, mirroring
-/// `report()` and the verdict block of `lint-docs.sh`. Advisories (issue
-/// 0009) print alongside violations but never touch the exit code.
+/// A hard invariant failure: `check`'s exit code goes non-zero when any
+/// exist.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Violation {
+    pub file: String,
+    pub message: String,
+}
+
+/// A soft finding (issue 0009): printed alongside violations but never
+/// affects the exit code. `kind` is the advisory's category — `size`,
+/// `owner`, `liveness`, or `moved-source` — so a JSON consumer can filter by
+/// it without parsing `message`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Advisory {
+    pub file: String,
+    pub kind: String,
+    pub message: String,
+}
+
+/// `check`'s full report (ADR 0060): every invariant's violations and
+/// advisories, the bundle enumerated and its doc count, and `ok` (no
+/// violations) precomputed so a renderer never has to re-derive it.
+#[derive(Debug, Serialize)]
+pub struct Report {
+    pub bundle: String,
+    pub docs: usize,
+    pub violations: Vec<Violation>,
+    pub advisories: Vec<Advisory>,
+    pub ok: bool,
+}
+
+/// Collects violations and advisories as `run_all_checks` walks the bundle,
+/// mirroring `report()`/`advise()` of `lint-docs.sh`.
 pub(crate) struct Reporter {
-    violations: Vec<(String, String)>,
-    advisories: Vec<(String, String)>,
+    violations: Vec<Violation>,
+    advisories: Vec<Advisory>,
 }
 
 impl Reporter {
@@ -176,38 +204,43 @@ impl Reporter {
     }
 
     pub(crate) fn report(&mut self, file: &Path, message: impl Into<String>) {
-        self.violations
-            .push((file.display().to_string(), message.into()));
+        self.violations.push(Violation {
+            file: file.display().to_string(),
+            message: message.into(),
+        });
     }
 
-    pub(crate) fn advise(&mut self, file: &Path, message: impl Into<String>) {
-        self.advisories
-            .push((file.display().to_string(), message.into()));
+    pub(crate) fn advise(&mut self, file: &Path, kind: &str, message: impl Into<String>) {
+        self.advisories.push(Advisory {
+            file: file.display().to_string(),
+            kind: kind.to_owned(),
+            message: message.into(),
+        });
     }
 
+    fn into_report(self, bundle: &Path, docs: usize) -> Report {
+        Report {
+            bundle: bundle.display().to_string(),
+            docs,
+            ok: self.violations.is_empty(),
+            violations: self.violations,
+            advisories: self.advisories,
+        }
+    }
+
+    #[cfg(test)]
     fn into_violations(self) -> Vec<(String, String)> {
         self.violations
+            .into_iter()
+            .map(|violation| (violation.file, violation.message))
+            .collect()
     }
 
-    fn finish(self, doc_count: usize) -> ExitCode {
-        for (file, message) in &self.advisories {
-            println!("  {file:<44} {message}");
-        }
-        if !self.advisories.is_empty() {
-            println!();
-        }
-        for (file, message) in &self.violations {
-            println!("  {file:<44} {message}");
-        }
-        println!();
+    #[cfg(test)]
+    fn finish(&self) -> ExitCode {
         if self.violations.is_empty() {
-            println!("OK — {doc_count} docs, no invariant violations.");
             ExitCode::SUCCESS
         } else {
-            println!(
-                "FAIL — {} violation(s) across {doc_count} docs.",
-                self.violations.len()
-            );
             ExitCode::from(1)
         }
     }

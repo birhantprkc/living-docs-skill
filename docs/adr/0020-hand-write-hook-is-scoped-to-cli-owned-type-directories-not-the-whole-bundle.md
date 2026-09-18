@@ -3,11 +3,13 @@ type: ADR
 title: Hand-write hook is scoped to CLI-owned type directories, not the whole bundle
 description: Narrow the ADR 0019 write-time hand-write hook from the whole docs bundle to the four CLI-owned type directories (adr/bdr/prd/issues), so hand-authored types the CLI never scaffolds (research) and the bundle-root index.md are outside its scope.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 supersedes: 0019
 tags: [check, cli, enforcement, frontmatter, hooks]
 timestamp: 2026-07-24T01:34:45Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs read` for what is in force.
 
 # 0020. Hand-write hook is scoped to CLI-owned type directories, not the whole bundle
 

@@ -3,7 +3,7 @@ type: Issue
 title: "Retired-record callout: supersede/set/fmt write it, check enforces it, index rows name the successor, effective reports withheld count, skill rules teach the stop"
 description: Implement the retired-record self-declaration decided in ADR 0058 across core, check, index, effective, the skill corpus, and this repo's own docs bundle.
 owner: Evaldo Klock
-status: open
+status: closed
 timestamp: 2026-09-17T14:49:17Z
 ---
 
@@ -49,3 +49,7 @@ An agent that opens a Superseded or Deprecated record directly sees no visible s
 6. `effective`: withheld line.
 7. Skill corpus edits.
 8. Dogfood sweep with the freshly built binary; regenerate indexes; `check docs` green.
+
+### Outcome
+
+Closed: the retired-record callout (supersede/set/fmt writing it, check enforcing it, index and effective reporting it) shipped in v0.17.0.

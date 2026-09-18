@@ -65,7 +65,7 @@ fn store() -> MapStore {
 #[test]
 fn set_status_updates_the_field_within_the_type_vocabulary() {
     let store = store();
-    set(&store, Path::new("/bundle"), "0001", "status", "Accepted").expect("valid status");
+    apply(&store, Path::new("/bundle"), "0001", "status", "Accepted").expect("valid status");
     assert!(store
         .contents("/bundle/adr/0001-a-decision.md")
         .contains("status: Accepted\n"));
@@ -74,7 +74,7 @@ fn set_status_updates_the_field_within_the_type_vocabulary() {
 #[test]
 fn set_status_rejects_a_value_outside_the_type_vocabulary_and_writes_nothing() {
     let store = store();
-    let err = set(&store, Path::new("/bundle"), "0001", "status", "Ratified")
+    let err = apply(&store, Path::new("/bundle"), "0001", "status", "Ratified")
         .expect_err("Ratified is not an ADR status");
     assert!(err.contains("not a valid status"), "got: {err}");
     assert_eq!(store.contents("/bundle/adr/0001-a-decision.md"), ADR);
@@ -83,7 +83,7 @@ fn set_status_rejects_a_value_outside_the_type_vocabulary_and_writes_nothing() {
 #[test]
 fn set_status_reserves_superseded_for_the_supersede_verb() {
     let store = store();
-    let err = set(&store, Path::new("/bundle"), "0001", "status", "Superseded")
+    let err = apply(&store, Path::new("/bundle"), "0001", "status", "Superseded")
         .expect_err("Superseded is set only via supersede");
     assert!(err.contains("living-docs supersede"), "got: {err}");
 }
@@ -91,12 +91,12 @@ fn set_status_reserves_superseded_for_the_supersede_verb() {
 #[test]
 fn set_status_deprecated_adds_the_deprecated_callout() {
     let store = store();
-    set(&store, Path::new("/bundle"), "0001", "status", "Deprecated").expect("valid status");
+    apply(&store, Path::new("/bundle"), "0001", "status", "Deprecated").expect("valid status");
     let contents = store.contents("/bundle/adr/0001-a-decision.md");
     assert!(
         contents.contains(
             "> **DEPRECATED — do not act on this record.** It has no successor. \
-             Run `living-docs effective` for what is in force.\n\n# A Decision"
+             Run `living-docs read` for what is in force.\n\n# A Decision"
         ),
         "got: {contents}"
     );
@@ -105,8 +105,8 @@ fn set_status_deprecated_adds_the_deprecated_callout() {
 #[test]
 fn set_status_back_to_active_removes_the_callout_and_leaves_the_body_byte_identical() {
     let store = store();
-    set(&store, Path::new("/bundle"), "0001", "status", "Deprecated").expect("valid status");
-    set(&store, Path::new("/bundle"), "0001", "status", "Accepted").expect("valid status");
+    apply(&store, Path::new("/bundle"), "0001", "status", "Deprecated").expect("valid status");
+    apply(&store, Path::new("/bundle"), "0001", "status", "Accepted").expect("valid status");
 
     let contents = store.contents("/bundle/adr/0001-a-decision.md");
     let original_body = extract_record(Path::new("/bundle/adr/0001-a-decision.md"), ADR).body;
@@ -119,7 +119,7 @@ fn set_status_back_to_active_removes_the_callout_and_leaves_the_body_byte_identi
 #[test]
 fn set_description_quotes_and_replaces_the_placeholder() {
     let store = store();
-    set(
+    apply(
         &store,
         Path::new("/bundle"),
         "0001",
@@ -138,7 +138,7 @@ fn set_description_quotes_and_replaces_the_placeholder() {
 #[test]
 fn set_owner_accepts_any_string() {
     let store = store();
-    set(
+    apply(
         &store,
         Path::new("/bundle"),
         "0001",
@@ -154,7 +154,7 @@ fn set_owner_accepts_any_string() {
 #[test]
 fn set_rejects_an_unknown_field() {
     let store = store();
-    let err = set(&store, Path::new("/bundle"), "0001", "title", "New")
+    let err = apply(&store, Path::new("/bundle"), "0001", "title", "New")
         .expect_err("title is not a settable field");
     assert!(err.contains("not a settable field"), "got: {err}");
     assert_eq!(store.contents("/bundle/adr/0001-a-decision.md"), ADR);
@@ -163,7 +163,7 @@ fn set_rejects_an_unknown_field() {
 #[test]
 fn set_fails_when_the_record_cannot_be_found_and_leaves_it_unchanged() {
     let store = store();
-    let err = set(&store, Path::new("/bundle"), "0099", "status", "Accepted")
+    let err = apply(&store, Path::new("/bundle"), "0099", "status", "Accepted")
         .expect_err("no such record");
     assert!(err.contains("no record found for 0099"), "got: {err}");
     assert_eq!(store.contents("/bundle/adr/0001-a-decision.md"), ADR);

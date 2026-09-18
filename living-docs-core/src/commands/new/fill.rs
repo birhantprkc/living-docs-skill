@@ -1,6 +1,6 @@
-//! Frontmatter fills for `new`/`brief` scaffolds: targeted line edits of
-//! CLI-owned keys inside the leading frontmatter block only — never a serde
-//! round-trip — so body placeholders and guidance comments survive
+//! Frontmatter and heading fills for `new` scaffolds: targeted line edits of
+//! CLI-owned keys inside the leading frontmatter block, plus the record's
+//! title heading — never a serde round-trip — so body placeholders survive
 //! byte-for-byte.
 
 use crate::doc_type::{self, Identity};
@@ -59,9 +59,7 @@ pub(crate) fn frontmatter_close_index(lines: &[&str]) -> Option<usize> {
 /// Fills the frontmatter `title:` line with `title`, quoted exactly as
 /// [`crate::record::to_canonical_markdown`] would (via
 /// [`format_scalar`]) — never a local quoting rule — so a fresh scaffold's
-/// frontmatter is already a canonical-check fixed point (ADR 0019). Shared
-/// with [`crate::commands::brief::run`], which applies the same fill on top
-/// of its own pre-filled sections.
+/// frontmatter is already a canonical-check fixed point (ADR 0019).
 pub(crate) fn fill_frontmatter_title(content: &str, title: &str) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let Some(close) = frontmatter_close_index(&lines) else {
@@ -188,6 +186,39 @@ pub(crate) fn fill_frontmatter_kind(
     }
     crate::commands::supersede::apply_frontmatter_field(content, "kind", kind)
         .ok_or_else(|| "template has no frontmatter block to fill `kind` into".to_string())
+}
+
+/// Fills the template's title heading — the first `# `/`## ` line after the
+/// frontmatter that still carries an angle-bracket placeholder — with
+/// `NNNN. <title>` for a numbered record or the bare title otherwise, so the
+/// agent never hand-writes the one heading the CLI already knows.
+pub(crate) fn fill_heading(content: &str, title: &str, number: Option<u32>) -> String {
+    let lines: Vec<&str> = content.lines().collect();
+    let Some(close) = frontmatter_close_index(&lines) else {
+        return content.to_string();
+    };
+    let heading = match number {
+        Some(number) => format!("{number:04}. {title}"),
+        None => title.to_string(),
+    };
+    let mut filled = false;
+    let updated: Vec<String> = lines
+        .iter()
+        .enumerate()
+        .map(|(i, &line)| {
+            if filled || i < close || !is_placeholder_heading(line) {
+                return line.to_string();
+            }
+            filled = true;
+            let prefix = line.split_whitespace().next().unwrap_or("#");
+            format!("{prefix} {heading}")
+        })
+        .collect();
+    updated.join("\n") + "\n"
+}
+
+fn is_placeholder_heading(line: &str) -> bool {
+    (line.starts_with("# ") || line.starts_with("## ")) && line.contains('<') && line.contains('>')
 }
 
 #[cfg(test)]

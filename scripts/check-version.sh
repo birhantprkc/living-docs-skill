@@ -107,24 +107,6 @@ if [[ ! -e "${skill_mds[0]}" ]]; then
 fi
 check_versioned_class required spec-aware "${skill_mds[@]}"
 
-plugin_json="$root/.claude-plugin/plugin.json"
-plugin_v="$(grep -E '"version":' "$plugin_json" | head -1 | sed -E 's/.*"version":[[:space:]]*"([^"]+)".*/\1/')"
-check ".claude-plugin/plugin.json" "$plugin_v"
-
-instruction_mds=("$root"/.github/instructions/*.md)
-if [[ ! -e "${instruction_mds[0]}" ]]; then
-	echo "ERROR: no .github/instructions/*.md files found" >&2
-	exit 1
-fi
-check_versioned_class optional plain "${instruction_mds[@]}"
-
-cursor_rule_mdcs=("$root"/.cursor/rules/*.mdc)
-if [[ ! -e "${cursor_rule_mdcs[0]}" ]]; then
-	echo "ERROR: no .cursor/rules/*.mdc files found" >&2
-	exit 1
-fi
-check_versioned_class optional plain "${cursor_rule_mdcs[@]}"
-
 if [[ "$fail" -ne 0 ]]; then
 	echo "Version check FAILED."
 	exit 1

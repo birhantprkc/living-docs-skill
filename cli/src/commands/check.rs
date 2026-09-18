@@ -1,39 +1,125 @@
-//! `check` verb wrapper: resolves the bundle path, then delegates to `living_docs_core::check::run_require_owner`.
+//! `check` verb wrapper: resolves the bundle path, compiles the report
+//! through `living_docs_core::check::compile`, and renders it as colored
+//! text or JSON per the resolved output mode (ADR 0060).
 
-use crate::config::{Backend, Engine};
-use crate::store::{build_backend_store, report_failure};
-use living_docs_core::check;
+use crate::output::{self, ColorMode, OutputMode, Style};
+use crate::store::build_store;
+use living_docs_core::check::{self, MermaidReport, Report};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 pub(crate) fn run_check(
-    backend: Backend,
-    engine: Engine,
     docs_dir: &Path,
     paths: Vec<PathBuf>,
     require_owner: bool,
+    mode: OutputMode,
+    color: ColorMode,
 ) -> ExitCode {
-    let bundle = check_bundle(backend, docs_dir, paths);
-    match build_backend_store(backend, engine, &bundle) {
-        Ok(store) => check::run_require_owner(store.as_ref(), &bundle, require_owner),
-        Err(err) => report_failure(&err),
+    let bundle = check_bundle(docs_dir, paths);
+    let Some(report) = check::compile(build_store().as_ref(), &bundle, require_owner) else {
+        eprintln!(
+            "living-docs check: bundle root not found: {}",
+            bundle.display()
+        );
+        eprintln!(
+            "       run from the repo root, or pass the docs directory: living-docs check path/to/docs"
+        );
+        return ExitCode::from(2);
+    };
+    if mode.is_json() {
+        println!("{}", output::to_json(&report));
+    } else {
+        render_text(&report, color);
+    }
+    if report.ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
     }
 }
 
-/// The db backend has no notion of `check`'s `[BUNDLE_ROOT]` positional
-/// argument — its `DocStore` is scoped to `--docs-dir` at construction — so
-/// it always checks `docs_dir`, ignoring `paths`. The fs backend prefers a
-/// positional `[BUNDLE_ROOT]` when given one, and otherwise falls back to
-/// `docs_dir` — so `--docs-dir X fmt`/`check` operates on `X`, never a
-/// hardcoded `docs`.
-pub(crate) fn check_bundle(backend: Backend, docs_dir: &Path, paths: Vec<PathBuf>) -> PathBuf {
-    match backend {
-        Backend::Db => docs_dir.to_path_buf(),
-        Backend::Fs => paths
-            .into_iter()
-            .next()
-            .unwrap_or_else(|| docs_dir.to_path_buf()),
+fn render_text(report: &Report, color: ColorMode) {
+    println!("Living Docs lint — bundle: {}", report.bundle);
+    println!();
+    for advisory in &report.advisories {
+        let line = format!("  {:<44} {}", advisory.file, advisory.message);
+        println!("{}", output::paint(color, Style::Yellow, &line));
     }
+    if !report.advisories.is_empty() {
+        println!();
+    }
+    for violation in &report.violations {
+        let line = format!("  {:<44} {}", violation.file, violation.message);
+        println!("{}", output::paint(color, Style::Red, &line));
+    }
+    println!();
+    render_verdict(report, color);
+}
+
+fn render_verdict(report: &Report, color: ColorMode) {
+    if report.ok {
+        let line = format!("OK — {} docs, no invariant violations.", report.docs);
+        println!("{}", output::paint(color, Style::Green, &line));
+    } else {
+        let line = format!(
+            "FAIL — {} violation(s) across {} docs.",
+            report.violations.len(),
+            report.docs
+        );
+        println!("{}", output::paint(color, Style::Red, &line));
+    }
+}
+
+/// `check --mermaid-only [paths...]`: compiles the mermaid-fence report
+/// through `living_docs_core::check::compile_mermaid_only` and renders it as
+/// colored text or JSON per the resolved output mode (ADR 0060), the same
+/// split `run_check` uses for the full report.
+pub(crate) fn run_mermaid_only(paths: &[PathBuf], mode: OutputMode, color: ColorMode) -> ExitCode {
+    let report = check::compile_mermaid_only(paths);
+    if mode.is_json() {
+        println!("{}", output::to_json(&report));
+    } else {
+        render_mermaid_text(&report, color);
+    }
+    if report.ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    }
+}
+
+fn render_mermaid_text(report: &MermaidReport, color: ColorMode) {
+    for error in &report.errors {
+        println!("FAIL {}:{}", error.file, error.line);
+        for line in error.message.lines().take(5) {
+            println!("    {line}");
+        }
+    }
+    println!();
+    if report.ok {
+        let line = format!(
+            "OK: {} diagram(s) across {} file(s).",
+            report.diagrams, report.files
+        );
+        println!("{}", output::paint(color, Style::Green, &line));
+    } else {
+        let line = format!(
+            "FAIL: {} of {} diagram(s) failed to parse.",
+            report.errors.len(),
+            report.diagrams
+        );
+        println!("{}", output::paint(color, Style::Red, &line));
+    }
+}
+
+/// A positional `[BUNDLE_ROOT]` wins when given; otherwise the global
+/// `--docs-dir`, so `--docs-dir X fmt`/`check` operates on `X`, never a
+/// hardcoded `docs`.
+pub(crate) fn check_bundle(docs_dir: &Path, paths: Vec<PathBuf>) -> PathBuf {
+    paths
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| docs_dir.to_path_buf())
 }
 
 #[cfg(test)]
@@ -41,34 +127,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn check_bundle_uses_docs_dir_for_the_db_backend_ignoring_paths() {
-        let bundle = check_bundle(
-            Backend::Db,
-            Path::new("/repo/docs"),
-            vec![PathBuf::from("/ignored")],
-        );
-        assert_eq!(bundle, PathBuf::from("/repo/docs"));
-    }
-
-    #[test]
-    fn check_bundle_uses_the_first_path_argument_for_the_fs_backend() {
-        let bundle = check_bundle(
-            Backend::Fs,
-            Path::new("/repo/docs"),
-            vec![PathBuf::from("/bundle")],
-        );
+    fn check_bundle_uses_the_first_path_argument() {
+        let bundle = check_bundle(Path::new("/repo/docs"), vec![PathBuf::from("/bundle")]);
         assert_eq!(bundle, PathBuf::from("/bundle"));
     }
 
     #[test]
-    fn check_bundle_falls_back_to_docs_dir_for_the_fs_backend_when_no_paths_are_given() {
-        let bundle = check_bundle(Backend::Fs, Path::new("/repo/docs"), Vec::new());
-        assert_eq!(bundle, PathBuf::from("/repo/docs"));
-    }
-
-    #[test]
-    fn check_bundle_honors_a_custom_docs_dir_for_the_fs_backend_when_no_paths_are_given() {
-        let bundle = check_bundle(Backend::Fs, Path::new("/repo/custom"), Vec::new());
+    fn check_bundle_falls_back_to_docs_dir_when_no_paths_are_given() {
+        let bundle = check_bundle(Path::new("/repo/custom"), Vec::new());
         assert_eq!(bundle, PathBuf::from("/repo/custom"));
     }
 }

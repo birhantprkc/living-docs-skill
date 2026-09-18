@@ -28,7 +28,7 @@ It is a native Rust binary (correct without shelling out to a hand-rolled markdo
 parser): `serde_yaml` for frontmatter, `pulldown-cmark` for link extraction and resolution
 (every link form — inline, titled, angle-bracket, reference-style, images), and a native
 directory-index/reachability BFS plus supersede-chain walk for the OKF structural graph.
-No host tools to install — install the binary itself via `./install.sh cli` or
+No host tools to install — install the binary itself via `./install.sh` or
 `make cli-install`. `living-docs check --mermaid-only` validates Mermaid fences in-process
 via the pure-Rust merman-core parser (ADR 0013) — no Docker, no host tools.
 
@@ -51,5 +51,4 @@ eyeballing them; the rest are judgement:
 - [ ] Architecture diagrams use Mermaid (in-repo text) and match the code.
 - [ ] The constitution is singular (`docs/constitution.md`) — no NNNN prefix, no index entry.
 - [ ] Each index file's links all resolve (no dangling references).
-- [ ] Any doc declaring `visibility` uses `private | public | showcase` (check enforces the domain); absent ⇒ private, and a doc meant for a public bundle carries `visibility: public | showcase`.
 - [ ] Docs-first respected: the repo body matches the published tracker/wiki copy.

@@ -1,14 +1,9 @@
-# Living Docs — convenience wrapper around install.sh.
+# Living Docs — build, lint and gate targets, plus a thin `cli-install`
+# wrapper over install.sh (which bootstraps the living-docs binary only).
 # Run `make help` for the list of targets.
 
 SHELL := /bin/bash
 INSTALL := ./install.sh
-
-# Dev-env docker-compose (issue 0007): pulls POSTGRES_USER/POSTGRES_DB/PG_PORT from .env
-# into the targets below. The leading `-` makes a missing .env non-fatal (docker compose
-# itself also reads .env for ${VAR} substitution in docker-compose.yml).
--include .env
-export
 
 # Docker-always dev environment for cli/ (Rust). The host is not assumed to have a
 # toolchain — Dockerfile.dev pins the exact version from cli/rust-toolchain.toml, plus
@@ -28,65 +23,17 @@ DOCKER_CARGO = docker run --rm \
 LIVING_DOCS_BIN := target/release/living-docs
 
 .DEFAULT_GOAL := help
-.PHONY: help install install-claude install-cursor install-copilot \
-        install-opencode install-codex install-pi install-all install-pocock \
-        project-claude project-opencode project-codex project-pi \
-        uninstall uninstall-all check lint test-fixtures test-hooks \
+.PHONY: help check lint test-fixtures \
         test-release-gate test-version-gate version \
         test-filesize-gate filesize \
         allow-inventory test-allow-inventory-gate test-install-gate \
-        cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install \
-        up down db-up db-psql db-logs db-test
+        cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-install: install-claude ## Install for Claude Code (global) — the default
-
-install-claude: ## Install the skills for Claude Code (~/.claude/skills)
-	$(INSTALL) claude
-
-install-cursor: ## Install the Living Docs rule for Cursor (.cursor/rules)
-	$(INSTALL) cursor
-
-install-copilot: ## Install the Living Docs instruction for GitHub Copilot (.github/instructions)
-	$(INSTALL) copilot
-
-install-opencode: ## Install the skills for OpenCode (~/.config/opencode/skills)
-	$(INSTALL) opencode
-
-install-codex: ## Install the skills for Codex (~/.codex/skills)
-	$(INSTALL) codex
-
-install-pi: ## Install the skills for Pi (~/.pi/agent/skills + AGENTS.md)
-	$(INSTALL) pi
-
-install-all: ## Install for every supported harness
-	$(INSTALL) all
-
-install-pocock: ## Clone Matt Pocock's companion skills (grill-me, to-prd, to-issues) — MIT
-	$(INSTALL) pocock
-
-project-claude: ## Install for Claude Code into the current project (.claude/skills)
-	$(INSTALL) claude --project
-
-project-opencode: ## Install for OpenCode into the current project (.opencode/skills)
-	$(INSTALL) opencode --project
-
-project-codex: ## Install for Codex into the current project (.codex/skills)
-	$(INSTALL) codex --project
-
-project-pi: ## Install for Pi into the current project (.pi/skills)
-	$(INSTALL) pi --project
-
-uninstall: ## Remove the global Claude Code install
-	$(INSTALL) claude --uninstall
-
-uninstall-all: ## Remove the install for every supported harness
-	$(INSTALL) all --uninstall
-
-check: version filesize allow-inventory build test-fixtures test-hooks test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate test-install-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, install gate fixtures, dry-run harnesses
+check: version filesize allow-inventory build test-fixtures test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate test-install-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, install gate fixtures, dry-run install.sh
 	bash -n install.sh
 	bash -n scripts/check-version.sh
 	bash -n scripts/verify-release-assets.sh
@@ -94,15 +41,12 @@ check: version filesize allow-inventory build test-fixtures test-hooks test-rele
 	bash -n scripts/check-allow-inventory.sh
 	bash -n scripts/tests/install/run.sh
 	cargo test --manifest-path cli/Cargo.toml
-	$(LIVING_DOCS_BIN) check --require-owner examples/linkly/docs
+	$(LIVING_DOCS_BIN) check --require-owner --plain examples/linkly/docs
 	$(LIVING_DOCS_BIN) check --mermaid-only
-	$(INSTALL) all --dry-run
+	$(INSTALL) --dry-run
 
 test-fixtures: build ## Run the hostile/negative fixtures that guard the check parsers
 	LIVING_DOCS_BIN=$(LIVING_DOCS_BIN) ./skills/living-docs/tests/run.sh
-
-test-hooks: ## Run the write-gate hook fixtures (ADR 0021)
-	./skills/living-docs/tests/hooks/run.sh
 
 test-release-gate: ## Run the verify-release-assets.sh fixtures (ADR 0024), stubbed gh
 	./scripts/tests/verify-release-assets/run.sh
@@ -134,8 +78,7 @@ lint: check ## Alias for check
 # cli-* targets run cargo inside the pinned Dockerfile.dev image. `build` uses host
 # cargo to compile locally (see cli/rust-toolchain.toml for the pinned version) ->
 # target/release/living-docs. `cli-install` fetches the published release binary via
-# install.sh (ADR 0041); it never compiles. NOTE: `install` is already taken by the
-# skill installer above, so the release CLI install target is `cli-install`, not `install`.
+# install.sh (ADR 0041); it never compiles.
 
 cli-dev-image: ## Build the pinned Rust dev image (rustfmt + clippy + build-essential)
 	docker build -f Dockerfile.dev -t $(DEV_IMAGE) .
@@ -162,23 +105,3 @@ build: ## Build the release CLI binary natively (host cargo) -> target/release/l
 cli-install: ## Install the living-docs CLI from the latest GitHub release
 	$(INSTALL) cli
 
-# Provisions the ParadeDB (Postgres + BM25) service from ADR 0004 for local db-mode work.
-# The compose `web` service is deferred to issues 0004/0006.
-
-up: ## Start every compose service in the background
-	docker compose up -d
-
-down: ## Stop compose services (the named paradedb-data volume is kept)
-	docker compose down
-
-db-up: ## Start only the paradedb service and block until its healthcheck passes
-	docker compose up -d --wait paradedb
-
-db-psql: ## Open a psql shell against the composed paradedb service
-	docker compose exec paradedb psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
-
-db-logs: ## Follow the paradedb service logs
-	docker compose logs -f paradedb
-
-db-test: db-up ## Run the db-store dual-engine test suite against the composed DB
-	LIVING_DOCS_TEST_PG_URL=$(DATABASE_URL) cargo test --manifest-path db-store/Cargo.toml

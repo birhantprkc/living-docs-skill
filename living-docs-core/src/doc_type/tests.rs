@@ -53,7 +53,7 @@ fn status_vocabulary_matches_adr_0029_per_type() {
     );
     assert_eq!(
         spec_for("prd").unwrap().status_vocabulary,
-        &["Draft", "Accepted", "Implemented"]
+        &["Draft", "Accepted", "Implemented", "Deprecated"]
     );
     assert_eq!(
         spec_for("issue").unwrap().status_vocabulary,
@@ -86,7 +86,7 @@ fn status_vocabulary_never_carries_superseded_for_any_type() {
 
 /// The row this slice adds: `constitution` now resolves, and it resolves
 /// as a [`Identity::Singleton`] naming exactly `constitution.md` — the
-/// row `commands::new`/`commands::brief` branch on to write the bundle's
+/// row `commands::new` branches on to write the bundle's
 /// single unnumbered record.
 #[test]
 fn spec_for_resolves_constitution_as_a_singleton_named_constitution_md() {

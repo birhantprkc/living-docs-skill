@@ -2,7 +2,7 @@
 type: Issue
 title: Atlas edit — optimistic concurrency via a revision precondition
 description: Adds the Atlas edit route on top of the create-slice's write+check plumbing, enforcing the ADR 0016 single-store optimistic-concurrency contract — a submitted base_revision that has moved is rejected, never silently overwritten or merged.
-status: open
+status: closed
 labels: [web, atlas, authoring, database, concurrency]
 blocked_by: [10]
 timestamp: 2026-07-21T00:00:00Z
@@ -25,7 +25,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 ### Context manifest
 
 - Read: issue 0010's transactional write+check verb and `revision` column, `web`'s record
-  page (issue 0008) which already renders `record_meta`.
+  page (issue 0045) which already renders `record_meta`.
 - Seams touched: the edit form submits the `revision` it read alongside the body/frontmatter
   edits; the core write verb gains a `base_revision: Option<i64>` precondition — when
   present, the write commits only if the stored revision still matches, else it is

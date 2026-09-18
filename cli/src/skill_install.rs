@@ -11,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-/// The AI harnesses `skill install` places the corpus for natively — every
+/// The AI harnesses `install skills` places the corpus for natively — every
 /// one auto-discovers `SKILL.md` files under its own skills directory, so
 /// placement never needs a generated pointer file (unlike `cursor`/`copilot`,
 /// slice S2 of ADR 0028).
@@ -163,7 +163,7 @@ fn write_one(placement: &Placement) -> io::Result<()> {
 }
 
 fn report_failure(message: &str) -> ExitCode {
-    eprintln!("living-docs skill install: {message}");
+    eprintln!("living-docs install skills: {message}");
     ExitCode::from(2)
 }
 
@@ -177,14 +177,14 @@ mod tests {
     struct SkillCorpusAssets;
 
     /// Whether `relative_path` (relative to a skill's own directory, e.g.
-    /// `reference/SPEC.md`) is one `skill install` places on a harness's
-    /// filesystem, versus one served through `living-docs skill <name>
-    /// --topic <topic>`. Only the slim-stub `SKILL.md` (ADR 0014) and
+    /// `reference/SPEC.md`) is one `install skills` places on a harness's
+    /// filesystem, versus one served through `living-docs guide <topic>
+    /// --skill <name>`. Only the slim-stub `SKILL.md` (ADR 0014) and
     /// anything a stub links to directly by relative path — vendored
     /// external material such as `okf-knowledge-format`'s `reference/` spec
     /// — has to exist on disk; `rules/`, `templates/`, `hooks/`, `scripts/`,
     /// and `tests/` are progressive-disclosure or dev-only content the CLI
-    /// (or, for `hooks/`, `hooks install`) serves instead.
+    /// (or, for `hooks/`, `install hooks`) serves instead.
     /// [`SKILL_ASSET_SPECS`] must declare exactly the paths this predicate
     /// accepts, proven below.
     fn is_skill_install_asset(relative_path: &str) -> bool {

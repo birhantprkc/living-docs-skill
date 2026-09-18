@@ -1,125 +1,76 @@
-use args::{Cli, Command, DbCmd, HooksCmd, SkillCmd};
-use clap::Parser;
-use living_docs_core::check;
+use args::{Command, InstallCmd, UninstallCmd};
+use output::{ColorMode, OutputMode};
 use std::process::ExitCode;
 
 mod args;
 mod commands;
-mod config;
 mod hooks;
+mod output;
 mod skill;
 mod skill_install;
 mod store;
 
 #[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = args::parse();
+    let mode = OutputMode::from_flags(cli.json, cli.plain, cli.color);
+    let color = ColorMode::from_choice(cli.color);
+    let quiet = cli.quiet;
     match cli.command {
         Command::New {
             doc_type,
             title,
             description,
             kind,
-            json,
             owner,
         } => commands::new::run_new(
-            cli.backend,
-            cli.engine,
             &cli.docs_dir,
             &doc_type,
             &title,
             &commands::new::NewArgs {
                 description: description.as_deref(),
                 kind: kind.as_deref(),
-                json: json.as_deref(),
                 owner: owner.as_deref(),
             },
+            mode,
         ),
-        Command::Index {
-            doc_type,
-            visibility,
-        } => {
-            commands::index::run_index(cli.backend, cli.engine, &cli.docs_dir, doc_type, visibility)
-        }
+        Command::Index { doc_type } => commands::index::run_index(&cli.docs_dir, doc_type, mode),
         Command::Supersede { old, new } => {
-            commands::supersede::run_supersede(cli.backend, cli.engine, &cli.docs_dir, &old, &new)
+            commands::supersede::run_supersede(&cli.docs_dir, &old, &new, mode)
         }
         Command::Set {
             reference,
             key,
             value,
-        } => commands::set::run_set(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            &reference,
-            &key,
-            &value,
-        ),
+        } => commands::set::run_set(&cli.docs_dir, &reference, &key, &value, mode),
         Command::Check {
             paths,
             mermaid_only,
             ..
-        } if mermaid_only => check::run_mermaid_only(&paths),
+        } if mermaid_only => commands::check::run_mermaid_only(&paths, mode, color),
         Command::Check {
             paths,
             require_owner,
             ..
-        } => {
-            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths, require_owner)
-        }
-        Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
-        Command::Migrate { paths, apply } => {
-            commands::migrate::run_migrate(cli.backend, cli.engine, &cli.docs_dir, paths, apply)
-        }
-        Command::Export {
-            out_dir,
-            visibility,
-        } => commands::export::run_export(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            &out_dir,
-            visibility,
-        ),
-        Command::LeakGate {
-            bundle,
-            check_tier3,
-        } => commands::leak_gate::run_leak_gate(&bundle, check_tier3),
-        Command::Db {
-            cmd: DbCmd::Sync { project },
-        } => commands::db::run_db_sync(&cli.docs_dir, cli.engine, project),
-        Command::Effective(args) => {
-            commands::effective::run_effective(cli.backend, cli.engine, &cli.docs_dir, args)
-        }
-        Command::Search {
-            query,
-            project,
-            strict,
-        } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
-        Command::Skill {
+        } => commands::check::run_check(&cli.docs_dir, paths, require_owner, mode, color),
+        Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check, mode),
+        Command::Read(args) => commands::read::run_read(&cli.docs_dir, args, mode),
+        Command::Guide(args) => commands::guide::run_guide(args, mode),
+        Command::Install {
             action:
-                Some(SkillCmd::Install {
+                InstallCmd::Skills {
                     harness,
                     project,
                     dir,
                     dry_run,
-                }),
-            ..
-        } => skill_install::install(harness, project, dir, dry_run),
-        Command::Skill {
-            name,
-            topic,
-            list,
-            json,
-            plain,
-            ..
-        } => commands::skill_cmd::run_skill(name, topic, list, json, plain),
-        Command::Hooks {
-            cmd: HooksCmd::Install { dir, dry_run },
-        } => commands::hooks_cmd::run_hooks_install(dir, dry_run, &cli.docs_dir),
-        Command::Hooks {
-            cmd: HooksCmd::Uninstall { dir, dry_run },
-        } => commands::hooks_cmd::run_hooks_uninstall(dir, dry_run),
+                },
+        } => commands::install::run_install_skills(harness, project, dir, dry_run),
+        Command::Install {
+            action: InstallCmd::Hooks { dir, dry_run },
+        } => commands::install::run_install_hooks(dir, dry_run, &cli.docs_dir, quiet),
+        Command::Uninstall {
+            action: UninstallCmd::Hooks { dir, dry_run },
+        } => commands::uninstall::run_uninstall_hooks(dir, dry_run),
+        Command::Completions { shell } => commands::completions::run_completions(shell),
     }
 }

@@ -2,7 +2,7 @@
 type: Issue
 title: The harness matrix is six targets where four are the same copy with a different destination
 description: Decide whether the six harness targets become a registry row the way doc types did, now that placement has moved from shell into Rust and the duplication is visible in one file.
-status: Proposed
+status: closed
 timestamp: 2026-07-30T22:34:18Z
 ---
 
@@ -56,3 +56,7 @@ harness that is latently present in the other three.
 
 Until one of those fires, the duplication is four short functions that are read more often
 than they are edited, and a registry would be the more expensive shape.
+
+### Outcome
+
+Closed as decided by issue 0046: packaging is the CLI, the harness matrix leaves the repo, and `skill install --harness` is the single placement channel.

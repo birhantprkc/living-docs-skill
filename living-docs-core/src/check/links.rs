@@ -140,7 +140,7 @@ mod tests {
             &mut reporter,
         );
 
-        assert!(!exit_code_is_success(reporter.finish(1)));
+        assert!(!exit_code_is_success(reporter.finish()));
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
             &mut reporter,
         );
 
-        assert!(exit_code_is_success(reporter.finish(0)));
+        assert!(exit_code_is_success(reporter.finish()));
     }
 
     #[test]

@@ -2,7 +2,7 @@
 type: Issue
 title: Atlas delete — a new verb with no CLI precedent
 description: ADR 0016 names delete as an Atlas verb "if absent" from the CLI — it is absent — so this slice needs a small ADR deciding what "delete" means for a living-docs record before any code lands, given the project's standing supersede-never-delete convention for decision records.
-status: open
+status: closed
 labels: [web, atlas, authoring, database, needs-adr]
 blocked_by: [10]
 timestamp: 2026-07-21T00:00:00Z

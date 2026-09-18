@@ -23,19 +23,19 @@ Split when a doc passes ~200 lines or starts mixing unrelated concerns.
 5. **Cut over.** Repoint the live pointers (project guide's Docs index, maintenance rules) to the new index. Delete the old monolith. Leave *historical* mentions (in ADR/issue "Consequences") untouched — they are history.
 6. **Completeness review.** Diff the old content against the union of new files: every term present exactly once, nothing lost or duplicated, all index links resolve, old file removed.
 
-## Reading the corpus — the effective view, not the raw index
+## Reading the corpus — the in-force view, not the raw index
 
 The corpus is append-only (supersede, never rewrite): right for history, wrong as the thing an agent reads. An `index.md` lists **everything**, including superseded links and stale records, and leaves supersede-chain resolution to the reader — who then plans on whichever record they opened first.
 
-**Agents read `living-docs effective`, never `index.md` directly** (ADR 0050). It compiles the in-force view: active records only (superseded/deprecated withheld), supersede chains collapsed to the head with a one-line lineage (`supersedes 0131 via 0133`), grouped **constitution and PRDs first, then ADRs, then the rest** by number, so the reader orients before drilling in.
+**Agents read `living-docs read`, never `index.md` directly** (ADR 0050). It compiles the in-force view: active records only (superseded/deprecated withheld), supersede chains collapsed to the head with a one-line lineage (`supersedes 0131 via 0133`), grouped **constitution and PRDs first, then ADRs, then the rest** by number, so the reader orients before drilling in.
 
-- `living-docs effective` — the whole active view (title + description per record).
-- `living-docs effective --topic <term>` — only records whose title, description, or body contains the term (case-insensitive).
-- `living-docs effective --full` — full record bodies instead of the one-line index entries.
+- `living-docs read` — the whole active view (title + description per record).
+- `living-docs read --topic <term>` — only records whose title, description, or body contains the term (case-insensitive).
+- `living-docs read --full` — full record bodies instead of the one-line index entries.
 
-`index.md` remains the generated on-disk artifact and the human/browser entry point; `effective` is the agent's read surface over the same records.
+`index.md` remains the generated on-disk artifact and the human/browser entry point; `read` is the agent's read surface over the same records.
 
-A raw record opened directly still carries its own stop signal: a body that opens with a `SUPERSEDED` or `DEPRECATED` callout is history. Follow the successor link or discard the record; never plan on it; read `living-docs effective` for what is in force.
+A raw record opened directly still carries its own stop signal: a body that opens with a `SUPERSEDED` or `DEPRECATED` callout is history. Follow the successor link or discard the record; never plan on it; read `living-docs read` for what is in force.
 
 ## Heading discipline
 

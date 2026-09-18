@@ -3,7 +3,7 @@ type: ADR
 title: Architecture views are a registry doc type on a Named identity with a kind-sequenced generated index
 description: "Promote architecture views to CLI-owned records: a new Named identity (dir, slug-named files) carries a view doc type in docs/architecture/, scaffolded by new --kind, canonically checked, and indexed in C4/arc42 zoom order by a kind frontmatter key."
 owner: Evaldo Klock
-status: Proposed
+status: Accepted
 timestamp: 2026-08-14T07:53:45Z
 ---
 

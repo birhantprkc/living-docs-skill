@@ -24,6 +24,7 @@ pub(crate) fn check_body_size(store: &dyn DocStore, all_md: &[PathBuf], reporter
         if let Some(lines) = over_target_body_lines(&content) {
             reporter.advise(
                 f,
+                "size",
                 format!("SIZE body {lines} lines exceeds the {WARN_LINES}-line advisory target (aim ~{AIM_LINES})"),
             );
         }

@@ -3,7 +3,7 @@
 //! `lint-docs.sh`. Every record's content is read through `DocStore::read`,
 //! and the supersede-chain sibling lookup is driven by `all_md`
 //! (`DocStore::list`'s own enumeration) rather than a filesystem re-scan, so
-//! both invariants validate whichever backend `check::run` is given.
+//! both invariants validate whichever backend `check::compile` is given.
 
 use super::{file_name_str, Reporter};
 use crate::doc_type;
@@ -75,30 +75,12 @@ fn check_concept_file(f: &Path, contents: &str, reporter: &mut Reporter) {
     if frontmatter_scalar(contents, "type").is_none() {
         reporter.report(f, "frontmatter has no non-empty 'type'");
     }
-    if let Some(visibility) = frontmatter_scalar(contents, "visibility") {
-        if !is_valid_visibility(&visibility) {
-            reporter.report(
-                f,
-                format!(
-                    "invalid visibility '{visibility}' (allowed: private|public|showcase; absent means private)"
-                ),
-            );
-        }
-    }
-}
-
-/// Domain check for a *present* `visibility` value (ADR 0009). Absence is
-/// handled upstream by the `Option` branch in `check_concept_file` and never
-/// reaches this predicate — default-deny means an absent field is always
-/// valid, so only a present value needs validating against the domain.
-fn is_valid_visibility(value: &str) -> bool {
-    matches!(value, "private" | "public" | "showcase")
 }
 
 /// A `status: Superseded` record (case-insensitive) needs a non-empty
 /// `superseded_by` resolving to a sibling `<NNNN>-*.md` or `<NNNN>.md`
 /// record. The sibling lookup matches against `all_md` — the same
-/// enumeration `check::run` got from `DocStore::list` — instead of
+/// enumeration `check::compile` got from `DocStore::list` — instead of
 /// re-scanning the directory on disk, so a target the active backend never
 /// enumerates is caught even when a same-named file still exists on disk.
 pub(crate) fn check_supersede_chain(
@@ -186,7 +168,7 @@ fn report_missing_owner(f: &Path, contents: &str, require_owner: bool, reporter:
     if require_owner {
         reporter.report(f, message);
     } else {
-        reporter.advise(f, message);
+        reporter.advise(f, "owner", message);
     }
 }
 

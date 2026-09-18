@@ -2,7 +2,7 @@
 type: Issue
 title: "check validates the artifact file manifest: missing listed file fails, unlisted orphan file warns"
 description: "Teach check to validate an artifact's files manifest: fail on a missing listed file, warn on an unlisted orphan file."
-status: open
+status: closed
 timestamp: 2026-08-07T14:38:11Z
 ---
 

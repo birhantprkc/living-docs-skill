@@ -6,32 +6,22 @@ status: open
 timestamp: <ISO 8601 datetime>
 ---
 
-<!-- Status lives in frontmatter (`status`), not a body line. Settable values are
-     exactly open | in-progress | closed. `living-docs supersede` sets Superseded on
-     this issue -- never set it by hand -- when a later issue replaces it. Everything
-     BELOW the closing `---` is the issue body and MUST stay byte-identical to the
-     published tracker body — strip the frontmatter when publishing. -->
-
 ## <Issue title>
 
-{{SUMMARY}}
-
-If it implements a PRD or ADR, link it bundle-relative: "Implements [ADR NNNN](/adr/NNNN-<slug>.md)" / "Part of [PRD NNNN](/prd/NNNN-<slug>.md)".
+{{SUMMARY: the change and why; link the ADR or PRD it implements bundle-relative, e.g. Implements [ADR NNNN](/adr/NNNN-slug.md)}}
 
 ### Scope
 
-<!-- For removals/refactors, state what is explicitly KEPT. -->
+{{SCOPE: what is included; for a removal or refactor, what is explicitly kept}}
 
-{{SCOPE}}
+### Decision
+
+{{DECISION: any cheap-to-reverse choice made here, with the option not taken; remove the section when the issue decides nothing}}
 
 ### Acceptance
 
-<!-- An observable, testable condition. -->
-
-- {{ACCEPTANCE_CRITERION}}
+- {{ACCEPTANCE_CRITERION: an observable, testable condition}}
 
 ### Plan
 
-<!-- For a large task, list the slices. -->
-
-{{PLAN}}
+{{PLAN: the slices, for a large task}}

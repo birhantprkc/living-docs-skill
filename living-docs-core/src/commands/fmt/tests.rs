@@ -245,7 +245,7 @@ fn canonicalize_record_adds_a_missing_callout_to_a_retired_record() {
 fn canonicalize_record_removes_a_stale_callout_from_an_active_record() {
     let stale = "---\ntype: ADR\ntitle: Active\ndescription: d\nstatus: Accepted\n---\n\n\
                  > **SUPERSEDED — do not act on this record.** Replaced by [0002](0002.md). \
-                 Run `living-docs effective` for what is in force.\n\n# Active\n\nBody text.\n";
+                 Run `living-docs read` for what is in force.\n\n# Active\n\nBody text.\n";
     let store = MapStore::seeded(&[("/bundle/adr/0003-active.md", stale)]);
 
     let rewritten = canonicalize_record(&store, Path::new("/bundle/adr/0003-active.md"));

@@ -24,7 +24,7 @@ view`, the index via `living-docs index`, and only the body below the closing `-
 hand-edited. Views carry no status and are never superseded — they are living documents
 updated in place; git history is the trail.
 
-The architecture index (`index.md`, OKF reserved listing, no frontmatter) is reachable from the bundle-root `docs/index.md`. Each view file is a standalone **OKF concept** (`type: Architecture View`): frontmatter, then a single `#` H1, then `##` sections. A legacy single `docs/architecture.md` is migrated by re-creating each of its diagrams as a view record.
+The architecture index (`index.md`, OKF reserved listing, no frontmatter) is reachable from the bundle-root `docs/index.md`. Each view file is a standalone **OKF concept** (`type: Architecture View`): frontmatter, then a single `#` H1, then `##` sections. A legacy single `docs/architecture.md` is brought current by re-creating each of its diagrams as a view record.
 
 ## The standard views
 

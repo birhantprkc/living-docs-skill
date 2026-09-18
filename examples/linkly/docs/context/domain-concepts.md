@@ -25,9 +25,9 @@ segment in `GET /{code}`.
 ## Mint
 
 The act of creating a new `LINK` for a submitted URL. See
-[BDR 0001](/bdr/0001-shorten-and-redirect.md), Scenario 1.
+[issue 0001](/issues/0001-implement-shorten-endpoint.md), acceptance.
 
 ## Resolve
 
 The act of turning a `code` back into its `target_url` for redirect. See
-[BDR 0001](/bdr/0001-shorten-and-redirect.md), Scenario 2.
+[issue 0001](/issues/0001-implement-shorten-endpoint.md), acceptance.

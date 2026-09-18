@@ -1,6 +1,6 @@
 # Issues
 
-Execution slices — discrete units of work that trace back to a PRD/ADR/BDR.
+Execution slices — discrete units of work that trace back to a PRD/ADR.
 
 ## Open
 

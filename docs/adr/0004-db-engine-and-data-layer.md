@@ -3,10 +3,12 @@ type: ADR
 title: db-mode runs on ParadeDB by default with SQLite opt-in, over SeaORM
 description: The database backend defaults to ParadeDB (Postgres + BM25) with SQLite (+FTS5) as an opt-in engine, accessed through SeaORM for portable normalized CRUD while full-text search is hand-written raw SQL per engine.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [architecture, data-layer, database, paradedb, postgres, seaorm, search, sqlite]
 timestamp: 2026-07-16T00:00:00Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs read` for what is in force.
 
 # 0004. db-mode runs on ParadeDB by default with SQLite opt-in, over SeaORM
 

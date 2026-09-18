@@ -1,18 +1,74 @@
-//! `fmt` verb wrapper: fs-backend only, reuses `check::check_bundle` for bundle resolution.
+//! `fmt` verb wrapper: reuses `check::check_bundle` for bundle resolution
+//! and renders `living_docs_core::commands::fmt::outcome` as colored text
+//! or JSON (ADR 0060).
 
 use crate::commands::check::check_bundle;
-use crate::config::Backend;
+use crate::output::{self, OutputMode};
+use living_docs_core::commands::fmt::{self, Outcome};
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-/// `fmt` is fs-backend only (db-mode is canonical by construction on
-/// export), so it needs no `build_backend_store`/`Engine` plumbing — it
-/// reuses [`check_bundle`]'s `[BUNDLE_ROOT]` resolution (a positional path
-/// wins; otherwise `--docs-dir`) against a fixed [`fs_store::FsStore`], the
-/// same way [`crate::commands::leak_gate::run_leak_gate`] always inspects a
-/// materialized filesystem bundle regardless of `--backend`. `check_only`
-/// threads straight through to the core `run` dry-run path.
-pub(crate) fn run_fmt(docs_dir: &Path, paths: Vec<PathBuf>, check_only: bool) -> ExitCode {
-    let target = check_bundle(Backend::Fs, docs_dir, paths);
-    living_docs_core::commands::fmt::run(&fs_store::FsStore::new(), &target, check_only)
+#[derive(Serialize)]
+struct WrittenJson<'a> {
+    files: Vec<&'a Path>,
+}
+
+#[derive(Serialize)]
+struct PendingJson<'a> {
+    pending: Vec<&'a Path>,
+}
+
+pub(crate) fn run_fmt(
+    docs_dir: &Path,
+    paths: Vec<PathBuf>,
+    check_only: bool,
+    mode: OutputMode,
+) -> ExitCode {
+    let target = check_bundle(docs_dir, paths);
+    match fmt::outcome(&fs_store::FsStore::new(), &target, check_only) {
+        Ok(outcome) => render(&outcome, mode),
+        Err(message) => {
+            eprintln!("living-docs fmt: {message}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn render(outcome: &Outcome, mode: OutputMode) -> ExitCode {
+    match outcome {
+        Outcome::Rewritten(paths) => {
+            render_paths(paths, "record(s) rewritten.", mode, |paths| WrittenJson {
+                files: paths,
+            });
+            ExitCode::SUCCESS
+        }
+        Outcome::Pending(paths) => {
+            render_paths(paths, "record(s) would change.", mode, |paths| {
+                PendingJson { pending: paths }
+            });
+            if paths.is_empty() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+    }
+}
+
+fn render_paths<'a, T: Serialize>(
+    paths: &'a [PathBuf],
+    summary_suffix: &str,
+    mode: OutputMode,
+    to_json: impl FnOnce(Vec<&'a Path>) -> T,
+) {
+    if mode.is_json() {
+        let borrowed = paths.iter().map(PathBuf::as_path).collect();
+        println!("{}", output::to_json(&to_json(borrowed)));
+        return;
+    }
+    for path in paths {
+        println!("{}", path.display());
+    }
+    println!("{} {summary_suffix}", paths.len());
 }

@@ -3,10 +3,12 @@ type: ADR
 title: db-mode authoring data model and lossless export contract
 description: Fixes the three data-model decisions ADR 0005 deferred — the frontmatter tail store, the dual-identity columns, and the canonical lossless-export contract — so db-mode authoring (issue 0006) can be planned.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [authoring, database, eav, export, identity, schema]
 timestamp: 2026-07-17T14:41:11Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs read` for what is in force.
 
 # 0007. db-mode authoring data model and lossless export contract
 

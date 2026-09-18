@@ -1,38 +1,40 @@
 # Living Docs
 
-**Run a project's documentation as a living system — not a write-once artifact that rots.**
+**Run a project's engineering decisions as a living log — not a write-once artifact that rots.**
+
+> **This is an experiment and it changes constantly.** Verbs and record formats may
+> change between releases without a deprecation window — see ADR 0059 for the latest
+> cut. Pin a release tag rather than tracking `main` if you need stability.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Format: OKF](https://img.shields.io/badge/Format-OKF%20v0.1-blue.svg)](skills/okf-knowledge-format/reference/SPEC.md)
 [![Skill: agent-ready](https://img.shields.io/badge/Skill-agent--ready-success.svg)](#whats-in-the-box)
 [![Works with: Claude Code · Cursor · Copilot · OpenCode · Codex · Pi](https://img.shields.io/badge/Works%20with-Claude%20Code%20·%20Cursor%20·%20Copilot%20·%20OpenCode%20·%20Codex%20·%20Pi-8A2BE2.svg)](#installation)
 
-![Living Docs — the doc trail: constitution → PRD → ADR + BDR → issues → code](assets/doc-trail.svg)
-
 Living Docs is an **AI agent skill** for **documentation-as-code** that keeps a
-codebase's docs in sync with its code. It works with **Claude Code**, **Cursor**,
+codebase's decision log in sync with its code. It works with **Claude Code**, **Cursor**,
 **GitHub Copilot**, **OpenCode**, **Codex**, and **Pi** — any agent that loads
-markdown "skills" / instruction files. It is stack-agnostic: it governs *how* docs are
-organized and maintained (Architecture Decision Records, Behavior Decision
-Records, PRDs, a constitution, a glossary, living
-[Mermaid](https://mermaid.js.org/) diagrams), never *what* technology a project
-uses.
+markdown "skills" / instruction files. It is stack-agnostic: it governs *how* decisions
+are recorded and maintained (Architecture Decision Records, issues, research notes, an
+optional PRD, a constitution, living [Mermaid](https://mermaid.js.org/) architecture
+views), never *what* technology a project uses.
 
 The mechanical half of that discipline is owned end-to-end by the bundled
-**`living-docs` CLI** — one self-contained Rust binary that **scaffolds records**
-(`new`, `brief`), **drives their lifecycle** (`status`, `describe`, `supersede`),
-**rebuilds indexes** (`index`, `fmt`), **validates the invariants** (`check`), and
-serves **ranked full-text search** (`search`) over a derived read-model — embedded
-SQLite + FTS5 or ParadeDB. There is no LLM inside the tool: the agent writes only
-the judgment prose; everything mechanical is deterministic and reproducible.
+**`living-docs` CLI** — one self-contained Rust binary with ten verbs that
+**scaffolds records** (`new`), **drives their lifecycle** (`set`, `supersede`),
+**rebuilds indexes** (`index`, `fmt`), **validates the invariants** (`check`),
+**compiles the in-force view an agent reads** (`read`), and **serves the skill
+corpus and the enforcement hooks** (`guide`, `install`, `uninstall`). There is no LLM
+inside the tool: the agent writes only the judgment prose; everything mechanical is
+deterministic and reproducible.
 
 The whole discipline collapses to one spine:
 
-> **Every piece of knowledge has exactly one home, that home is indexed, and
-> nothing structural ships without its doc.**
+> **Every piece of knowledge has exactly one home, that home is indexed, and a
+> material decision ships with its record.**
 
-Everything else — the constitution, ADRs, BDRs, PRDs, issues, research notes,
-architecture diagrams, and the semantic context index — hangs off that spine.
+Everything else — the constitution, ADRs, PRDs, issues, research notes and
+architecture views — hangs off that spine.
 
 ---
 
@@ -50,9 +52,9 @@ every action from:
    drift waiting to happen.
 3. **Indexed or it doesn't exist.** Every doc is reachable from an `index.md`.
    No orphan files.
-4. **Supersede, never rewrite history.** Decisions and requirements are
-   append-only. When something changes, mark the old record superseded and
-   write a new one — never silently edit the past.
+4. **Supersede, never rewrite history.** Decisions are append-only. When
+   something changes, mark the old record superseded and write a new one —
+   never silently edit the past.
 5. **No structural change without its doc.** New module, moved files, schema
    change, new data flow → update the relevant doc *and its diagram* in the
    same change. No "I'll document it later."
@@ -69,119 +71,134 @@ agent-enforceable packaging** of it. See [Provenance](#provenance--honest-attrib
 
 ## The doc trail
 
-Every change follows one chain, from the foundational source of truth down to
-code:
+Only what a change earns appears. A routine change is an issue and code; a decision
+expensive to reverse earns an ADR; a product spec worth pinning earns a PRD:
 
 ```mermaid
 flowchart LR
-  C[constitution] --> P[PRD]
+  C[constitution] --> P[PRD optional]
   P --> A[ADR]
-  P --> B[BDR]
   A --> I[issues]
-  B --> I
+  C --> I
   I --> K[code]
 ```
 
-| Artifact | Role |
+| Artifact | The one question it answers |
 |---|---|
-| **constitution** | Foundational source of truth: what the product is, core data model, non-negotiables. |
-| **PRD** | What the system must do and why — feature/product requirement spec. |
-| **ADR** | How the system is structured — architectural/implementation decision and rationale. |
-| **BDR** | What the system must observably do — inputs, outputs, side effects, Given/When/Then scenarios. |
-| **issues** | Execution slices — discrete units of work that trace back to ADRs/BDRs. |
-| **code** | Implementation — every behavior, structure, and interface specified above, realized. |
+| **constitution** | What never changes here? Scope, non-negotiables, the root of trace. |
+| **PRD** (optional) | Who asked, what is out of scope, what does success look like? |
+| **ADR** | What did we choose, what did we reject, and why? A decision expensive to reverse. |
+| **issue** | What is the change, and how do we know it is done? Carries any cheap-to-reverse choice inline. |
+| **research** | What does external evidence say? Dated, sourced, append-only. |
+| **code** | The implementation the records govern. |
+
+**The one rule that decides whether to write a record:** write an ADR when a future
+reader would pay to rediscover *why* you chose this over the alternatives. Otherwise put
+the choice in the issue. When in doubt, it is an issue.
 
 ---
 
 ## What's in the box
 
-This repo bundles the Living Docs skill together with its composition
-dependencies and the prior-art research that backs its honesty claims:
-
 | Path | What it is |
 |---|---|
 | [`skills/living-docs/`](skills/living-docs/) | The skill: the five invariants, the doc trail, per-doc-type conventions (`rules/`) and starter templates (`templates/`). |
 | [`skills/okf-knowledge-format/`](skills/okf-knowledge-format/) | The **format** standard the docs use — Open Knowledge Format (OKF): markdown + YAML frontmatter, required `type`, reserved `index.md`/`log.md`, bundle-relative links. The OKF spec is **vendored verbatim** from Google Cloud Platform. |
-| [`skills/research-artifacts/`](skills/research-artifacts/) | The research-note format and source discipline that feeds ADRs/PRDs (the `docs/research/` half of the trail). |
-| [`skills/public-export/`](skills/public-export/) | Publish a clean **public build** of a private living-docs project without leaking the private "why": a default-deny allowlist export driven by document visibility, a deterministic **leak gate** (`living-docs export` + `living-docs leak-gate`), and a human-gated clean-history publish. |
-| [`cli/`](cli/) (authoring verbs) | **Deterministic authoring**: `new` / `brief` scaffold a record with CLI-owned numbering and frontmatter — and `new --json '{...}'` authors the **whole body in one call**, its keys validated against the type template's own section headings ([ADR 0038](docs/adr/0038-record-bodies-are-authorable-as-section-keyed-json-through-new-json.md)). `status` / `describe` set the lifecycle fields, `supersede` wires both link directions, `index` rebuilds every index, `fmt` canonicalizes frontmatter and unwraps hard-wrapped prose to one line per paragraph ([ADR 0046](docs/adr/0046-fmt-unwraps-hard-wrapped-prose-one-paragraph-is-one-line-and-the-authoring-rule-says-so.md)). Architecture is a first-class doc type: `new view "<name>" --kind <context\|container\|component\|flow\|sequence\|state\|data-model\|deployment>` scaffolds one view per concern in `docs/architecture/`, and the generated index sorts them in C4/arc42 zoom order ([ADR 0036](docs/adr/0036-architecture-views-are-a-registry-doc-type-on-a-named-identity-with-a-kind-sequenced-generated-index.md)). The agent writes only the judgment body below the frontmatter; write-time hooks block hand-edits to the rest. |
-| [`cli/`](cli/) (`living-docs migrate [--apply]`) | **Adaptation advisor**: scans a bundle (or detects its absence) and prints one ordered plan — `RUN` steps are exact mechanical commands, `AUTHOR` steps are judgment work naming the record and its governing ADR, `ADOPT` steps bootstrap a project with no bundle at all ([ADR 0037](docs/adr/0037-migration-is-a-deterministic-advisor-verb-plus-skill-guided-judgment.md)). `--apply` executes the mechanical subset **transactionally**: snapshot, `index` + `fmt`, byte-for-byte rollback on any failure or `check` regression ([ADR 0040](docs/adr/0040-migrate-apply-is-a-cli-front-transaction-over-the-mechanical-subset.md)). |
-| [`cli/`](cli/) (`living-docs seal init`) | **Provenance sealing**: baselines a per-clone HMAC key + ledger under `.git/living-docs/` (never committed); every CLI write re-seals automatically, and `check` then fails any record created or owned-frontmatter-edited outside the CLI — including shell edits (`sed`, `cat >`) that write-time hooks never see. Fail-open until initialized; friction, not cryptography, by declared design ([ADR 0039](docs/adr/0039-cli-produced-records-carry-an-ephemeral-hmac-provenance-seal-that-check-verifies.md)). |
-| [`cli/`](cli/) (`living-docs search` / `db`) | **Ranked full-text search** over a derived read-model — the embedded SQLite + FTS5 file (`--engine sqlite`) or ParadeDB via `$DATABASE_URL` ([ADR 0004](docs/adr/0004-db-engine-and-data-layer.md)) — with an explicit `db sync` step that (re)builds the projection from the `.md` records. Exactly one backend is authoritative per deployment ([ADR 0003](docs/adr/0003-storage-backend-model.md)): no bidirectional sync, no source-of-truth conflict. |
-| [`references/prior-art-landscape.md`](references/prior-art-landscape.md) | The sourced prior-art analysis — every part of Living Docs (the doc trail, the OKF format, the diagrams, the governance invariants) mapped to its established originator, so every "credit, not invention" claim has a checkable citation. |
-| [`cli/`](cli/) ([`living-docs check`](cli/)) | The **deterministic checker** for the mechanical invariants — frontmatter/`type`, indexing + reachability, link resolution, supersede integrity, **requirement traceability** (every `FR-N`/`NFR-N` a non-Draft PRD defines must be cited by a BDR that links it — advisory at `Accepted`, violation at `Implemented`, [ADR 0035](docs/adr/0035-requirement-ids-are-prd-scoped-ears-statements-and-check-traces-bdr-coverage.md)), and **provenance seals** once `seal init` has baselined the clone ([ADR 0039](docs/adr/0039-cli-produced-records-carry-an-ephemeral-hmac-provenance-seal-that-check-verifies.md)). A single self-contained Rust binary: native `serde_yaml` frontmatter parsing and native `pulldown-cmark` link extraction/resolution — no host tools (no lychee/yq/jq) needed. *A constraint without an instrument is a vibe*; this is the instrument. Wire it into CI. Install with `./install.sh cli` or `make cli-install`. |
-| [`cli/`](cli/) (`living-docs check --mermaid-only`) | Validates every fenced ```` ```mermaid ```` block **in-process** via the pure-Rust [`merman-core`](https://crates.io/crates/merman-core) parser — the real Mermaid grammar, not a hand-rolled check — and fails with a `file:line` pointer at the first broken diagram. **No Docker, no daemon, no Chromium** ([ADR 0013](docs/adr/0013-mermaid-validation-runs-in-process-via-merman-core-not-a-docker-mermaid-cli-shell-out.md)): the same self-contained binary does it. With no path argument it sweeps every git-tracked `.md` file in the repo. |
-| [`examples/linkly/`](examples/linkly/) | A worked, **lint-clean** end-to-end corpus (constitution → PRD → ADR + BDR → issue) for a fictional URL shortener — the discipline shown, not just described, and the fixture CI runs `living-docs check` against. |
+| [`skills/research-artifacts/`](skills/research-artifacts/) | The research-note format and source discipline that feeds ADRs (the `docs/research/` half of the trail). |
+| [`cli/`](cli/) (authoring verbs) | **Deterministic authoring**: `new` scaffolds a record with CLI-owned numbering, frontmatter and title heading, and every body section as a `{{SLOT: hint}}` the agent replaces with prose. `set` sets the lifecycle fields, `supersede` wires both link directions and writes the retired-record callout, `index` rebuilds every index, `fmt` canonicalizes frontmatter. Architecture is a first-class doc type: `new view "<name>" --kind <context\|container\|component\|flow\|sequence\|state\|data-model\|deployment>` scaffolds one view per concern in `docs/architecture/`, and the generated index sorts them in C4/arc42 zoom order. |
+| [`cli/`](cli/) (`living-docs read`) | **The agent-facing read**: active records only, supersede chains collapsed to the head with a one-line lineage, retired records withheld and counted. `--topic <term>` filters, `--full` prints bodies. An agent reads this, never `index.md`. |
+| [`cli/`](cli/) (`living-docs check`) | The **deterministic checker** for the mechanical invariants — frontmatter/`type`, indexing + reachability, link resolution, supersede integrity and the retired-record callout, unfilled `{{SLOT}}` placeholders, and Mermaid fences (in-process via the pure-Rust [`merman-core`](https://crates.io/crates/merman-core) parser — no Docker, no daemon). A single self-contained binary: native `serde_yaml` frontmatter parsing and native `pulldown-cmark` link extraction — no host tools needed. *A constraint without an instrument is a vibe*; this is the instrument. It runs at commit and in CI. |
+| [`cli/`](cli/) (`living-docs guide` / `install` / `uninstall`) | The skill corpus travels **inside the binary** and is served on demand (`guide --list`, `guide adr`); `install hooks` materializes the session-teaching hook and the pre-commit doc-gate into a project, `install skills` places the corpus into a harness's skills directory. |
+| [`references/prior-art-landscape.md`](references/prior-art-landscape.md) | The sourced prior-art analysis — every part of Living Docs mapped to its established originator, so every "credit, not invention" claim has a checkable citation. |
+| [`examples/linkly/`](examples/linkly/) | A worked, **lint-clean** end-to-end corpus (constitution → PRD → ADR → issue) for a fictional URL shortener — the discipline shown, not just described, and the fixture CI runs `living-docs check` against. |
 
-Each skill is self-describing — open its `SKILL.md` for the full operational
-detail. Living Docs and OKF compose but do not overlap: **Living Docs governs
-*which* docs exist and the no-drift discipline; OKF governs *how* a knowledge
-bundle's markdown and frontmatter are shaped.**
+Living Docs and OKF compose but do not overlap: **Living Docs governs *which* docs
+exist and the no-drift discipline; OKF governs *how* a knowledge bundle's markdown
+and frontmatter are shaped.**
 
 ---
 
 ## Installation
 
-The skill is plain **markdown instruction files** — nothing to compile or install to use it. The optional `living-docs` CLI — deterministic authoring, checking, and full-text search — is a single self-contained Rust binary with **no host-tool dependencies at all**: native frontmatter and link parsing (no lychee/yq/jq) and — since **v0.6.0** — in-process Mermaid validation via the pure-Rust `merman-core` parser, so `--mermaid-only` **no longer needs Docker**. Install it with `./install.sh cli` or `make cli-install`.
-Installing Living Docs always means the same thing: **put the three `skills/`
-directories (or a generated rule file) where your tool discovers instructions,
-then start a fresh session.** A cross-platform installer and a `Makefile` do this
-for every supported tool. Clone once:
+The `living-docs` CLI is a single self-contained Rust binary with **no host-tool
+dependencies at all**, and packaging follows it: the binary is the unit of
+distribution, and every skill/hook placement is a CLI verb, never a copy step
+a shell script owns. Clone once:
 
 ```bash
 git clone https://github.com/ejklock/living-docs-skill.git
 cd living-docs-skill
 ```
 
-### Quick start — `install.sh` / `make`
+Installing Living Docs is three independent steps:
+
+1. **Install the binary.**
+
+   ```bash
+   ./install.sh          # downloads the latest release asset (sha256-verified);
+                          #   LIVING_DOCS_VERSION pins a tag; falls back to `cargo build --release`
+   # or:
+   make cli-install       # thin wrapper over `./install.sh`
+   ```
+
+   Useful flags: `--dir <path>` (custom destination, default `~/.local/bin`),
+   `--uninstall`, `--from-source`, `--dry-run`, `--help`.
+
+2. **Place the skills** for your harness:
+
+   ```bash
+   living-docs install skills --harness claude     # ~/.claude/skills (or .claude/skills with --project)
+   living-docs install skills --harness opencode    # ~/.config/opencode/skills (or .opencode/skills)
+   living-docs install skills --harness codex       # ~/.codex/skills (or .codex/skills)
+   living-docs install skills --harness pi          # ~/.pi/agent/skills (or .pi/skills)
+   ```
+
+   `--project` installs into the current repo instead of the global user dir;
+   `--dir <path>` overrides the destination outright. Then restart the session
+   so the tool picks up the skills.
+
+3. **Arm enforcement:**
+
+   ```bash
+   living-docs install hooks [--dir <project>] [--docs-dir <bundle>] [--dry-run]
+   ```
+
+   Materializes the session-teaching script into `.living-docs/hooks/`, wires
+   `.claude/settings.json` with the resolved bundle pinned as
+   `LIVING_DOCS_BUNDLE=`, and installs the pre-commit doc-gate at
+   `.githooks/pre-commit` (pointing `core.hooksPath` at it). Remove everything
+   it wrote with the sibling `living-docs uninstall hooks`. There is
+   deliberately **no write-time hook** — a pre-write block teaches the agent to
+   negotiate with the block, not to use the CLI; a failing `check` in the same
+   session does.
+
+### `make` targets
 
 ```bash
-./install.sh                 # Claude Code, global (~/.claude/skills) — the default
-./install.sh cursor          # Cursor rule in the current project
-./install.sh copilot         # GitHub Copilot instruction in the current project
-./install.sh opencode        # OpenCode (~/.config/opencode/skills)
-./install.sh codex           # Codex (~/.codex/skills)
-./install.sh pi              # Pi (~/.pi/agent/skills + AGENTS.md)
-./install.sh all             # every supported harness at once
-```
-
-Useful flags: `--project` (install into the current repo instead of the global
-user dir), `--dir <path>` (custom skills directory), `--uninstall`, `--dry-run`,
-`--help`. The same targets are available via `make`:
-
-```bash
-make help            # list every target
-make install         # Claude Code, global
-make install-cursor  # or install-copilot / install-opencode / install-codex / install-pi / install-all
-make project-claude  # install into the current project
-make uninstall-all   # remove from every harness
-make check           # full gate: version sync · living-docs check the example ·
-                     #   validate mermaid · hostile parser fixtures · bash -n all
-                     #   scripts · dry-run every harness
+make check           # full gate: version sync · file-size ratchet · cargo test ·
+                     #   living-docs check the example · validate mermaid ·
+                     #   hostile parser fixtures · bash -n all scripts · dry-run install.sh
 make build           # build the living-docs binary natively -> target/release/living-docs
 make cli-install     # install the living-docs binary onto PATH (fetches the latest GitHub release; LIVING_DOCS_VERSION pins a tag)
 make test-fixtures   # run the hostile/negative fixtures guarding the parsers
+make help            # list every target
 ```
 
 ### Where each tool loads from
 
 | Tool | Mechanism | Default location (global · `--project`) | Enforcement |
 |---|---|---|---|
-| **Claude Code** | native `SKILL.md` skills | `~/.claude/skills` · `.claude/skills` | Plugin **or** `living-docs hooks install` — write-gate + session teaching + pre-commit |
-| **OpenCode** | native `SKILL.md` skills (also reads `.claude/skills`) | `~/.config/opencode/skills` · `.opencode/skills` | `living-docs hooks install` — pre-commit doc-gate only |
-| **Codex** | native `SKILL.md` skills | `~/.codex/skills` · `.codex/skills` | `living-docs hooks install` — pre-commit doc-gate only |
-| **Cursor** | project rule | `.cursor/rules/living-docs.mdc` (project-scoped) | None — pre-commit + CI only |
-| **GitHub Copilot** | path-scoped instruction | `.github/instructions/living-docs.instructions.md` (project-scoped) | None — pre-commit + CI only |
-| **Pi** | skills dir + `AGENTS.md` pointer | `~/.pi/agent/skills` · `.pi/skills` | `living-docs hooks install` — pre-commit doc-gate only |
+| **Claude Code** | native `SKILL.md` skills | `~/.claude/skills` · `.claude/skills` | `living-docs install hooks` — session teaching + pre-commit doc-gate |
+| **OpenCode** | native `SKILL.md` skills (also reads `.claude/skills`) | `~/.config/opencode/skills` · `.opencode/skills` | `living-docs install hooks` — pre-commit doc-gate |
+| **Codex** | native `SKILL.md` skills | `~/.codex/skills` · `.codex/skills` | `living-docs install hooks` — pre-commit doc-gate |
+| **Pi** | skills dir + `AGENTS.md` pointer | `~/.pi/agent/skills` · `.pi/skills` | `living-docs install hooks` — pre-commit doc-gate |
 
 **Claude Code**, **OpenCode**, and **Codex** share the same model: they
-auto-discover folders of `SKILL.md` files from their skills directory, so the
-installer just copies the three skills there (OpenCode additionally reads
-`.claude/skills`, so a Claude install already covers it). For **Cursor** and
-**Copilot** the installer generates the rule/instruction file with the right
-frontmatter header (`globs` / `applyTo` scoped to `docs/**` and `**/*.md`) from
-`living-docs/SKILL.md`. **Pi** has no native skills directory — after the skills
-are copied, reference them once from your `AGENTS.md`:
+auto-discover folders of `SKILL.md` files from their skills directory, so
+`living-docs install skills` just copies the three skills there (OpenCode
+additionally reads `.claude/skills`, so a Claude install already covers it).
+**Pi** has no native skills directory — after the skills are copied, reference
+them once from your `AGENTS.md`:
 
 ```markdown
 ## Living Docs
@@ -189,63 +206,42 @@ Follow the documentation discipline in skills/living-docs/SKILL.md,
 skills/okf-knowledge-format/SKILL.md, and skills/research-artifacts/SKILL.md.
 ```
 
-Then restart the session so the tool picks up the skills.
+### Cursor and GitHub Copilot
 
-### Enforcement — write-time gates, not just instructions
-
-`./install.sh` ships **skills only** — it copies markdown instructions and never
-touches a hook script or wires any settings file ([ADR 0023](docs/adr/0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md)).
-The write-gate, the session-teaching hook, and the pre-commit doc-gate are
-distributed through two separate, deterministic channels:
-
-- **Claude Code plugin** (Claude Code only):
-  `/plugin marketplace add ejklock/living-docs-skill` then
-  `/plugin install living-docs@living-docs` (add `--scope project` to commit the
-  choice to the repo). Installs the write-gate (`PreToolUse` on
-  `Write|Edit|MultiEdit`, blocking hand-written docs before they land) and the
-  session-teaching hook (`SessionStart`), both resolved through
-  `${CLAUDE_PLUGIN_ROOT}` so no checkout of this bundle is required.
-- **`living-docs hooks install [--dir <project>] [--docs-dir <bundle>] [--dry-run]`**
-  (every harness): materializes the two hook scripts into `.living-docs/hooks/`,
-  wires `.claude/settings.json` with the resolved bundle pinned as
-  `LIVING_DOCS_BUNDLE=`, and installs the pre-commit doc-gate at
-  `.githooks/pre-commit` (pointing `core.hooksPath` at it). The pre-commit gate
-  is git-level and catches every harness at commit time; the
-  `.claude/settings.json` wiring is what gives Claude Code its write-time gate.
-  Remove everything it wrote with the sibling
-  `living-docs hooks uninstall [--dir <project>] [--dry-run]` — `install` and
-  `uninstall` are separate subcommands, not a flag.
-
-**Cursor and GitHub Copilot have no write-time hook surface at all** — neither
-tool exposes a pre-write hook, so they rely entirely on the pre-commit gate and
-CI to catch a hand-written doc after the fact.
-
-One caveat worth knowing: plugin hooks and `.claude/settings.json` hooks fire
-independently, with no deduplication. Installing both channels in the same
-Claude Code project duplicates the `SessionStart` notice and the (still
-correct) block — an accepted trade-off recorded in
-[ADR 0023](docs/adr/0023-hooks-ship-through-two-deterministic-channels-an-in-repo-claude-code-plugin-and-a-living-docs-hooks-install-verb.md).
+Both tools read a plain markdown instruction rather than a native skills
+directory, and a placement verb for two one-file harnesses isn't worth its
+maintenance (ADR 0028). Point them at the skill content directly instead of
+generating a file: run `living-docs guide --plain` and paste its
+output into `.cursor/rules/living-docs.mdc` (with `globs: "docs/**,**/*.md"`)
+or `.github/instructions/living-docs.instructions.md` (with
+`applyTo: "docs/**,**/*.md"`) — or just point either tool at the installed
+`SKILL.md` under your harness's skills directory. Enforcement is the same
+`living-docs install hooks` step as every other harness.
 
 ### Skill content — served by the CLI, not copied to disk
 
 Native harnesses (Claude Code, OpenCode, Codex, Pi) only get each skill's slim
 `SKILL.md` stub (plus `okf-knowledge-format/reference/`, the vendored spec) — the
 full per-doc-type conventions (`rules/`) and starter templates (`templates/`)
-travel **inside the `living-docs` binary** ([ADR 0014](docs/adr/0014-the-cli-serves-skill-content-from-an-embedded-corpus-harness-skill-md-files-are-slim-stubs.md))
-and are reached with `living-docs skill`, not by reading files off disk:
+travel **inside the `living-docs` binary** and are reached with `living-docs guide`,
+not by reading files off disk:
 
 ```bash
-living-docs skill --list                          # every embedded skill and its topics
-living-docs skill living-docs                      # the full living-docs/SKILL.md body
-living-docs skill living-docs --topic adr           # just the adr topic's rules (+ template)
+living-docs guide --list                          # every embedded skill and its topics
+living-docs guide                                  # the full living-docs/SKILL.md body
+living-docs guide adr                              # just the adr topic's rules (+ template)
 ```
 
-Output is **context-aware**: piped or otherwise non-TTY output defaults to minified
-single-line JSON (the machine-friendly shape another agent parses); a real terminal
-gets human-readable plain text. `--json` and `--plain` override the autodetection in
-either direction and are mutually exclusive. This is why a native harness install is
-a small, stable footprint on disk while the authoritative detail stays centralized in
-one versioned binary — see [ADR 0014](docs/adr/0014-the-cli-serves-skill-content-from-an-embedded-corpus-harness-skill-md-files-are-slim-stubs.md).
+Output is **context-aware** — for `guide` and every other data verb (`check`, `read`,
+`index`, `fmt`, `new`, `set`, `supersede`): piped or otherwise non-TTY output defaults
+to minified single-line JSON (the machine-friendly shape another agent parses); a real
+terminal gets human-readable, colored plain text. `--json` and `--plain` override the
+autodetection in either direction and are mutually exclusive; `--color=auto|always|never`
+and the `NO_COLOR` environment variable govern color, and `--quiet` silences
+informational stderr lines. Exit codes are stable and documented in `--help`: `0`
+success, `1` a gate or a verb's own check failed, `2` invalid usage. `living-docs
+completions bash|zsh|fish` prints a shell completion script generated straight from
+the same command tree `--help` reads, so it never drifts (ADR 0060).
 
 ### Any other tool
 
@@ -254,18 +250,16 @@ Copy `skills/living-docs/`, `skills/okf-knowledge-format/`, and
 just read the `SKILL.md` files — they are plain markdown meant to be read by
 humans and agents alike.
 
-### Companion skills (Matt Pocock) — recommended, not bundled
+### Companion skills (Matt Pocock) — referenced, not bundled
 
-Living Docs *composes with* but does **not** bundle Matt Pocock's skills. His
-`grill-me` (design interview before a load-bearing decision) pairs directly with
-Living Docs, and his `to-prd` / `to-issues` are kindred to the PRD/issues
-workflow here. They are best installed **straight from the source** so they stay
-canonical and up to date — his repo is MIT-licensed, so cloning and using it is
-permitted (keep his `LICENSE` notice if you copy files):
+Living Docs *composes with* but does **not** bundle or install Matt Pocock's
+skills. His `grill-me` (design interview before a load-bearing decision) pairs
+directly with Living Docs, and his `to-prd` / `to-issues` are kindred to the
+PRD/issues workflow here. Install them **straight from the source** so they
+stay canonical and up to date — his repo is MIT-licensed, so cloning and using
+it is permitted (keep his `LICENSE` notice if you copy files):
 
 ```bash
-./install.sh pocock          # git clones his repo (default ~/.matt-pocock-skills)
-# or by hand:
 git clone https://github.com/mattpocock/skills.git
 # his repo ships a `setup-matt-pocock-skills` skill that wires them up
 ```
@@ -277,27 +271,24 @@ See [`ATTRIBUTION.md`](ATTRIBUTION.md) for how Living Docs relates to his work.
 ## When to invoke
 
 - Standing up documentation for a project (`docs/` structure, the docs index,
-  ADR/issue/BDR/constitution directories).
-- Writing or editing an **ADR**, **PRD**, **BDR**, **constitution**, or
-  **issue** → load the matching `rules/` + `templates/` file.
+  ADR/issue directories).
+- Reading the corpus as an agent (what governs X *now*) → `living-docs read`.
+- Writing or editing an **ADR**, **PRD**, **constitution**, or **issue** → load the
+  matching topic with `living-docs guide <topic>`.
 - Recording **research** → the `research-artifacts` skill.
-- Drawing or updating an **architecture / data-flow / sequence diagram**
+- Drawing or updating an **architecture / data-flow / sequence view**
   (living Mermaid, in-repo text that must match the code).
-- Defining a **term or acronym** → the glossary, one home per term.
 - A doc grew too large or mixes concerns → **split into a semantic index**.
-- Enforcing the **no-drift maintenance rule** after any structural change.
+- Enforcing the **no-drift maintenance rule** after any structural change → `living-docs check`.
 
 ---
 
 ## Composition with other skills
 
 Living Docs is deliberately small and composes with the rest of your toolchain
-rather than absorbing it: design grilling before a load-bearing ADR, an
-architecture-improvement pass that reads the context index and ADRs, a
+rather than absorbing it: design grilling before a load-bearing ADR, a
 deep-research step that gathers the evidence `research-artifacts` then formats,
-and an implementation-review step that checks code honors the ADRs/BDRs. See the
-"Composition with other skills" section in
-[`skills/living-docs/SKILL.md`](skills/living-docs/SKILL.md) for the full map.
+and an implementation-review step that checks code honors the ADRs.
 
 > The design-grilling step composes with **`grill-me`** by
 > **Matt Pocock** ([github.com/mattpocock/skills](https://github.com/mattpocock/skills))
@@ -309,10 +300,9 @@ and an implementation-review step that checks code honors the ADRs/BDRs. See the
 
 **This work instrumentalizes established practices; it does not invent them.**
 "Living documentation" is Cyrille Martraire's named methodology; ADRs are
-Michael Nygard's (supersede-don't-delete is the adr-tools convention); BDRs wrap
-Specification by Example / BDD (Adzic; North); the file format is Google Cloud
-Platform's OKF, vendored verbatim; the architecture diagrams are
-[Mermaid](https://mermaid.js.org/) (Knut Sveidqvist & the mermaid-js community).
+Michael Nygard's (supersede-don't-delete is the adr-tools convention); the file
+format is Google Cloud Platform's OKF, vendored verbatim; the architecture diagrams
+are [Mermaid](https://mermaid.js.org/) (Knut Sveidqvist & the mermaid-js community).
 None of the doc types are invented here. What is original is modest and concrete: the
 **composition + the governance invariants** carried in frontmatter as a fact contract
 **and enforced by a checker** — the *enforcement*, not the *invention*.
@@ -328,8 +318,9 @@ Full credits and the per-source links are in
 Issues and PRs welcome — the project dogfoods its own rules. See
 [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo layout, the invariants it holds
 itself to, how to refresh the vendored OKF spec, and how to validate a change —
-`make check` runs the full gate: version sync, the docs linter, the hostile parser
-fixtures, `bash -n` on every script, and a dry-run of every installer.
+`make check` runs the full gate: version sync, the file-size ratchet, the test suite,
+the docs linter, the hostile parser fixtures, `bash -n` on every script, and a dry-run
+of `install.sh`.
 
 ---
 
@@ -338,29 +329,29 @@ fixtures, `bash -n` on every script, and a dry-run of every installer.
 **What is an "agent skill"?**
 A skill is a folder of markdown instructions (a `SKILL.md` plus optional `rules/`
 and `templates/`) that an AI coding agent loads and follows. Living Docs is a
-skill that teaches the agent how to keep documentation in sync with code.
+skill that teaches the agent how to keep a decision log in sync with code.
 
 **Which tools does Living Docs work with?**
-Claude Code, OpenCode, and Codex (native `SKILL.md` skills), Cursor
-(`.cursor/rules`), GitHub Copilot (`.github/instructions`), and Pi (`AGENTS.md`).
-Because the skill is plain markdown, any agent that reads instruction files can
-use it. See [Installation](#installation).
+Claude Code, OpenCode, and Codex (native `SKILL.md` skills, `living-docs install
+skills`), Pi (`AGENTS.md`), and Cursor and GitHub Copilot by pointing their
+rule/instruction file at `living-docs guide --plain`. Because the
+skill is plain markdown, any agent that reads instruction files can use it.
+See [Installation](#installation).
 
 **How is this different from a documentation generator or a wiki?**
 Living Docs is not a generator and not a hosting tool. It is a *discipline* — five
-no-drift governance invariants plus a doc trail (constitution → PRD → ADR + BDR →
+no-drift governance invariants plus a doc trail (constitution → PRD → ADR →
 issues → code). The agent **follows** the discipline as it works; a deterministic
-CLI **authors** the mechanical half (`living-docs new` / `status` / `supersede` /
-`index`) and **verifies** it (`living-docs check`) when you wire it into
-CI or the agent's loop. Prompt-level guidance plus a machine check — not one
-pretending to be the other. Your docs live in the repo, in Git, next to the code.
+CLI **authors** the mechanical half (`living-docs new` / `set` / `supersede` /
+`index`) and **verifies** it (`living-docs check`) at commit and in CI. Prompt-level
+guidance plus a machine check — not one pretending to be the other. Your docs live
+in the repo, in Git, next to the code.
 
-**What is an ADR / BDR / PRD?**
-An **ADR** (Architecture Decision Record) captures *how* the system is structured
-and why. A **BDR** (Behavior Decision Record) captures *what* the system must
-observably do (Given/When/Then). A **PRD** captures the product/feature
-requirements. Each has a convention file and a starter template under
-[`skills/living-docs/`](skills/living-docs/).
+**Why is there no search, database or web UI?**
+There was, and it was cut (ADR 0059): nothing in the authoring loop used it, and it
+was half the code. `living-docs read --topic <term>` and `grep` answer "where
+did we decide X?" on a repo-sized corpus. A search front returns as a workspace
+member the day a consumer needs cross-project search.
 
 **What is OKF (Open Knowledge Format)?**
 A vendor-neutral format from Google Cloud Platform — markdown with YAML
@@ -378,8 +369,8 @@ lifecycle, not your tech stack.
 
 **Did you invent this?**
 No, and the repo says so. Living Docs *composes* established practices (Martraire's
-living documentation, Nygard's ADRs, Specification by Example for BDRs, Google's
-OKF). Full, sourced credits in [`ATTRIBUTION.md`](ATTRIBUTION.md) and
+living documentation, Nygard's ADRs, Google's OKF). Full, sourced credits in
+[`ATTRIBUTION.md`](ATTRIBUTION.md) and
 [`references/prior-art-landscape.md`](references/prior-art-landscape.md).
 
 ---
@@ -395,8 +386,7 @@ its own upstream license — see [`ATTRIBUTION.md`](ATTRIBUTION.md).
 
 <sub>**Keywords:** living documentation · documentation as code · docs-as-code ·
 AI agent skill · Claude Code skill · Cursor rules · GitHub Copilot instructions ·
-OpenCode · Codex · Pi · Architecture Decision Records (ADR) · Behavior Decision Records
-(BDR) · PRD · project constitution · glossary · Mermaid architecture diagrams ·
-semantic index · Open Knowledge Format (OKF) · deterministic docs CLI · full-text
-search · SQLite FTS5 · public docs export · leak gate · knowledge management ·
-technical writing · software architecture · markdown documentation · no-drift docs.</sub>
+OpenCode · Codex · Pi · Architecture Decision Records (ADR) · PRD · project
+constitution · Mermaid architecture diagrams · semantic index · Open Knowledge
+Format (OKF) · deterministic docs CLI · knowledge management · technical writing ·
+software architecture · markdown documentation · no-drift docs.</sub>

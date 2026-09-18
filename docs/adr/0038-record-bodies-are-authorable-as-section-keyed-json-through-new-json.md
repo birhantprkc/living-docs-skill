@@ -3,9 +3,11 @@ type: ADR
 title: Record bodies are authorable as section-keyed JSON through new --json
 description: "new gains --json: a sections object whose keys must match the type template's own headings; the CLI validates keys, fills each named section and the title heading, and leaves unnamed sections as template guidance — one call authors a complete record with no scaffold-then-edit round trip."
 owner: Evaldo Klock
-status: Proposed
+status: Deprecated
 timestamp: 2026-08-14T08:21:07Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs read` for what is in force.
 
 # 0038. Record bodies are authorable as section-keyed JSON through new --json
 

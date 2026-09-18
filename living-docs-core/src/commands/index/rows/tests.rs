@@ -6,7 +6,6 @@ fn record(number: u32, title: &str, status: &str, filename: &str) -> Record {
         title: title.to_string(),
         status: status.to_string(),
         filename: filename.to_string(),
-        visibility: "private".to_string(),
         superseded_by: None,
     }
 }

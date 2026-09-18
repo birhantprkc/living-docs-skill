@@ -259,6 +259,11 @@ assert_out_has   "4-unsupported-message" \
   "unsupported platform (SunOS/sparc64) for a prebuilt binary; building from source"
 assert_log_lacks "4-no-latest-query" "releases/latest"
 
+echo "case 5: any target other than cli exits non-zero with a usage error"
+invoke -- claude
+assert_exit    "5-exit-1"        1
+assert_out_has "5-names-cli"     "cli is the only target"
+
 echo
 if ((fail == 0)); then
   echo "All install.sh fixtures passed."

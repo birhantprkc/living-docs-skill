@@ -19,7 +19,7 @@ fn advisory_messages(reporter: &Reporter) -> Vec<&str> {
     reporter
         .advisories
         .iter()
-        .map(|(_, message)| message.as_str())
+        .map(|advisory| advisory.message.as_str())
         .collect()
 }
 

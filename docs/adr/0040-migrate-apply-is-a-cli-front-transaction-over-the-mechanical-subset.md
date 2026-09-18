@@ -3,9 +3,11 @@ type: ADR
 title: migrate --apply is a CLI-front transaction over the mechanical subset
 description: "Adds --apply to migrate as an fs-only, all-or-nothing applier in the CLI front: snapshot bundle + seal ledger, run index and fmt, roll back byte-for-byte on any failure or check regression; the core advisor stays read-only, AUTHOR steps are never applied, ADOPT plans refuse apply."
 owner: Evaldo Klock
-status: Proposed
+status: Deprecated
 timestamp: 2026-08-14T08:40:33Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs read` for what is in force.
 
 # 0040. migrate --apply is a CLI-front transaction over the mechanical subset
 

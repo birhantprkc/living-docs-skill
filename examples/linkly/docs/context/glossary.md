@@ -17,7 +17,6 @@ doc language (English); names and acronym headwords stay as-is. Domain entities 
 | Acronym | Expansion | Definition |
 |---|---|---|
 | ADR | Architecture Decision Record | A record of one architectural decision and its rationale. |
-| BDR | Behavior Decision Record | A record of observable behavior as Given/When/Then scenarios. |
 | PRD | Product Requirements Document | A spec of what a capability must do and why. |
 | URL | Uniform Resource Locator | The web address a link points at. |
 

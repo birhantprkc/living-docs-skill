@@ -2,7 +2,7 @@
 type: Issue
 title: Atlas supersede — browser parity with the CLI supersede verb
 description: Adds an Atlas supersede action reusing living-docs-core's existing supersede verb, so superseding via the browser leaves both records linked and conformant identically to the CLI path.
-status: open
+status: closed
 labels: [web, atlas, authoring, database]
 blocked_by: [10, 11]
 timestamp: 2026-07-21T00:00:00Z
@@ -25,7 +25,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 ### Context manifest
 
 - Read: `living-docs-core`'s existing `supersede` service (issue 0006/ADR 0007), issue
-  0008's metadata panel (already renders the supersede chain read-only).
+  0045's metadata panel (already renders the supersede chain read-only).
 - Seams touched: a supersede action on the record page (pick the superseding record,
   confirm), wired to the same core `supersede` verb the CLI uses — reused, not
   reimplemented — inside the transactional write+check wrapper from issue 0010 so a
@@ -36,7 +36,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 
 - `web`: a supersede action on the record page (author picks or types the superseding
   record's number/path, confirms); on success the page re-renders showing the updated
-  status badge and supersede chain (both already rendered by issue 0008's metadata panel).
+  status badge and supersede chain (both already rendered by issue 0045's metadata panel).
 - No new `living-docs-core` logic — this slice calls the existing supersede verb through
   the same transactional wrapper create/edit use, and surfaces its errors (e.g. "no record
   found for NNNN") in the browser instead of stderr.

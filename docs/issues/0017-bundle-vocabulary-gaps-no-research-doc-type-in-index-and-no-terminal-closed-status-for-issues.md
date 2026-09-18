@@ -2,7 +2,7 @@
 type: Issue
 title: "bundle vocabulary gaps: no research doc type in index and no terminal closed status for issues"
 description: Close the two bundle vocabulary gaps — a research type the index cannot generate, and issues with no terminal closed status.
-status: Proposed
+status: closed
 timestamp: 2026-07-30T18:59:13Z
 ---
 

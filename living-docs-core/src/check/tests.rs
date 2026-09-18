@@ -12,7 +12,7 @@ fn file_name_str_returns_the_basename() {
 #[test]
 fn reporter_with_no_violations_reports_clean_and_exits_zero() {
     let reporter = Reporter::new();
-    let code = reporter.finish(3);
+    let code = reporter.finish();
     assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
 }
 
@@ -158,7 +158,7 @@ fn is_bundle_singleton_follows_the_registry_not_a_literal_filename() {
 /// rather than falling back to `std::fs::read_to_string` at the same
 /// path.
 #[test]
-fn run_reads_record_content_through_the_store_even_when_no_file_backs_it_on_disk() {
+fn compile_reads_record_content_through_the_store_even_when_no_file_backs_it_on_disk() {
     let bundle = ScratchBundle::new("store-only-record");
     let mut files = BTreeMap::new();
     files.insert(
@@ -167,9 +167,9 @@ fn run_reads_record_content_through_the_store_even_when_no_file_backs_it_on_disk
     );
     let store = MapStore { files };
 
-    let code = run(&store, &bundle.root);
+    let report = compile(&store, &bundle.root, false).expect("bundle root exists");
 
-    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert!(report.ok, "violations: {:?}", report.violations);
 }
 
 /// A supersede target that a real file on disk would satisfy, but that
@@ -177,7 +177,8 @@ fn run_reads_record_content_through_the_store_even_when_no_file_backs_it_on_disk
 /// the sibling lookup is driven by the store's own enumeration
 /// (`DocStore::list`), not a filesystem re-scan.
 #[test]
-fn run_reports_a_supersede_target_the_store_omits_even_though_a_same_named_file_exists_on_disk() {
+fn compile_reports_a_supersede_target_the_store_omits_even_though_a_same_named_file_exists_on_disk()
+{
     let bundle = ScratchBundle::new("store-omits-target");
     fs::write(
         bundle.root.join("adr").join("0002-other.md"),
@@ -192,16 +193,16 @@ fn run_reports_a_supersede_target_the_store_omits_even_though_a_same_named_file_
     );
     let store = MapStore { files };
 
-    let code = run(&store, &bundle.root);
+    let report = compile(&store, &bundle.root, false).expect("bundle root exists");
 
-    assert_ne!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert!(!report.ok, "expected a violation, got none");
 }
 
 /// `check` warns on an ADR without `owner` but stays exit-zero by default,
 /// so the existing corpus (which carries no `owner` values yet) never
 /// breaks CI.
 #[test]
-fn run_stays_exit_zero_on_an_adr_missing_owner_by_default() {
+fn compile_stays_ok_on_an_adr_missing_owner_by_default() {
     let bundle = ScratchBundle::new("owner-warn-default");
     let mut files = BTreeMap::new();
     files.insert(
@@ -210,15 +211,15 @@ fn run_stays_exit_zero_on_an_adr_missing_owner_by_default() {
     );
     let store = MapStore { files };
 
-    let code = run(&store, &bundle.root);
+    let report = compile(&store, &bundle.root, false).expect("bundle root exists");
 
-    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert!(report.ok, "violations: {:?}", report.violations);
 }
 
 /// `check --require-owner` promotes the same missing-`owner` finding to an
 /// invariant violation.
 #[test]
-fn run_require_owner_fails_on_an_adr_missing_owner() {
+fn compile_require_owner_fails_on_an_adr_missing_owner() {
     let bundle = ScratchBundle::new("owner-require");
     let mut files = BTreeMap::new();
     files.insert(
@@ -227,15 +228,15 @@ fn run_require_owner_fails_on_an_adr_missing_owner() {
     );
     let store = MapStore { files };
 
-    let code = run_require_owner(&store, &bundle.root, true);
+    let report = compile(&store, &bundle.root, true).expect("bundle root exists");
 
-    assert_ne!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert!(!report.ok, "expected a violation, got none");
 }
 
-/// A non-ADR/BDR type (e.g. Issue) missing `owner` never produces a finding,
+/// A type that does not require an owner (e.g. Issue) missing `owner` never produces a finding,
 /// even under `--require-owner`.
 #[test]
-fn run_require_owner_never_flags_a_type_that_does_not_require_owner() {
+fn compile_require_owner_never_flags_a_type_that_does_not_require_owner() {
     let bundle = ScratchBundle::new("owner-not-required");
     let mut files = BTreeMap::new();
     files.insert(
@@ -245,7 +246,7 @@ fn run_require_owner_never_flags_a_type_that_does_not_require_owner() {
     );
     let store = MapStore { files };
 
-    let code = run_require_owner(&store, &bundle.root, true);
+    let report = compile(&store, &bundle.root, true).expect("bundle root exists");
 
-    assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
+    assert!(report.ok, "violations: {:?}", report.violations);
 }

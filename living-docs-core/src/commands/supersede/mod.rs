@@ -9,7 +9,7 @@ use std::process::ExitCode;
 
 pub fn run(store: &dyn DocStore, docs_dir: &Path, old: &str, new: &str) -> ExitCode {
     match supersede(store, docs_dir, old, new) {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(_) => ExitCode::SUCCESS,
         Err(message) => {
             eprintln!("living-docs supersede: {message}");
             ExitCode::from(2)
@@ -17,12 +17,16 @@ pub fn run(store: &dyn DocStore, docs_dir: &Path, old: &str, new: &str) -> ExitC
     }
 }
 
+/// Wires both link directions and writes the retired-record callout on
+/// `old`. Returns the two resolved paths (`old`, `new`) — the CLI front
+/// renders this as colored text or JSON (ADR 0060); [`run`] is the
+/// plain-text-always convenience wrapper over it.
 pub fn supersede(
     store: &dyn DocStore,
     docs_dir: &Path,
     old: &str,
     new: &str,
-) -> Result<(), String> {
+) -> Result<(PathBuf, PathBuf), String> {
     let (_, old_number) = parse_record_reference(old)?;
     let (_, new_number) = parse_record_reference(new)?;
 
@@ -44,7 +48,7 @@ pub fn supersede(
         &[("supersedes", format!("{old_number:04}"))],
     )?;
 
-    Ok(())
+    Ok((old_path, new_path))
 }
 
 pub(crate) fn parse_record_number(arg: &str) -> Result<u32, String> {
@@ -160,7 +164,7 @@ fn matches_record_prefix(path: &Path, prefix: &str) -> bool {
 /// the body survive untouched — then routes the whole frontmatter block
 /// through [`crate::record::canonicalize_frontmatter`] before writing it
 /// back once (ADR 0048). Templates ship most supersede keys as an empty line
-/// to fill; when a key is absent entirely (e.g. BDR/PRD templates have no
+/// to fill; when a key is absent entirely (e.g. the PRD template has no
 /// `supersedes` line), the targeted edit inserts it at the block's close,
 /// and the canonical pass then moves it into its fixed position — so an
 /// inserted or changed key always lands in canonical order and `living-docs

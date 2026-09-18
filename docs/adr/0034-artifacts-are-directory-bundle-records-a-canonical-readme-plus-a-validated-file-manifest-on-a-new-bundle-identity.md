@@ -3,9 +3,11 @@ type: ADR
 title: "Artifacts are directory-bundle records: a canonical README plus a validated file manifest on a new Bundle identity"
 description: Add a third Identity variant, Bundle, for directory-per-record artifacts whose canonical README lists the files it references, and register an artifact doc type on it with a check-validated manifest.
 owner: Evaldo Klock
-status: Proposed
+status: Deprecated
 timestamp: 2026-08-07T14:36:44Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs read` for what is in force.
 
 # 0034. Artifacts are directory-bundle records on a new Bundle identity
 
