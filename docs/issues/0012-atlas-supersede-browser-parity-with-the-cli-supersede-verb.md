@@ -25,7 +25,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 ### Context manifest
 
 - Read: `living-docs-core`'s existing `supersede` service (issue 0006/ADR 0007), issue
-  0008's metadata panel (already renders the supersede chain read-only).
+  0045's metadata panel (already renders the supersede chain read-only).
 - Seams touched: a supersede action on the record page (pick the superseding record,
   confirm), wired to the same core `supersede` verb the CLI uses — reused, not
   reimplemented — inside the transactional write+check wrapper from issue 0010 so a

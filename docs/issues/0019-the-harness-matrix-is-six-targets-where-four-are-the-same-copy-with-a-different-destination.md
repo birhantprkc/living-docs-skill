@@ -59,4 +59,4 @@ than they are edited, and a registry would be the more expensive shape.
 
 ### Outcome
 
-Closed: the harness-registry question is superseded by the accessory-packaging cut (installer matrix, plugin, and Copilot copy) coming next, which removes the duplication this issue was weighing.
+Closed as decided by issue 0046: packaging is the CLI, the harness matrix leaves the repo, and `skill install --harness` is the single placement channel.

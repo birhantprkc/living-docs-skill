@@ -64,7 +64,7 @@ const TYPED_FRONTMATTER_KEYS: [&str; 10] = [
 /// resolution happens against a project's other records in
 /// `db_store::sync::sync_project`); `tags` is the frontmatter's `tags`
 /// sequence, empty when absent. `status` is the frontmatter `status:`
-/// value, `None` when the key is absent (issue 0008, ADR 0015, S1).
+/// value, `None` when the key is absent (issue 0045, ADR 0015, S1).
 /// `frontmatter_tail` is every remaining frontmatter key with no typed
 /// column, in source encounter order, ready to insert into
 /// `frontmatter_fields` with the index as `ordinal`. Each entry's

@@ -64,6 +64,9 @@ We will make one compile-time table the sole enumeration of the taxonomy, have e
 
 **8. The one enumeration the registry cannot reach stays hardcoded, and is pinned by a cross-language fitness test.** `skills/living-docs/hooks/block-docs-handwrite.sh` is bash and matches CLI-owned directories with a literal alternation (`(adr|bdr|prd|issues)`, ADR 0020's scope). It cannot read a Rust `const`, and a PreToolUse gate must stay fast and fail-open rather than shell out to the binary on every write. So the bash copy remains a copy, and a Rust test reads the script, extracts the alternation group, and asserts it equals the registry's `Identity::Numbered` directories. The duplication survives; the *drift* does not.
 
+**Rejected alternatives:**
+- `is_bundle_singleton` rejected a `canonicalize` call: it would make a pure predicate touch the filesystem and would break every in-memory-store unit test — a real regression traded for an imaginary one.
+
 ## Consequences
 
 **Easier / gained:**
@@ -75,6 +78,10 @@ We will make one compile-time table the sole enumeration of the taxonomy, have e
 **Harder / accepted trade-offs:**
 - The registry is compile-time, so a doc type cannot be added by configuration. This is deliberate: templates are `include_str!`-embedded to keep the binary self-contained (ADR 0001), so a configured type could name a template that does not exist — the config would be able to express a broken state that the table cannot.
 - `Identity` becoming an enum makes `dir_for` fallible for a reason other than "unknown type": a singleton has no directory. Callers that assumed a directory for every known type must handle that, which is the point.
+- Corrected invariant: a registry row the CLI will `brief` must carry slot definitions, enforced by fitness function `brief_output_passes_check_for_every_supported_doc_type` (ADR 0057 later removed `brief`, so the fitness function now applies to `new` only).
+- The `scaffold_brief` identity branch this ADR added closed the contradiction that `brief constitution` would have reported the type as unsupported while `new constitution` succeeded.
+- Adding the `research` row silently made `docs/research/` CLI-owned; that belongs in the release notes.
+- Whether the size advisory becomes a registry field is a separate decision.
 
 ## Verification
 
@@ -90,7 +97,8 @@ We will make one compile-time table the sole enumeration of the taxonomy, have e
 - **Fitness function A:** a test iterating `DOC_TYPES` asserts every spec resolves a non-empty template whose first line matches its `frontmatter` value, and that `spec_for(spec.token)` round-trips. A row added with a mismatched template fails it.
 - **Fitness function B:** a test asserts the number of `web_creatable` specs equals the number of options the web create form renders, and that the set of tokens `index` regenerates equals the `DOC_TYPES` **`Identity::Numbered`** tokens (see decision 6: a singleton has no directory index). The three surfaces cannot drift apart.
 - **Fitness function C:** a test asserts the unsupported-type error message contains every token in `DOC_TYPES`, so the message cannot go stale.
-- **Fitness function D:** `grep` finds no literal `"bdr"` string list outside `doc_type.rs` and `#[cfg(test)]` modules, *except* `brief::slots_for` and `brief::trail_comment_for` — the nine taxonomy-identity enumerations are gone, not merely supplemented. The two exempt sites match on type token to select **judgment-slot content**, which is per-type prose, not identity; they are a known follow-up, not a leak. This is a prose check, not a test: a test asserting the absence of a string in sibling source files would couple the registry's tests to file layout, which is a worse invariant than the one it guards.
+- **Fitness function D:** `grep` finds no literal `"bdr"` string list outside `doc_type.rs` and `#[cfg(test)]` modules, *except* `brief::slots_for` and `brief::trail_comment_for` — the nine taxonomy-identity enumerations are gone, not merely supplemented. The two exempt sites match on type token to select **judgment-slot content**, which is per-type prose, not identity; they stayed hand-synced until ADR 0027 moved every type-keyed rule into a registry field. This is a prose check, not a test: a test asserting the absence of a string in sibling source files would couple the registry's tests to file layout, which is a worse invariant than the one it guards.
+- The invariant that the paths a `DocStore` enumerates under a bundle are rooted at the bundle it was given, pinned by a test.
 
 ## Alternatives rejected
 
