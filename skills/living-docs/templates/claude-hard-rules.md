@@ -105,8 +105,7 @@ The dividing line is determinism: any documentation step with a single correct o
 
 **Write ONLY the body below the closing `---`.** Numbering, frontmatter (`type`, `title`, `status`, `supersedes`, `superseded_by`, `timestamp`), and index rows are CLI-owned; `description` and `tags` are yours.
 
-This rule is enforced by one gate, not prose: `living-docs check` runs at commit and in CI, and a hand-written record fails there in the session that authored it. Wire it once per project through either of two deterministic channels:
+This rule is enforced by one gate, not prose: `living-docs check` runs at commit and in CI, and a hand-written record fails there in the session that authored it. Wire it once per project with:
 
-- **Claude Code plugin:** `/plugin marketplace add ejklock/living-docs-skill` then `/plugin install living-docs@living-docs` (`--scope project` to commit the choice). Installs the session-teaching hook (`SessionStart`, so every session receives this rule and the resolved CLI path at start).
 - **`living-docs hooks install [--dir <path>] [--docs-dir <bundle>] [--dry-run]`** (every harness): materializes the session-teaching script, wires it into `.claude/settings.json`, and installs a `pre-commit` hook running `living-docs check <bundle>`. Remove everything it wrote with the sibling `living-docs hooks uninstall [--dir <path>] [--dry-run]`.
-- **Knob:** `LIVING_DOCS_BUNDLE=<dir>` (docs bundle scope), honored by either channel.
+- **Knob:** `LIVING_DOCS_BUNDLE=<dir>` (docs bundle scope).

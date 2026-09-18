@@ -1,4 +1,5 @@
-# Living Docs — convenience wrapper around install.sh.
+# Living Docs — build, lint and gate targets, plus a thin `cli-install`
+# wrapper over install.sh (which bootstraps the living-docs binary only).
 # Run `make help` for the list of targets.
 
 SHELL := /bin/bash
@@ -22,10 +23,7 @@ DOCKER_CARGO = docker run --rm \
 LIVING_DOCS_BIN := target/release/living-docs
 
 .DEFAULT_GOAL := help
-.PHONY: help install install-claude install-cursor install-copilot \
-        install-opencode install-codex install-pi install-all install-pocock \
-        project-claude project-opencode project-codex project-pi \
-        uninstall uninstall-all check lint test-fixtures \
+.PHONY: help check lint test-fixtures \
         test-release-gate test-version-gate version \
         test-filesize-gate filesize \
         allow-inventory test-allow-inventory-gate test-install-gate \
@@ -35,51 +33,7 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-install: install-claude ## Install for Claude Code (global) — the default
-
-install-claude: ## Install the skills for Claude Code (~/.claude/skills)
-	$(INSTALL) claude
-
-install-cursor: ## Install the Living Docs rule for Cursor (.cursor/rules)
-	$(INSTALL) cursor
-
-install-copilot: ## Install the Living Docs instruction for GitHub Copilot (.github/instructions)
-	$(INSTALL) copilot
-
-install-opencode: ## Install the skills for OpenCode (~/.config/opencode/skills)
-	$(INSTALL) opencode
-
-install-codex: ## Install the skills for Codex (~/.codex/skills)
-	$(INSTALL) codex
-
-install-pi: ## Install the skills for Pi (~/.pi/agent/skills + AGENTS.md)
-	$(INSTALL) pi
-
-install-all: ## Install for every supported harness
-	$(INSTALL) all
-
-install-pocock: ## Clone Matt Pocock's companion skills (grill-me, to-prd, to-issues) — MIT
-	$(INSTALL) pocock
-
-project-claude: ## Install for Claude Code into the current project (.claude/skills)
-	$(INSTALL) claude --project
-
-project-opencode: ## Install for OpenCode into the current project (.opencode/skills)
-	$(INSTALL) opencode --project
-
-project-codex: ## Install for Codex into the current project (.codex/skills)
-	$(INSTALL) codex --project
-
-project-pi: ## Install for Pi into the current project (.pi/skills)
-	$(INSTALL) pi --project
-
-uninstall: ## Remove the global Claude Code install
-	$(INSTALL) claude --uninstall
-
-uninstall-all: ## Remove the install for every supported harness
-	$(INSTALL) all --uninstall
-
-check: version filesize allow-inventory build test-fixtures test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate test-install-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, install gate fixtures, dry-run harnesses
+check: version filesize allow-inventory build test-fixtures test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate test-install-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, install gate fixtures, dry-run install.sh
 	bash -n install.sh
 	bash -n scripts/check-version.sh
 	bash -n scripts/verify-release-assets.sh
@@ -89,7 +43,7 @@ check: version filesize allow-inventory build test-fixtures test-release-gate te
 	cargo test --manifest-path cli/Cargo.toml
 	$(LIVING_DOCS_BIN) check --require-owner examples/linkly/docs
 	$(LIVING_DOCS_BIN) check --mermaid-only
-	$(INSTALL) all --dry-run
+	$(INSTALL) --dry-run
 
 test-fixtures: build ## Run the hostile/negative fixtures that guard the check parsers
 	LIVING_DOCS_BIN=$(LIVING_DOCS_BIN) ./skills/living-docs/tests/run.sh
@@ -124,8 +78,7 @@ lint: check ## Alias for check
 # cli-* targets run cargo inside the pinned Dockerfile.dev image. `build` uses host
 # cargo to compile locally (see cli/rust-toolchain.toml for the pinned version) ->
 # target/release/living-docs. `cli-install` fetches the published release binary via
-# install.sh (ADR 0041); it never compiles. NOTE: `install` is already taken by the
-# skill installer above, so the release CLI install target is `cli-install`, not `install`.
+# install.sh (ADR 0041); it never compiles.
 
 cli-dev-image: ## Build the pinned Rust dev image (rustfmt + clippy + build-essential)
 	docker build -f Dockerfile.dev -t $(DEV_IMAGE) .
@@ -150,5 +103,5 @@ build: ## Build the release CLI binary natively (host cargo) -> target/release/l
 	cargo build --release --manifest-path cli/Cargo.toml
 
 cli-install: ## Install the living-docs CLI from the latest GitHub release
-	$(INSTALL) cli
+	$(INSTALL)
 

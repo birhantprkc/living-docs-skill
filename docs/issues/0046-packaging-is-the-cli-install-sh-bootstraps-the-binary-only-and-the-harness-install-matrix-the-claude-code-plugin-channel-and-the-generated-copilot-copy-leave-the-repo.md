@@ -2,7 +2,7 @@
 type: Issue
 title: "Packaging is the CLI: install.sh bootstraps the binary only, and the harness install matrix, the Claude Code plugin channel and the generated Copilot copy leave the repo"
 description: "Executes ADR 0028's packaging decision: the binary is the unit of distribution, skill install and hooks install are the only placement channels, and the shell installer, Makefile install targets, plugin manifest and generated instruction copies are removed"
-status: in-progress
+status: closed
 timestamp: 2026-09-18T08:59:34Z
 ---
 

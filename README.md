@@ -120,69 +120,84 @@ and frontmatter are shaped.**
 
 ## Installation
 
-The skill is plain **markdown instruction files** — nothing to compile or install to use
-it. The `living-docs` CLI is a single self-contained Rust binary with **no host-tool
-dependencies at all**. Install it with `./install.sh cli` or `make cli-install`.
-
-Installing Living Docs always means the same thing: **put the three `skills/`
-directories (or a generated rule file) where your tool discovers instructions,
-then start a fresh session.** A cross-platform installer and a `Makefile` do this
-for every supported tool. Clone once:
+The `living-docs` CLI is a single self-contained Rust binary with **no host-tool
+dependencies at all**, and packaging follows it: the binary is the unit of
+distribution, and every skill/hook placement is a CLI verb, never a copy step
+a shell script owns. Clone once:
 
 ```bash
 git clone https://github.com/ejklock/living-docs-skill.git
 cd living-docs-skill
 ```
 
-### Quick start — `install.sh` / `make`
+Installing Living Docs is three independent steps:
+
+1. **Install the binary.**
+
+   ```bash
+   ./install.sh          # downloads the latest release asset (sha256-verified);
+                          #   LIVING_DOCS_VERSION pins a tag; falls back to `cargo build --release`
+   # or:
+   make cli-install       # thin wrapper over `./install.sh`
+   ```
+
+   Useful flags: `--dir <path>` (custom destination, default `~/.local/bin`),
+   `--uninstall`, `--from-source`, `--dry-run`, `--help`.
+
+2. **Place the skills** for your harness:
+
+   ```bash
+   living-docs skill install --harness claude     # ~/.claude/skills (or .claude/skills with --project)
+   living-docs skill install --harness opencode    # ~/.config/opencode/skills (or .opencode/skills)
+   living-docs skill install --harness codex       # ~/.codex/skills (or .codex/skills)
+   living-docs skill install --harness pi          # ~/.pi/agent/skills (or .pi/skills)
+   ```
+
+   `--project` installs into the current repo instead of the global user dir;
+   `--dir <path>` overrides the destination outright. Then restart the session
+   so the tool picks up the skills.
+
+3. **Arm enforcement:**
+
+   ```bash
+   living-docs hooks install [--dir <project>] [--docs-dir <bundle>] [--dry-run]
+   ```
+
+   Materializes the session-teaching script into `.living-docs/hooks/`, wires
+   `.claude/settings.json` with the resolved bundle pinned as
+   `LIVING_DOCS_BUNDLE=`, and installs the pre-commit doc-gate at
+   `.githooks/pre-commit` (pointing `core.hooksPath` at it). Remove everything
+   it wrote with the sibling `living-docs hooks uninstall`. There is
+   deliberately **no write-time hook** — a pre-write block teaches the agent to
+   negotiate with the block, not to use the CLI; a failing `check` in the same
+   session does.
+
+### `make` targets
 
 ```bash
-./install.sh                 # Claude Code, global (~/.claude/skills) — the default
-./install.sh cursor          # Cursor rule in the current project
-./install.sh copilot         # GitHub Copilot instruction in the current project
-./install.sh opencode        # OpenCode (~/.config/opencode/skills)
-./install.sh codex           # Codex (~/.codex/skills)
-./install.sh pi              # Pi (~/.pi/agent/skills + AGENTS.md)
-./install.sh all             # every supported harness at once
-```
-
-Useful flags: `--project` (install into the current repo instead of the global
-user dir), `--dir <path>` (custom skills directory), `--uninstall`, `--dry-run`,
-`--help`. The same targets are available via `make`:
-
-```bash
-make help            # list every target
-make install         # Claude Code, global
-make install-cursor  # or install-copilot / install-opencode / install-codex / install-pi / install-all
-make project-claude  # install into the current project
-make uninstall-all   # remove from every harness
 make check           # full gate: version sync · file-size ratchet · cargo test ·
                      #   living-docs check the example · validate mermaid ·
-                     #   hostile parser fixtures · bash -n all scripts · dry-run every harness
+                     #   hostile parser fixtures · bash -n all scripts · dry-run install.sh
 make build           # build the living-docs binary natively -> target/release/living-docs
-make cli-install     # install the living-docs binary onto PATH (fetches the latest GitHub release; LIVING_DOCS_VERSION pins a tag)
 make test-fixtures   # run the hostile/negative fixtures guarding the parsers
+make help            # list every target
 ```
 
 ### Where each tool loads from
 
 | Tool | Mechanism | Default location (global · `--project`) | Enforcement |
 |---|---|---|---|
-| **Claude Code** | native `SKILL.md` skills | `~/.claude/skills` · `.claude/skills` | Plugin **or** `living-docs hooks install` — session teaching + pre-commit doc-gate |
+| **Claude Code** | native `SKILL.md` skills | `~/.claude/skills` · `.claude/skills` | `living-docs hooks install` — session teaching + pre-commit doc-gate |
 | **OpenCode** | native `SKILL.md` skills (also reads `.claude/skills`) | `~/.config/opencode/skills` · `.opencode/skills` | `living-docs hooks install` — pre-commit doc-gate |
 | **Codex** | native `SKILL.md` skills | `~/.codex/skills` · `.codex/skills` | `living-docs hooks install` — pre-commit doc-gate |
-| **Cursor** | project rule | `.cursor/rules/living-docs.mdc` (project-scoped) | pre-commit + CI |
-| **GitHub Copilot** | path-scoped instruction | `.github/instructions/living-docs.instructions.md` (project-scoped) | pre-commit + CI |
 | **Pi** | skills dir + `AGENTS.md` pointer | `~/.pi/agent/skills` · `.pi/skills` | `living-docs hooks install` — pre-commit doc-gate |
 
 **Claude Code**, **OpenCode**, and **Codex** share the same model: they
-auto-discover folders of `SKILL.md` files from their skills directory, so the
-installer just copies the three skills there (OpenCode additionally reads
-`.claude/skills`, so a Claude install already covers it). For **Cursor** and
-**Copilot** the installer generates the rule/instruction file with the right
-frontmatter header (`globs` / `applyTo` scoped to `docs/**` and `**/*.md`) from
-`living-docs/SKILL.md`. **Pi** has no native skills directory — after the skills
-are copied, reference them once from your `AGENTS.md`:
+auto-discover folders of `SKILL.md` files from their skills directory, so
+`living-docs skill install` just copies the three skills there (OpenCode
+additionally reads `.claude/skills`, so a Claude install already covers it).
+**Pi** has no native skills directory — after the skills are copied, reference
+them once from your `AGENTS.md`:
 
 ```markdown
 ## Living Docs
@@ -190,32 +205,17 @@ Follow the documentation discipline in skills/living-docs/SKILL.md,
 skills/okf-knowledge-format/SKILL.md, and skills/research-artifacts/SKILL.md.
 ```
 
-Then restart the session so the tool picks up the skills.
+### Cursor and GitHub Copilot
 
-### Enforcement — one gate, at commit and in CI
-
-`./install.sh` ships **skills only** — it copies markdown instructions and never
-touches a hook script or wires any settings file. The gate is `living-docs check`:
-a hand-written record, a stale index, a broken supersede link or an unfilled slot
-fails in the session that authored it, at commit, and again in CI. It is distributed
-through two deterministic channels:
-
-- **Claude Code plugin** (Claude Code only):
-  `/plugin marketplace add ejklock/living-docs-skill` then
-  `/plugin install living-docs@living-docs` (add `--scope project` to commit the
-  choice to the repo). Installs the session-teaching hook (`SessionStart`), which
-  tells every session the body-only rule and where the CLI is, resolved through
-  `${CLAUDE_PLUGIN_ROOT}` so no checkout of this bundle is required.
-- **`living-docs hooks install [--dir <project>] [--docs-dir <bundle>] [--dry-run]`**
-  (every harness): materializes the session-teaching script into `.living-docs/hooks/`,
-  wires `.claude/settings.json` with the resolved bundle pinned as
-  `LIVING_DOCS_BUNDLE=`, and installs the pre-commit doc-gate at
-  `.githooks/pre-commit` (pointing `core.hooksPath` at it). Remove everything it
-  wrote with the sibling `living-docs hooks uninstall [--dir <project>] [--dry-run]`.
-
-There is deliberately **no write-time hook**: a pre-write block exists on one harness
-only and teaches the agent to negotiate with the block, not to use the CLI. A failing
-`check` in the same session does.
+Both tools read a plain markdown instruction rather than a native skills
+directory, and a placement verb for two one-file harnesses isn't worth its
+maintenance (ADR 0028). Point them at the skill content directly instead of
+generating a file: run `living-docs skill living-docs --plain` and paste its
+output into `.cursor/rules/living-docs.mdc` (with `globs: "docs/**,**/*.md"`)
+or `.github/instructions/living-docs.instructions.md` (with
+`applyTo: "docs/**,**/*.md"`) — or just point either tool at the installed
+`SKILL.md` under your harness's skills directory. Enforcement is the same
+`living-docs hooks install` step as every other harness.
 
 ### Skill content — served by the CLI, not copied to disk
 
@@ -243,18 +243,16 @@ Copy `skills/living-docs/`, `skills/okf-knowledge-format/`, and
 just read the `SKILL.md` files — they are plain markdown meant to be read by
 humans and agents alike.
 
-### Companion skills (Matt Pocock) — recommended, not bundled
+### Companion skills (Matt Pocock) — referenced, not bundled
 
-Living Docs *composes with* but does **not** bundle Matt Pocock's skills. His
-`grill-me` (design interview before a load-bearing decision) pairs directly with
-Living Docs, and his `to-prd` / `to-issues` are kindred to the PRD/issues
-workflow here. They are best installed **straight from the source** so they stay
-canonical and up to date — his repo is MIT-licensed, so cloning and using it is
-permitted (keep his `LICENSE` notice if you copy files):
+Living Docs *composes with* but does **not** bundle or install Matt Pocock's
+skills. His `grill-me` (design interview before a load-bearing decision) pairs
+directly with Living Docs, and his `to-prd` / `to-issues` are kindred to the
+PRD/issues workflow here. Install them **straight from the source** so they
+stay canonical and up to date — his repo is MIT-licensed, so cloning and using
+it is permitted (keep his `LICENSE` notice if you copy files):
 
 ```bash
-./install.sh pocock          # git clones his repo (default ~/.matt-pocock-skills)
-# or by hand:
 git clone https://github.com/mattpocock/skills.git
 # his repo ships a `setup-matt-pocock-skills` skill that wires them up
 ```
@@ -315,7 +313,7 @@ Issues and PRs welcome — the project dogfoods its own rules. See
 itself to, how to refresh the vendored OKF spec, and how to validate a change —
 `make check` runs the full gate: version sync, the file-size ratchet, the test suite,
 the docs linter, the hostile parser fixtures, `bash -n` on every script, and a dry-run
-of every installer.
+of `install.sh`.
 
 ---
 
@@ -327,10 +325,11 @@ and `templates/`) that an AI coding agent loads and follows. Living Docs is a
 skill that teaches the agent how to keep a decision log in sync with code.
 
 **Which tools does Living Docs work with?**
-Claude Code, OpenCode, and Codex (native `SKILL.md` skills), Cursor
-(`.cursor/rules`), GitHub Copilot (`.github/instructions`), and Pi (`AGENTS.md`).
-Because the skill is plain markdown, any agent that reads instruction files can
-use it. See [Installation](#installation).
+Claude Code, OpenCode, and Codex (native `SKILL.md` skills, `living-docs skill
+install`), Pi (`AGENTS.md`), and Cursor and GitHub Copilot by pointing their
+rule/instruction file at `living-docs skill living-docs --plain`. Because the
+skill is plain markdown, any agent that reads instruction files can use it.
+See [Installation](#installation).
 
 **How is this different from a documentation generator or a wiki?**
 Living Docs is not a generator and not a hosting tool. It is a *discipline* — five

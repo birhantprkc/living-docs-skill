@@ -29,15 +29,6 @@ write_frontmatter() { # write_frontmatter <file> <version-line-or-empty>
   } >"$file"
 }
 
-write_plugin() { # write_plugin <dir> <version>
-  cat >"$1/.claude-plugin/plugin.json" <<JSON
-{
-  "name": "fixture",
-  "version": "$2"
-}
-JSON
-}
-
 write_cargo() { # write_cargo <dir> <package-version> -> realistic layout: [package] first, inline deps after
   mkdir -p "$1/cli"
   cat >"$1/cli/Cargo.toml" <<TOML
@@ -68,9 +59,7 @@ set_all_versions() { # set_all_versions <dir> <version>
   local dir="$1" version="$2"
   printf '%s' "$version" >"$dir/VERSION"
   write_frontmatter "$dir/skills/foo/SKILL.md" "version: \"$version\""
-  write_plugin "$dir" "$version"
   write_cargo "$dir" "$version"
-  write_frontmatter "$dir/.github/instructions/foo.md" "version: \"$version\""
   write_frontmatter "$dir/.cursor/rules/foo.mdc" "version: \"$version\""
 }
 
@@ -87,8 +76,7 @@ write_spec_skill() { # write_spec_skill <dir> <skill-md-version> -> a skill dir 
 
 new_repo() { # new_repo <name> -> prints the path to a consistent baseline repo at 0.9.0
   local dir="$TMP/$1"
-  mkdir -p "$dir/scripts" "$dir/skills/foo" "$dir/.claude-plugin" \
-    "$dir/.github/instructions" "$dir/.cursor/rules"
+  mkdir -p "$dir/scripts" "$dir/skills/foo" "$dir/.cursor/rules"
   cp "$SCRIPT_SRC" "$dir/scripts/check-version.sh"
   chmod +x "$dir/scripts/check-version.sh"
   set_all_versions "$dir" "0.9.0"
@@ -147,20 +135,6 @@ invoke "$repo"
 assert_exit    "2-exit-1"     1
 assert_out_has "2-names-file" "skills/foo/SKILL.md"
 
-echo "case 3: .claude-plugin/plugin.json drifted"
-repo="$(new_repo case3)"
-write_plugin "$repo" "0.0.1"
-invoke "$repo"
-assert_exit    "3-exit-1"     1
-assert_out_has "3-names-file" ".claude-plugin/plugin.json"
-
-echo "case 4: a .github/instructions/*.md drifted"
-repo="$(new_repo case4)"
-write_frontmatter "$repo/.github/instructions/foo.md" 'version: "0.0.1"'
-invoke "$repo"
-assert_exit    "4-exit-1"     1
-assert_out_has "4-names-file" ".github/instructions/foo.md"
-
 echo "case 5: a .cursor/rules/*.mdc drifted"
 repo="$(new_repo case5)"
 write_frontmatter "$repo/.cursor/rules/foo.mdc" 'version: "0.0.1"'
@@ -176,19 +150,19 @@ assert_exit    "6-exit-1"        1
 assert_out_has "6-malformed"     "MALFORMED"
 assert_out_has "6-names-file"    ".cursor/rules/foo.mdc"
 
-echo "case 7: same malformed form in .github/instructions and skills/*/SKILL.md, both reported"
+echo "case 7: same malformed form in .cursor/rules and skills/*/SKILL.md, both reported"
 repo="$(new_repo case7)"
-write_frontmatter "$repo/.github/instructions/foo.md" 'version : "0.0.1"'
+write_frontmatter "$repo/.cursor/rules/foo.mdc" 'version : "0.0.1"'
 write_frontmatter "$repo/skills/foo/SKILL.md" 'version : "0.0.1"'
 invoke "$repo"
-assert_exit     "7-exit-1"           1
-assert_out_has  "7-names-instruction" ".github/instructions/foo.md"
-assert_out_has  "7-names-skill"       "skills/foo/SKILL.md"
-assert_out_count "7-both-reported"    "MALFORMED" 2
+assert_exit     "7-exit-1"       1
+assert_out_has  "7-names-cursor" ".cursor/rules/foo.mdc"
+assert_out_has  "7-names-skill"  "skills/foo/SKILL.md"
+assert_out_count "7-both-reported" "MALFORMED" 2
 
-echo "case 8: .github/instructions/*.md with no version key at all — legitimately skipped"
+echo "case 8: .cursor/rules/*.mdc with no version key at all — legitimately skipped"
 repo="$(new_repo case8)"
-write_frontmatter "$repo/.github/instructions/foo.md" ""
+write_frontmatter "$repo/.cursor/rules/foo.mdc" ""
 invoke "$repo"
 assert_exit    "8-exit-0"     0
 assert_out_has "8-version-ok" "Version OK"
