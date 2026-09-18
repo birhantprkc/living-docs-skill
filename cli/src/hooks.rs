@@ -7,10 +7,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-const HOOK_ASSET_PATHS: [&str; 2] = [
-    "living-docs/hooks/block-docs-handwrite.sh",
-    "living-docs/hooks/session-context.sh",
-];
+const HOOK_ASSET_PATHS: [&str; 1] = ["living-docs/hooks/session-context.sh"];
 
 const PRE_COMMIT_ASSET_PATH: &str = "living-docs/hooks/pre-commit";
 const GIT_HOOKS_DEST_SUBDIR: &str = ".githooks";
@@ -19,9 +16,10 @@ const GIT_HOOKS_PATH_VALUE: &str = ".githooks";
 const HOOKS_DEST_SUBDIR: &str = ".living-docs/hooks";
 const SCRIPT_MODE: u32 = 0o755;
 const SETTINGS_REL_PATH: &str = ".claude/settings.json";
-const PRE_TOOL_USE_SECTION: &str = "PreToolUse";
+/// Stripped on uninstall only, so a project wired by an older release that
+/// still carried the write-gate entry is left clean.
+const LEGACY_PRE_TOOL_USE_SECTION: &str = "PreToolUse";
 const SESSION_START_SECTION: &str = "SessionStart";
-const PRE_TOOL_USE_MATCHER: &str = "Write|Edit|MultiEdit";
 
 struct HookScript {
     basename: &'static str,
@@ -34,10 +32,10 @@ struct HookEntrySpec {
     matcher: Option<&'static str>,
 }
 
-/// Materializes the corpus hook scripts into `<project_root>/.living-docs/hooks/`
+/// Materializes the session-teaching hook into `<project_root>/.living-docs/hooks/`
 /// at mode 0755, materializes the pre-commit doc-gate to
 /// `<project_root>/.githooks/pre-commit` and points `core.hooksPath` at it,
-/// then wires the two Claude Code hooks into `<project_root>/.claude/settings.json`
+/// then wires the `SessionStart` hook into `<project_root>/.claude/settings.json`
 /// via a `serde_json::Value` parse/mutate/serialize merge — idempotently,
 /// replacing any prior living-docs entry by identity rather than appending.
 /// The bundle pinned into each generated command's `LIVING_DOCS_BUNDLE=` is
@@ -90,8 +88,8 @@ pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> Ex
     }
 }
 
-/// Removes the artifacts [`install`] wrote — the two `.living-docs/hooks/`
-/// scripts, `.githooks/pre-commit`, and the living-docs entries in
+/// Removes the artifacts [`install`] wrote — the `.living-docs/hooks/`
+/// script, `.githooks/pre-commit`, and the living-docs entries in
 /// `<project_root>/.claude/settings.json` — leaving unrelated entries,
 /// unrelated top-level keys, and `core.hooksPath` untouched. A project
 /// carrying none of these artifacts is a clean no-op: exit 0, nothing
@@ -213,19 +211,12 @@ fn warn_hooks_path(detail: &str) {
     );
 }
 
-fn hook_entry_specs() -> [HookEntrySpec; 2] {
-    [
-        HookEntrySpec {
-            script_basename: basename_of(HOOK_ASSET_PATHS[0]),
-            section: PRE_TOOL_USE_SECTION,
-            matcher: Some(PRE_TOOL_USE_MATCHER),
-        },
-        HookEntrySpec {
-            script_basename: basename_of(HOOK_ASSET_PATHS[1]),
-            section: SESSION_START_SECTION,
-            matcher: None,
-        },
-    ]
+fn hook_entry_specs() -> [HookEntrySpec; 1] {
+    [HookEntrySpec {
+        script_basename: basename_of(HOOK_ASSET_PATHS[0]),
+        section: SESSION_START_SECTION,
+        matcher: None,
+    }]
 }
 
 fn living_docs_hook_marker() -> String {
@@ -355,7 +346,8 @@ fn plan_settings_removal(settings_path: &Path) -> Result<Option<Value>, String> 
 
 fn strip_hook_entries(settings: &mut Value) -> bool {
     let marker = living_docs_hook_marker();
-    let pre_tool_use_changed = strip_section_entries(settings, PRE_TOOL_USE_SECTION, &marker);
+    let pre_tool_use_changed =
+        strip_section_entries(settings, LEGACY_PRE_TOOL_USE_SECTION, &marker);
     let session_start_changed = strip_section_entries(settings, SESSION_START_SECTION, &marker);
     pre_tool_use_changed || session_start_changed
 }
@@ -405,13 +397,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn resolve_scripts_finds_both_corpus_assets() {
-        let scripts = resolve_scripts().expect("both hook scripts are embedded");
+    fn resolve_scripts_finds_the_session_teaching_asset() {
+        let scripts = resolve_scripts().expect("the hook script is embedded");
         let basenames: Vec<&str> = scripts.iter().map(|script| script.basename).collect();
-        assert_eq!(
-            basenames,
-            vec!["block-docs-handwrite.sh", "session-context.sh"]
-        );
+        assert_eq!(basenames, vec!["session-context.sh"]);
         assert!(scripts.iter().all(|script| !script.bytes.is_empty()));
     }
 
@@ -448,7 +437,7 @@ mod tests {
     #[test]
     fn ensure_child_array_normalizes_a_non_array_value_instead_of_panicking() {
         let mut settings = json!({ "hooks": "not-an-object" });
-        let section = ensure_hooks_section(&mut settings, PRE_TOOL_USE_SECTION);
+        let section = ensure_hooks_section(&mut settings, SESSION_START_SECTION);
         assert!(section.is_empty());
     }
 
@@ -494,7 +483,7 @@ mod tests {
     }
 
     #[test]
-    fn strip_hook_entries_removes_only_the_living_docs_entries() {
+    fn strip_hook_entries_removes_only_the_living_docs_entries_including_a_legacy_write_gate() {
         let mut settings = json!({
             "hooks": {
                 "PreToolUse": [

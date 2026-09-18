@@ -31,7 +31,7 @@ change before you invest time.
 
 ```
 .claude-plugin/            Claude Code plugin manifest + marketplace entry (repo root is the plugin bundle)
-hooks/                     hooks.json wiring the plugin's PreToolUse/SessionStart hooks
+hooks/                     hooks.json wiring the plugin's SessionStart hook
 skills/
   living-docs/             the skill: SKILL.md + rules/ + templates/ + hooks/ (enforcement scripts)
   okf-knowledge-format/    the file format (OKF spec vendored verbatim)
@@ -46,11 +46,11 @@ Makefile                   convenience wrapper around install.sh
 
 The repo root doubles as the **Claude Code plugin bundle**:
 `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` declare the
-plugin, `hooks/hooks.json` wires its `PreToolUse`/`SessionStart` hooks, and
+plugin, `hooks/hooks.json` wires its `SessionStart` hook, and
 `skills/` auto-discovers from the same root — no duplicated layout.
-`skills/living-docs/hooks/` is the **single source of truth** for all three
-enforcement scripts (`block-docs-handwrite.sh`, `session-context.sh`,
-`pre-commit`): the plugin addresses them through `${CLAUDE_PLUGIN_ROOT}` and
+`skills/living-docs/hooks/` is the **single source of truth** for both
+enforcement scripts (`session-context.sh`, `pre-commit`): the plugin
+addresses them through `${CLAUDE_PLUGIN_ROOT}` and
 `living-docs hooks install` materializes them from the same embedded corpus
 (ADR 0023). Edit them there — never in a materialized copy under a consumer
 project's `.living-docs/hooks/`.

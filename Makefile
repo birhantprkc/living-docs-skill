@@ -25,7 +25,7 @@ LIVING_DOCS_BIN := target/release/living-docs
 .PHONY: help install install-claude install-cursor install-copilot \
         install-opencode install-codex install-pi install-all install-pocock \
         project-claude project-opencode project-codex project-pi \
-        uninstall uninstall-all check lint test-fixtures test-hooks \
+        uninstall uninstall-all check lint test-fixtures \
         test-release-gate test-version-gate version \
         test-filesize-gate filesize \
         allow-inventory test-allow-inventory-gate test-install-gate \
@@ -79,7 +79,7 @@ uninstall: ## Remove the global Claude Code install
 uninstall-all: ## Remove the install for every supported harness
 	$(INSTALL) all --uninstall
 
-check: version filesize allow-inventory build test-fixtures test-hooks test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate test-install-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, install gate fixtures, dry-run harnesses
+check: version filesize allow-inventory build test-fixtures test-release-gate test-version-gate test-filesize-gate test-allow-inventory-gate test-install-gate ## Check version sync, file-size ratchet, allow-inventory gate, validate install.sh, run Rust tests, living-docs check + mermaid, hook fixtures, release-asset gate fixtures, version-gate fixtures, file-size gate fixtures, allow-inventory gate fixtures, install gate fixtures, dry-run harnesses
 	bash -n install.sh
 	bash -n scripts/check-version.sh
 	bash -n scripts/verify-release-assets.sh
@@ -93,9 +93,6 @@ check: version filesize allow-inventory build test-fixtures test-hooks test-rele
 
 test-fixtures: build ## Run the hostile/negative fixtures that guard the check parsers
 	LIVING_DOCS_BIN=$(LIVING_DOCS_BIN) ./skills/living-docs/tests/run.sh
-
-test-hooks: ## Run the write-gate hook fixtures (ADR 0021)
-	./skills/living-docs/tests/hooks/run.sh
 
 test-release-gate: ## Run the verify-release-assets.sh fixtures (ADR 0024), stubbed gh
 	./scripts/tests/verify-release-assets/run.sh

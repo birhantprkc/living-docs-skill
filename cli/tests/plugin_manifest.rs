@@ -74,11 +74,7 @@ fn hook_commands_are_plugin_rooted_and_point_at_executable_files() {
     let hooks_json = read_json("hooks/hooks.json");
     let commands = collect_hook_commands(&hooks_json);
 
-    assert!(
-        commands.len() >= 2,
-        "expected at least two hook commands, found {}",
-        commands.len()
-    );
+    assert!(!commands.is_empty(), "expected at least one hook command");
 
     for command in &commands {
         assert!(

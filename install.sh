@@ -9,7 +9,7 @@
 # the `living-docs skill` CLI command, not copied to disk — and, for tools
 # that need it, generating a small rule/instruction pointer file.
 #
-# Enforcement (write-gate, session teaching, pre-commit doc-gate) is NOT part
+# Enforcement (session teaching, pre-commit doc-gate) is NOT part
 # of this script — it ships through two separate channels: the Claude Code
 # plugin (/plugin marketplace add ejklock/living-docs-skill && /plugin install
 # living-docs@living-docs) or `living-docs hooks install` for every harness.
@@ -301,4 +301,4 @@ else
 fi
 
 log ""
-log "Reminder: this script ships skills only. Enforcement (write-gate, session teaching, pre-commit) installs separately — Claude Code plugin (/plugin marketplace add ejklock/living-docs-skill && /plugin install living-docs@living-docs) or 'living-docs hooks install' for every harness."
+log "Reminder: this script ships skills only. Enforcement (session teaching, pre-commit doc-gate) installs separately — Claude Code plugin (/plugin marketplace add ejklock/living-docs-skill && /plugin install living-docs@living-docs) or 'living-docs hooks install' for every harness."

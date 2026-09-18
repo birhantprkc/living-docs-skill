@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const SCRIPT_BASENAMES: [&str; 2] = ["block-docs-handwrite.sh", "session-context.sh"];
+const SCRIPT_BASENAMES: [&str; 1] = ["session-context.sh"];
 const LIVING_DOCS_MARKER: &str = ".living-docs/hooks/";
 
 fn living_docs() -> Command {
@@ -98,11 +98,13 @@ fn read_settings(project: &Path) -> serde_json::Value {
     serde_json::from_str(&raw).expect("settings.json parses as JSON")
 }
 
+/// The entries under `hooks.<section>`; an absent section is an empty list,
+/// since `install` writes only the sections it wires.
 fn entries(settings: &serde_json::Value, section: &str) -> Vec<serde_json::Value> {
     settings["hooks"][section]
         .as_array()
-        .unwrap_or_else(|| panic!("hooks.{section} is an array"))
-        .clone()
+        .cloned()
+        .unwrap_or_default()
 }
 
 fn living_docs_entries(settings: &serde_json::Value, section: &str) -> Vec<serde_json::Value> {
@@ -119,7 +121,7 @@ fn living_docs_entries(settings: &serde_json::Value, section: &str) -> Vec<serde
 }
 
 #[test]
-fn install_materializes_both_scripts_byte_identical_at_mode_0755() {
+fn install_materializes_the_hook_script_byte_identical_at_mode_0755() {
     let project = project_with_bundle("materialize", "docs");
 
     let output = run_install(&project, false);
@@ -206,21 +208,17 @@ fn install_defaults_dir_to_the_current_directory_when_omitted() {
 }
 
 #[test]
-fn install_wires_a_fresh_settings_json_with_one_pretooluse_and_one_sessionstart_entry() {
+fn install_wires_a_fresh_settings_json_with_one_sessionstart_entry_and_no_write_gate() {
     let project = project_with_bundle("fresh-wire", "docs");
 
     let output = run_install(&project, false);
     assert!(output.status.success());
 
     let settings = read_settings(&project);
-    let pre_tool_use = entries(&settings, "PreToolUse");
-    assert_eq!(pre_tool_use.len(), 1, "got: {pre_tool_use:?}");
-    assert_eq!(pre_tool_use[0]["matcher"], "Write|Edit|MultiEdit");
-    let pre_command = pre_tool_use[0]["hooks"][0]["command"]
-        .as_str()
-        .expect("PreToolUse entry carries a command string");
-    assert!(pre_command.contains(".living-docs/hooks/block-docs-handwrite.sh"));
-    assert!(pre_command.starts_with("LIVING_DOCS_BUNDLE=docs "));
+    assert!(
+        entries(&settings, "PreToolUse").is_empty(),
+        "got: {settings:?}"
+    );
 
     let session_start = entries(&settings, "SessionStart");
     assert_eq!(session_start.len(), 1, "got: {session_start:?}");
@@ -261,7 +259,7 @@ fn install_preserves_unrelated_settings_entries_and_top_level_keys() {
     assert_eq!(settings["unrelatedTopLevelKey"], "keep-me");
 
     let pre_tool_use = entries(&settings, "PreToolUse");
-    assert_eq!(pre_tool_use.len(), 2, "got: {pre_tool_use:?}");
+    assert_eq!(pre_tool_use.len(), 1, "got: {pre_tool_use:?}");
     let unrelated_still_present = pre_tool_use.iter().any(|entry| {
         entry["hooks"][0]["command"] == "echo custom-guard" && entry["matcher"] == "Bash"
     });
@@ -280,11 +278,7 @@ fn install_replaces_living_docs_entries_on_reinstall_without_duplicating() {
     assert!(second.status.success());
 
     let settings = read_settings(&project);
-    assert_eq!(
-        living_docs_entries(&settings, "PreToolUse").len(),
-        1,
-        "got: {settings:?}"
-    );
+    assert!(living_docs_entries(&settings, "PreToolUse").is_empty());
     assert_eq!(
         living_docs_entries(&settings, "SessionStart").len(),
         1,
@@ -302,18 +296,10 @@ fn install_pins_a_custom_docs_dir_verbatim_into_the_generated_commands() {
     assert!(output.status.success());
 
     let settings = read_settings(&project);
-    let pre_command = entries(&settings, "PreToolUse")[0]["hooks"][0]["command"]
-        .as_str()
-        .unwrap()
-        .to_string();
     let session_command = entries(&settings, "SessionStart")[0]["hooks"][0]["command"]
         .as_str()
         .unwrap()
         .to_string();
-    assert!(
-        pre_command.starts_with("LIVING_DOCS_BUNDLE=handbook "),
-        "got: {pre_command}"
-    );
     assert!(
         session_command.starts_with("LIVING_DOCS_BUNDLE=handbook "),
         "got: {session_command}"
@@ -356,7 +342,7 @@ fn install_fails_with_exit_2_when_existing_settings_json_is_not_valid_json_and_n
         "settings.json must never be overwritten on parse failure"
     );
     assert!(!project
-        .join(".living-docs/hooks/block-docs-handwrite.sh")
+        .join(".living-docs/hooks/session-context.sh")
         .exists());
 
     let _ = fs::remove_dir_all(&project);

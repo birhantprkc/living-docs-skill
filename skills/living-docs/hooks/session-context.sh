@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # session-context.sh — SessionStart hook for the living-docs authoring contract
-# (ADR 0021 layer 2: deterministic point-of-use teaching).
+# (deterministic point-of-use teaching).
 #
 # Emits one context line stating the body-only rule and the resolved CLI binary,
 # so every session receives the rule at t=0 instead of behind a skill trigger.
@@ -34,6 +34,6 @@ else
   BIN_NOTE="CLI not built — run \`make build\` (or \`cargo build --release --manifest-path cli/Cargo.toml\`) before authoring docs"
 fi
 
-printf 'living-docs: %s. Docs authoring contract: write ONLY the body below the closing --- of a record. Numbering, frontmatter, supersede links, and index rows are CLI-owned — `living-docs new <type> "<title>"`, `living-docs set <NNNN> <key> <value>`, `living-docs supersede <old> <new>`, `living-docs index`, `living-docs fmt`. Hand-writes to those are blocked by a PreToolUse hook.\n' "$BIN_NOTE"
+printf 'living-docs: %s. Docs authoring contract: write ONLY the body below the closing --- of a record. Numbering, frontmatter, supersede links, and index rows are CLI-owned — `living-docs new <type> "<title>"`, `living-docs set <NNNN> <key> <value>`, `living-docs supersede <old> <new>`, `living-docs index`, `living-docs fmt`. A hand-written one fails `living-docs check` at commit.\n' "$BIN_NOTE"
 
 exit 0

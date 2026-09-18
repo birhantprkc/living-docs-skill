@@ -20,10 +20,10 @@ pub(crate) struct EffectiveArgs {
 
 #[derive(Subcommand)]
 pub(crate) enum HooksCmd {
-    /// Writes the two corpus hook scripts into `<dir>/.living-docs/hooks/`
+    /// Writes the session-teaching hook into `<dir>/.living-docs/hooks/`
     /// at mode 0755, materializes the pre-commit doc-gate to
     /// `<dir>/.githooks/pre-commit` (pointing `core.hooksPath` at it), and
-    /// wires the Claude Code hooks into `<dir>/.claude/settings.json`,
+    /// wires the `SessionStart` hook into `<dir>/.claude/settings.json`,
     /// idempotently — re-running replaces the living-docs entries by
     /// identity rather than appending. The generated commands pin the
     /// resolved `--docs-dir` bundle as a `LIVING_DOCS_BUNDLE=` prefix.
@@ -36,8 +36,8 @@ pub(crate) enum HooksCmd {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Removes the artifacts `install` wrote — the two `.living-docs/hooks/`
-    /// scripts, `.githooks/pre-commit`, and the living-docs entries in
+    /// Removes the artifacts `install` wrote — the `.living-docs/hooks/`
+    /// script, `.githooks/pre-commit`, and the living-docs entries in
     /// `<dir>/.claude/settings.json` — leaving unrelated entries and
     /// `core.hooksPath` untouched. A clean no-op when nothing was installed.
     /// `--dry-run` reports the same removal plan without deleting anything.
