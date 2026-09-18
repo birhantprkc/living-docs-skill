@@ -8,7 +8,7 @@ mod common;
 use common::{living_docs, stdout_of, write};
 
 fn read(docs_dir: &Path, extra: &[&str]) -> Output {
-    let mut args = vec!["--docs-dir", docs_dir.to_str().unwrap(), "read"];
+    let mut args = vec!["--docs-dir", docs_dir.to_str().unwrap(), "read", "--plain"];
     args.extend_from_slice(extra);
     living_docs()
         .args(&args)
@@ -52,7 +52,12 @@ fn effective_alias_still_runs_hidden_from_help() {
     let bundle = common::temp_bundle("read", "alias");
     write_chain_bundle(&bundle);
 
-    let mut args = vec!["--docs-dir", bundle.to_str().unwrap(), "effective"];
+    let mut args = vec![
+        "--docs-dir",
+        bundle.to_str().unwrap(),
+        "effective",
+        "--plain",
+    ];
     args.push("--topic");
     args.push("widget");
     let output = living_docs()

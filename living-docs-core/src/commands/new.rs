@@ -37,7 +37,7 @@ pub fn run(
     title: &str,
     opts: &NewOptions,
 ) -> ExitCode {
-    match scaffold(store, docs_dir, doc_type, title, opts, &now_iso8601()) {
+    match write(store, docs_dir, doc_type, title, opts) {
         Ok(path) => {
             println!("{}", path.display());
             println!("{BODY_ONLY_INSTRUCTION}");
@@ -48,6 +48,19 @@ pub fn run(
             ExitCode::from(2)
         }
     }
+}
+
+/// Scaffolds and writes the new record, returning its path without printing
+/// anything — the CLI front renders this as colored text or JSON (ADR 0060);
+/// [`run`] is the plain-text-always convenience wrapper over it.
+pub fn write(
+    store: &dyn DocStore,
+    docs_dir: &Path,
+    doc_type: &str,
+    title: &str,
+    opts: &NewOptions,
+) -> Result<PathBuf, String> {
+    scaffold(store, docs_dir, doc_type, title, opts, &now_iso8601())
 }
 
 /// Computes `new`'s target path and filled content without writing it —

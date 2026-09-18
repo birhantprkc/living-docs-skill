@@ -12,7 +12,7 @@ fn file_name_str_returns_the_basename() {
 #[test]
 fn reporter_with_no_violations_reports_clean_and_exits_zero() {
     let reporter = Reporter::new();
-    let code = reporter.finish(3);
+    let code = reporter.finish();
     assert_eq!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
 }
 

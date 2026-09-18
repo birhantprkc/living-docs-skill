@@ -33,7 +33,7 @@ fn run_index(docs: &Path, doc_type: Option<&str>) -> Output {
 
 fn run_check(docs: &Path) -> Output {
     living_docs()
-        .args(["check", docs.to_str().unwrap()])
+        .args(["check", docs.to_str().unwrap(), "--plain"])
         .output()
         .expect("failed to run living-docs check")
 }

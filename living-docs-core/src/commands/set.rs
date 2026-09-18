@@ -3,7 +3,7 @@ use crate::commands::supersede::{find_record, set_frontmatter_fields};
 use crate::doc_type::{self, DocTypeSpec};
 use crate::record::{extract_record, format_scalar};
 use crate::store::DocStore;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 pub fn run(
@@ -13,8 +13,8 @@ pub fn run(
     key: &str,
     value: &str,
 ) -> ExitCode {
-    match set(store, docs_dir, reference, key, value) {
-        Ok(()) => ExitCode::SUCCESS,
+    match apply(store, docs_dir, reference, key, value) {
+        Ok(_) => ExitCode::SUCCESS,
         Err(message) => {
             eprintln!("living-docs set: {message}");
             ExitCode::from(2)
@@ -29,19 +29,21 @@ pub fn run(
 /// carries a vocabulary constraint (validated against the record's own type,
 /// `Superseded` reserved for `supersede`); `description`/`owner` accept any
 /// string, quoted via [`format_scalar`]. Nothing is written when the
-/// reference is unresolvable or the value fails validation.
-fn set(
+/// reference is unresolvable or the value fails validation. Returns the
+/// written record's path — the CLI front renders this as colored text or
+/// JSON (ADR 0060); [`run`] is the plain-text-always convenience wrapper.
+pub fn apply(
     store: &dyn DocStore,
     docs_dir: &Path,
     reference: &str,
     key: &str,
     value: &str,
-) -> Result<(), String> {
+) -> Result<PathBuf, String> {
     let path = find_record(store, docs_dir, reference)?;
     let field = resolve_field(store, &path, key, value)?;
     set_frontmatter_fields(store, &path, &[field])?;
     callout::reconcile(store, &path)?;
-    Ok(())
+    Ok(path)
 }
 
 fn resolve_field(

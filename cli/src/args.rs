@@ -1,5 +1,6 @@
 //! Clap argument and subcommand definitions for the `living-docs` CLI.
 
+use crate::output::ColorChoice;
 use clap::{Parser, Subcommand};
 
 mod sub;
@@ -16,6 +17,24 @@ pub(crate) struct Cli {
     /// Root of the docs bundle. Overridable so tests can point at a temp tree.
     #[arg(long, global = true, default_value = "docs")]
     pub(crate) docs_dir: PathBuf,
+
+    /// Emit minified single-line JSON instead of plain text, for a data
+    /// verb's success output. Overrides TTY autodetection; mutually
+    /// exclusive with `--plain` (ADR 0060).
+    #[arg(long, global = true)]
+    pub(crate) json: bool,
+    /// Force human-readable plain text, overriding TTY autodetection.
+    /// Mutually exclusive with `--json`.
+    #[arg(long, global = true, conflicts_with = "json")]
+    pub(crate) plain: bool,
+    /// Whether text output carries ANSI color: `auto` (default) colors a
+    /// TTY and honors `NO_COLOR`, `always`/`never` override both.
+    #[arg(long, global = true, value_enum, default_value = "auto")]
+    pub(crate) color: ColorChoice,
+    /// Silences informational stderr lines (warnings, progress notes).
+    /// Errors always print regardless.
+    #[arg(long, global = true)]
+    pub(crate) quiet: bool,
 
     #[command(subcommand)]
     pub(crate) command: Command,

@@ -18,9 +18,11 @@ fn temp_dir(label: &str) -> PathBuf {
     dir
 }
 
+/// Runs `new` with `--plain` (ADR 0060: default output is JSON off a TTY).
 fn run_new(docs: &Path, doc_type: &str, title: &str) -> Output {
     living_docs()
         .args(["--docs-dir", docs.to_str().unwrap(), "new", doc_type, title])
+        .arg("--plain")
         .output()
         .expect("failed to run living-docs")
 }
@@ -31,15 +33,8 @@ fn stderr_of(output: &Output) -> String {
 
 fn run_new_with_description(docs: &Path, doc_type: &str, title: &str, description: &str) -> Output {
     living_docs()
-        .args([
-            "--docs-dir",
-            docs.to_str().unwrap(),
-            "new",
-            doc_type,
-            title,
-            "--description",
-            description,
-        ])
+        .args(["--docs-dir", docs.to_str().unwrap(), "new", doc_type, title])
+        .args(["--description", description, "--plain"])
         .output()
         .expect("failed to run living-docs")
 }

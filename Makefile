@@ -41,7 +41,7 @@ check: version filesize allow-inventory build test-fixtures test-release-gate te
 	bash -n scripts/check-allow-inventory.sh
 	bash -n scripts/tests/install/run.sh
 	cargo test --manifest-path cli/Cargo.toml
-	$(LIVING_DOCS_BIN) check --require-owner examples/linkly/docs
+	$(LIVING_DOCS_BIN) check --require-owner --plain examples/linkly/docs
 	$(LIVING_DOCS_BIN) check --mermaid-only
 	$(INSTALL) --dry-run
 

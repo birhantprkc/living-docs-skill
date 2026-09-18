@@ -20,8 +20,14 @@ pub(crate) fn run_install_skills(
 /// other subcommand's cwd-relative default. `docs_dir` is the CLI's global
 /// `--docs-dir` flag, resolved at install time and pinned into the
 /// generated `LIVING_DOCS_BUNDLE=` commands (ADR 0020 scope, resolved once
-/// here rather than at hook run time).
-pub(crate) fn run_install_hooks(dir: Option<PathBuf>, dry_run: bool, docs_dir: &Path) -> ExitCode {
+/// here rather than at hook run time). `quiet` silences the informational
+/// `core.hooksPath` warning (ADR 0060).
+pub(crate) fn run_install_hooks(
+    dir: Option<PathBuf>,
+    dry_run: bool,
+    docs_dir: &Path,
+    quiet: bool,
+) -> ExitCode {
     let project_root = dir.unwrap_or_else(|| PathBuf::from("."));
-    hooks::install(&project_root, docs_dir, dry_run)
+    hooks::install(&project_root, docs_dir, dry_run, quiet)
 }

@@ -22,6 +22,7 @@ pub(crate) fn check_liveness(
         if is_stale_proposed(store, f, &bundle_str, all_md) {
             reporter.advise(
                 f,
+                "liveness",
                 "LIVENESS stale-proposed: seed status but the linked issue is terminal — settle or supersede",
             );
         }

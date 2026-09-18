@@ -1,11 +1,13 @@
 use args::{Cli, Command, InstallCmd, UninstallCmd};
 use clap::Parser;
 use living_docs_core::check;
+use output::{ColorMode, OutputMode};
 use std::process::ExitCode;
 
 mod args;
 mod commands;
 mod hooks;
+mod output;
 mod skill;
 mod skill_install;
 mod store;
@@ -13,6 +15,9 @@ mod store;
 #[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let cli = Cli::parse();
+    let mode = OutputMode::from_flags(cli.json, cli.plain);
+    let color = ColorMode::from_choice(cli.color);
+    let quiet = cli.quiet;
     match cli.command {
         Command::New {
             doc_type,
@@ -29,16 +34,17 @@ fn main() -> ExitCode {
                 kind: kind.as_deref(),
                 owner: owner.as_deref(),
             },
+            mode,
         ),
-        Command::Index { doc_type } => commands::index::run_index(&cli.docs_dir, doc_type),
+        Command::Index { doc_type } => commands::index::run_index(&cli.docs_dir, doc_type, mode),
         Command::Supersede { old, new } => {
-            commands::supersede::run_supersede(&cli.docs_dir, &old, &new)
+            commands::supersede::run_supersede(&cli.docs_dir, &old, &new, mode)
         }
         Command::Set {
             reference,
             key,
             value,
-        } => commands::set::run_set(&cli.docs_dir, &reference, &key, &value),
+        } => commands::set::run_set(&cli.docs_dir, &reference, &key, &value, mode),
         Command::Check {
             paths,
             mermaid_only,
@@ -48,10 +54,10 @@ fn main() -> ExitCode {
             paths,
             require_owner,
             ..
-        } => commands::check::run_check(&cli.docs_dir, paths, require_owner),
-        Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
-        Command::Read(args) => commands::read::run_read(&cli.docs_dir, args),
-        Command::Guide(args) => commands::guide::run_guide(args),
+        } => commands::check::run_check(&cli.docs_dir, paths, require_owner, mode, color),
+        Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check, mode),
+        Command::Read(args) => commands::read::run_read(&cli.docs_dir, args, mode),
+        Command::Guide(args) => commands::guide::run_guide(args, mode),
         Command::Install {
             action:
                 InstallCmd::Skills {
@@ -63,7 +69,7 @@ fn main() -> ExitCode {
         } => commands::install::run_install_skills(harness, project, dir, dry_run),
         Command::Install {
             action: InstallCmd::Hooks { dir, dry_run },
-        } => commands::install::run_install_hooks(dir, dry_run, &cli.docs_dir),
+        } => commands::install::run_install_hooks(dir, dry_run, &cli.docs_dir, quiet),
         Command::Uninstall {
             action: UninstallCmd::Hooks { dir, dry_run },
         } => commands::uninstall::run_uninstall_hooks(dir, dry_run),

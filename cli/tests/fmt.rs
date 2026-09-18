@@ -9,14 +9,14 @@ fn living_docs() -> Command {
 
 fn run_fmt(target: &Path) -> Output {
     living_docs()
-        .args(["fmt", target.to_str().unwrap()])
+        .args(["fmt", target.to_str().unwrap(), "--plain"])
         .output()
         .expect("failed to run living-docs fmt")
 }
 
 fn run_fmt_check(target: &Path) -> Output {
     living_docs()
-        .args(["fmt", "--check", target.to_str().unwrap()])
+        .args(["fmt", "--check", target.to_str().unwrap(), "--plain"])
         .output()
         .expect("failed to run living-docs fmt --check")
 }

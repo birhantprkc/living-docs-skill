@@ -168,7 +168,7 @@ fn report_missing_owner(f: &Path, contents: &str, require_owner: bool, reporter:
     if require_owner {
         reporter.report(f, message);
     } else {
-        reporter.advise(f, message);
+        reporter.advise(f, "owner", message);
     }
 }
 

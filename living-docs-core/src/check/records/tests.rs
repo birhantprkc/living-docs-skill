@@ -46,7 +46,7 @@ fn check_frontmatter_and_format_accepts_content_the_store_serves_with_no_disk_ba
 
     check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(1)));
+    assert!(exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn check_frontmatter_and_format_reports_content_the_store_serves_as_missing_fron
 
     check_frontmatter_and_format(&store, &all_md, &root_index, &mut reporter);
 
-    assert!(!exit_code_is_success(reporter.finish(1)));
+    assert!(!exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn check_supersede_chain_reports_a_target_absent_from_all_md() {
 
     check_supersede_chain(&store, &all_md, &mut reporter);
 
-    assert!(!exit_code_is_success(reporter.finish(1)));
+    assert!(!exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -102,7 +102,7 @@ fn check_supersede_chain_passes_when_the_target_is_present_in_all_md() {
 
     check_supersede_chain(&store, &all_md, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(2)));
+    assert!(exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -118,7 +118,7 @@ fn check_owner_requirement_advises_on_an_adr_without_owner_and_stays_exit_zero()
 
     check_owner_requirement(&store, &all_md, false, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(1)));
+    assert!(exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn check_owner_requirement_reports_a_violation_on_an_adr_without_owner_when_requ
 
     check_owner_requirement(&store, &all_md, true, &mut reporter);
 
-    assert!(!exit_code_is_success(reporter.finish(1)));
+    assert!(!exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn check_owner_requirement_passes_when_an_adr_carries_an_owner() {
 
     check_owner_requirement(&store, &all_md, true, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(1)));
+    assert!(exit_code_is_success(reporter.finish()));
 }
 
 #[test]
@@ -166,5 +166,5 @@ fn check_owner_requirement_never_flags_a_type_whose_registry_row_does_not_requir
 
     check_owner_requirement(&store, &all_md, true, &mut reporter);
 
-    assert!(exit_code_is_success(reporter.finish(1)));
+    assert!(exit_code_is_success(reporter.finish()));
 }

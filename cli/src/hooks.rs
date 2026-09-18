@@ -36,18 +36,19 @@ struct HookEntrySpec {
 /// at mode 0755, materializes the pre-commit doc-gate to
 /// `<project_root>/.githooks/pre-commit` and points `core.hooksPath` at it,
 /// then wires the `SessionStart` hook into `<project_root>/.claude/settings.json`
-/// via a `serde_json::Value` parse/mutate/serialize merge — idempotently,
-/// replacing any prior living-docs entry by identity rather than appending.
-/// The bundle pinned into each generated command's `LIVING_DOCS_BUNDLE=` is
-/// `docs_dir`, resolved against `project_root` and required to already
-/// exist. Under `dry_run`, reports the same plan on stdout and changes
-/// nothing on disk — including `core.hooksPath`. A missing embedded asset, a
-/// non-existent `docs_dir`, or a settings file that fails to parse as JSON
-/// are hard errors — named on stderr, no file written, `ExitCode::from(2)`.
-/// A failure setting `core.hooksPath` (e.g. `project_root` is not a git
-/// repository) is only a stderr warning; the verb still succeeds.
+/// idempotently, replacing any prior living-docs entry by identity. The
+/// bundle pinned into each generated command's `LIVING_DOCS_BUNDLE=` is
+/// `docs_dir`, required to already exist; `dry_run` reports the same plan
+/// and changes nothing. A missing asset, absent `docs_dir`, or unparseable
+/// settings file is a hard error (stderr, `ExitCode::from(2)`); a failed
+/// `core.hooksPath` write is only a warning (silenced by `quiet`).
 #[allow(clippy::too_many_lines)]
-pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> ExitCode {
+pub(crate) fn install(
+    project_root: &Path,
+    docs_dir: &Path,
+    dry_run: bool,
+    quiet: bool,
+) -> ExitCode {
     if let Err(message) = validate_docs_dir(project_root, docs_dir) {
         return report_failure(&message);
     }
@@ -78,7 +79,7 @@ pub(crate) fn install(project_root: &Path, docs_dir: &Path, dry_run: bool) -> Ex
     if let Err(err) = write_script_to(&project_root.join(GIT_HOOKS_DEST_SUBDIR), &pre_commit) {
         return report_failure(&err.to_string());
     }
-    arm_git_hooks_path(project_root);
+    arm_git_hooks_path(project_root, quiet);
     match write_settings(&settings_path, &settings) {
         Ok(()) => {
             println!("wired {}", settings_path.display());
@@ -178,8 +179,7 @@ fn write_scripts(project_root: &Path, scripts: &[HookScript]) -> io::Result<()> 
 }
 
 /// Writes `script` into `dest_dir` (creating it if needed) at [`SCRIPT_MODE`]
-/// — the one write path shared by [`write_scripts`] (`.living-docs/hooks/`)
-/// and [`install`]'s own pre-commit write (`.githooks/`).
+/// — shared by [`write_scripts`] and [`install`]'s own pre-commit write.
 fn write_script_to(dest_dir: &Path, script: &HookScript) -> io::Result<()> {
     fs::create_dir_all(dest_dir)?;
     let dest = dest_dir.join(script.basename);
@@ -189,10 +189,9 @@ fn write_script_to(dest_dir: &Path, script: &HookScript) -> io::Result<()> {
     Ok(())
 }
 
-/// Best-effort `git -C project_root config core.hooksPath .githooks`. Any
-/// failure — `project_root` is not a git repository, `git` is unavailable —
-/// is a stderr warning; the installer must still succeed outside a git repo.
-fn arm_git_hooks_path(project_root: &Path) {
+/// Best-effort `git config core.hooksPath`; any failure is a warning only,
+/// never fatal (the installer must succeed outside a git repo).
+fn arm_git_hooks_path(project_root: &Path, quiet: bool) {
     let outcome = std::process::Command::new("git")
         .arg("-C")
         .arg(project_root)
@@ -200,15 +199,16 @@ fn arm_git_hooks_path(project_root: &Path) {
         .output();
     match outcome {
         Ok(result) if result.status.success() => {}
-        Ok(result) => warn_hooks_path(String::from_utf8_lossy(&result.stderr).trim()),
-        Err(err) => warn_hooks_path(&err.to_string()),
+        Ok(result) => warn_hooks_path(quiet, String::from_utf8_lossy(&result.stderr).trim()),
+        Err(err) => warn_hooks_path(quiet, &err.to_string()),
     }
 }
 
-fn warn_hooks_path(detail: &str) {
-    eprintln!(
+fn warn_hooks_path(quiet: bool, detail: &str) {
+    let message = format!(
         "living-docs install hooks: could not set core.hooksPath ({detail}) — the pre-commit doc-gate will not run automatically outside a git repository"
     );
+    crate::output::note(quiet, &message);
 }
 
 fn hook_entry_specs() -> [HookEntrySpec; 1] {
@@ -388,7 +388,7 @@ fn announce_uninstall_dry_run(removable: &[PathBuf], strips_settings: bool, sett
 }
 
 fn report_failure(message: &str) -> ExitCode {
-    eprintln!("living-docs hooks: {message}");
+    eprintln!("living-docs: {message}");
     ExitCode::from(2)
 }
 

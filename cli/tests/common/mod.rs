@@ -9,9 +9,12 @@ pub fn living_docs() -> Command {
     Command::new(env!("CARGO_BIN_EXE_living-docs"))
 }
 
+/// Runs `check` with `--plain`, so callers asserting on stdout's text shape
+/// keep working under ADR 0060's JSON-off-a-TTY default; `check_json`
+/// exercises the JSON shape directly where that is the point of the test.
 pub fn run_check(bundle: &Path) -> Output {
     living_docs()
-        .args(["check", bundle.to_str().unwrap()])
+        .args(["check", bundle.to_str().unwrap(), "--plain"])
         .output()
         .expect("failed to run living-docs check")
 }

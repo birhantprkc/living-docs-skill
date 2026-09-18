@@ -9,12 +9,10 @@ use std::process::ExitCode;
 mod named;
 mod rows;
 
-/// Every registry token with a directory to index — Numbered and Named
-/// identities alike (ADR 0026, ADR 0036) — in [`doc_type::DOC_TYPES`]
-/// order: the set `index` regenerates when invoked with no explicit type.
-/// A [`Identity::Singleton`] type has no directory to index, so the bare
-/// sweep excludes it — regenerating it would need a directory that `new`
-/// never creates for a singleton.
+/// Every registry token with a directory to index (Numbered and Named
+/// identities, ADR 0026/0036), in [`doc_type::DOC_TYPES`] order — what a
+/// bare `index` regenerates. A [`Identity::Singleton`] has no directory, so
+/// the sweep excludes it.
 fn all_type_tokens() -> Vec<String> {
     doc_type::DOC_TYPES
         .iter()
@@ -29,50 +27,61 @@ fn all_type_tokens() -> Vec<String> {
 }
 
 pub fn run(store: &dyn DocStore, docs_dir: &Path, doc_type: Option<String>) -> ExitCode {
+    match write(store, docs_dir, doc_type) {
+        Ok(written) => {
+            written.iter().for_each(|p| println!("{}", p.display()));
+            ExitCode::SUCCESS
+        }
+        Err(message) => {
+            eprintln!("living-docs index: {message}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// Regenerates `doc_type`'s index(es), returning the rewritten paths (a
+/// type with no directory yet is a silent no-op); [`run`] renders these as
+/// plain text, the CLI front also as JSON (ADR 0060).
+pub fn write(
+    store: &dyn DocStore,
+    docs_dir: &Path,
+    doc_type: Option<String>,
+) -> Result<Vec<PathBuf>, String> {
     let types: Vec<String> = match doc_type {
         Some(t) => vec![t],
         None => all_type_tokens(),
     };
-
-    for doc_type in &types {
-        if let Err(message) = regenerate(store, docs_dir, doc_type) {
-            eprintln!("living-docs index: {message}");
-            return ExitCode::from(2);
-        }
-    }
-
-    ExitCode::SUCCESS
+    types
+        .iter()
+        .filter_map(|doc_type| regenerate(store, docs_dir, doc_type).transpose())
+        .collect()
 }
 
-/// `index.md` itself is a reserved fs presentation artifact outside every
-/// `DocStore` domain (ADR 0007: never synced to `db-store`), so it is always
-/// read/written through `std::fs` regardless of the active backend — only
-/// the records feeding its body are read through `store`, meaning a db-mode
-/// run regenerates the filesystem `index.md` from the records in the
-/// database.
+/// `index.md` is a reserved fs artifact outside every `DocStore` domain
+/// (ADR 0007): always read/written through `std::fs`, even in db-mode,
+/// where only the records feeding its body come from `store`.
 ///
-/// `doc_type`'s directory coming into existence is `new`'s job, never
-/// `index`'s (ADR 0026): a type with no directory yet is a successful no-op
-/// here, both for the bare `index` sweep and for an explicit `index
-/// <type>` naming a type the bundle doesn't use — otherwise a bare sweep
-/// would materialize an empty `index.md` per registry token regardless of
-/// whether the bundle carries that type, breaking invariant 3 (an
-/// unreachable directory index) for every type the bundle never populated.
-fn regenerate(store: &dyn DocStore, docs_dir: &Path, doc_type: &str) -> Result<(), String> {
+/// A type with no directory yet is a silent no-op (ADR 0026) — `new` owns
+/// directory creation, never `index`; regenerating one would materialize an
+/// empty `index.md` for every unused registry token, breaking invariant 3.
+fn regenerate(
+    store: &dyn DocStore,
+    docs_dir: &Path,
+    doc_type: &str,
+) -> Result<Option<PathBuf>, String> {
     let (index_path, content) = compute(store, docs_dir, doc_type)?;
     let type_dir = index_path.parent().unwrap_or(docs_dir);
     if !type_dir.is_dir() {
-        return Ok(());
+        return Ok(None);
     }
-    fs::write(&index_path, content).map_err(|e| e.to_string())
+    fs::write(&index_path, content).map_err(|e| e.to_string())?;
+    Ok(Some(index_path))
 }
 
-/// Computes `doc_type`'s regenerated `index.md` path and full content,
-/// reading the current on-disk file (if any) to preserve its preamble and
-/// reading the records feeding its body through `store`, without touching
-/// the filesystem itself — the pure step both [`regenerate`] (CLI `index`)
-/// and `db-store`'s `write_checked` build on, the latter needing to inspect
-/// and control the write/rollback timing itself.
+/// Computes `doc_type`'s regenerated `index.md` path and content — reading
+/// the on-disk preamble and the records through `store` — without writing
+/// anything: the pure step [`regenerate`] and `db-store`'s `write_checked`
+/// both build on, the latter controlling its own write/rollback timing.
 pub fn compute(
     store: &dyn DocStore,
     docs_dir: &Path,
@@ -111,10 +120,8 @@ fn body_for(
 
 /// Resolves the numbered-series directory `index` regenerates for
 /// `doc_type`: an unknown token gets [`unsupported_type_message`], but a
-/// registered [`Identity::Singleton`] token gets its own message instead —
-/// it IS supported, it simply has no directory index, and reusing the
-/// unsupported-type message would list `doc_type` itself among the tokens
-/// the caller is told to pick from.
+/// registered [`Identity::Singleton`] gets its own message — it IS
+/// supported, it simply has no directory index.
 fn numbered_dir_for(doc_type: &str) -> Result<&'static str, String> {
     let spec = doc_type::spec_for(doc_type).ok_or_else(|| unsupported_type_message(doc_type))?;
     match spec.identity {
@@ -140,11 +147,8 @@ struct Record {
 }
 
 /// Every `NNNN-*.md` record directly under `type_dir`, sorted ascending by
-/// `NNNN`, read through `store` (backend-faithful: a db-mode run sees
-/// exactly the records the database lists, not whatever happens to sit on
-/// disk). `title`/`status` come from each record's frontmatter (S1's
-/// reader); `NNNN` comes from the filename, matching how `next`/`new`
-/// allocate it.
+/// `NNNN`, read through `store` (backend-faithful). `title`/`status` come
+/// from each record's frontmatter; `NNNN` from the filename.
 fn collect_records(
     store: &dyn DocStore,
     docs_dir: &Path,
@@ -180,11 +184,9 @@ fn record_from_path(store: &dyn DocStore, path: &Path) -> Option<Record> {
 
 /// The record's rendered title: its frontmatter `title:` when present and
 /// parseable, otherwise its first `# ` H1 heading with a leading numbering
-/// prefix stripped (issue 0021 cause 2 — legacy records that only ever
-/// carried the title in their heading). A stderr warning names `path`
-/// whenever the fallback fires, since a blank/substituted title is otherwise
-/// invisible in the rendered index; only when the H1 is also absent does the
-/// title stay empty (still warned).
+/// prefix stripped (issue 0021 cause 2). A stderr warning names `path`
+/// whenever the fallback fires; the title stays empty (still warned) only
+/// when the H1 is also absent.
 fn title_for_record(contents: &str, path: &Path, number: u32) -> String {
     if let Some(title) = frontmatter::read_scalar_from_str(contents, "title") {
         return title;
@@ -267,13 +269,9 @@ fn find_boundary_offset(existing: &str) -> Option<usize> {
 
 /// Any generator-managed heading (`## `, whatever its text), bullet listing
 /// row, or hand-maintained Markdown table listing row is a boundary,
-/// whichever comes first. A single prefix check — rather than pinning the
-/// exact heading text per type — is what lets a legacy issues index still
-/// carrying `## Done`/`## Open` sections migrate cleanly: the first `## `
-/// line is found and replaced, regardless of its old wording. Recognizing a
-/// table listing row too (issue 0021 cause 1) is what turns a hand-maintained
-/// table-format index into a single migration pass instead of a silent
-/// append below it.
+/// whichever comes first — letting a legacy `## Done`/`## Open` index or a
+/// hand-maintained table (issue 0021) migrate in a single pass rather than
+/// a silent append below it.
 fn is_boundary_line(line: &str) -> bool {
     line.starts_with("## ") || line.starts_with("* [") || is_table_listing_row(line)
 }

@@ -21,21 +21,52 @@ use std::process::ExitCode;
 /// `check_only`, prints the same pending records but writes nothing, and
 /// returns a non-zero exit code when any record is pending.
 pub fn run(store: &dyn DocStore, target: &Path, check_only: bool) -> ExitCode {
-    let Some(paths) = resolve_targets(store, target) else {
-        eprintln!(
-            "living-docs fmt: bundle root not found: {}",
-            target.display()
-        );
-        return ExitCode::from(2);
-    };
-
-    if check_only {
-        return run_check(store, &paths);
+    match outcome(store, target, check_only) {
+        Ok(Outcome::Rewritten(paths)) => {
+            for path in &paths {
+                println!("{}", path.display());
+            }
+            println!("{} record(s) rewritten.", paths.len());
+            ExitCode::SUCCESS
+        }
+        Ok(Outcome::Pending(paths)) => {
+            for path in &paths {
+                println!("{}", path.display());
+            }
+            println!("{} record(s) would change.", paths.len());
+            if paths.is_empty() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+        Err(message) => {
+            eprintln!("living-docs fmt: {message}");
+            ExitCode::from(2)
+        }
     }
+}
 
-    let rewritten = canonicalize_bundle(store, &paths);
-    println!("{rewritten} record(s) rewritten.");
-    ExitCode::SUCCESS
+/// `fmt`'s outcome: which records were rewritten, or (`--check`) which are
+/// pending. Kept as one type so a caller matches on the mode it asked for
+/// rather than juggling two return values.
+pub enum Outcome {
+    Rewritten(Vec<PathBuf>),
+    Pending(Vec<PathBuf>),
+}
+
+/// Canonicalizes `target`'s frontmatter (or, under `check_only`, reports
+/// which records would change) without printing anything — the CLI front
+/// renders this as colored text or JSON (ADR 0060); [`run`] is the
+/// plain-text-always convenience wrapper over it.
+pub fn outcome(store: &dyn DocStore, target: &Path, check_only: bool) -> Result<Outcome, String> {
+    let Some(paths) = resolve_targets(store, target) else {
+        return Err(format!("bundle root not found: {}", target.display()));
+    };
+    if check_only {
+        return Ok(Outcome::Pending(pending_records(store, &paths)));
+    }
+    Ok(Outcome::Rewritten(canonicalize_bundle(store, &paths)))
 }
 
 /// Resolves `target` to the record paths `fmt` should consider: a single
@@ -51,43 +82,25 @@ fn resolve_targets(store: &dyn DocStore, target: &Path) -> Option<Vec<PathBuf>> 
     }
 }
 
-/// Reports which of `paths` are non-canonical without writing any of them,
-/// printing each pending path and a summary count. Returns
-/// [`ExitCode::SUCCESS`] when none are pending, `ExitCode::from(1)`
-/// otherwise.
-fn run_check(store: &dyn DocStore, paths: &[PathBuf]) -> ExitCode {
-    let mut pending = 0;
-    for path in paths {
-        if is_reserved_file(path) {
-            continue;
-        }
-        if record_is_pending(store, path) {
-            println!("{}", path.display());
-            pending += 1;
-        }
-    }
-    println!("{pending} record(s) would change.");
-    if pending == 0 {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::from(1)
-    }
+/// Returns which of `paths` are non-canonical, without writing any of them.
+fn pending_records(store: &dyn DocStore, paths: &[PathBuf]) -> Vec<PathBuf> {
+    paths
+        .iter()
+        .filter(|path| !is_reserved_file(path))
+        .filter(|path| record_is_pending(store, path))
+        .cloned()
+        .collect()
 }
 
-/// Canonicalizes every non-reserved record in `all_md`, printing each
-/// rewritten path as it happens, and returns how many were rewritten.
-fn canonicalize_bundle(store: &dyn DocStore, all_md: &[PathBuf]) -> usize {
-    let mut rewritten = 0;
-    for path in all_md {
-        if is_reserved_file(path) {
-            continue;
-        }
-        if canonicalize_record(store, path) {
-            println!("{}", path.display());
-            rewritten += 1;
-        }
-    }
-    rewritten
+/// Canonicalizes every non-reserved record in `all_md`, returning the paths
+/// actually rewritten.
+fn canonicalize_bundle(store: &dyn DocStore, all_md: &[PathBuf]) -> Vec<PathBuf> {
+    all_md
+        .iter()
+        .filter(|path| !is_reserved_file(path))
+        .filter(|path| canonicalize_record(store, path))
+        .cloned()
+        .collect()
 }
 
 /// `index.md`/`log.md` carry no frontmatter and are never part of the

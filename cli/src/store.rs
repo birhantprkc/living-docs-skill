@@ -7,7 +7,10 @@ pub(crate) fn build_store() -> Box<dyn DocStore> {
     Box::new(fs_store::FsStore::new())
 }
 
+/// Prints a usage-level failure (an invalid or unresolvable argument, e.g.
+/// an unknown `guide` skill/topic) and returns exit code 2, per the
+/// documented exit-code table (ADR 0060: 0 success, 1 gate failed, 2 usage).
 pub(crate) fn report_failure(message: &str) -> ExitCode {
     eprintln!("error: {message}");
-    ExitCode::FAILURE
+    ExitCode::from(2)
 }

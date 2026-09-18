@@ -85,6 +85,7 @@ fn check_target(
     }
     reporter.advise(
         dependent,
+        "moved-source",
         moved_source_finding(dependent, target, &status, successor.as_deref()),
     );
 }

@@ -43,16 +43,6 @@ pub(crate) struct GuideArgs {
     /// printing a single skill's content.
     #[arg(long)]
     pub(crate) list: bool,
-    /// Emit minified single-line JSON instead of plain text, for
-    /// consumption by other agents. Only changes the success-output shape;
-    /// errors still print to stderr as plain text. Overrides TTY
-    /// autodetection; mutually exclusive with `--plain`.
-    #[arg(long)]
-    pub(crate) json: bool,
-    /// Force human-readable plain text, overriding TTY autodetection.
-    /// Mutually exclusive with `--json`.
-    #[arg(long, conflicts_with = "json")]
-    pub(crate) plain: bool,
 }
 
 #[derive(Subcommand)]

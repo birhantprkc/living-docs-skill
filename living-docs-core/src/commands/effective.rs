@@ -9,6 +9,7 @@
 
 use crate::record::{self, ExtractedRecord};
 use crate::store::DocStore;
+use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -39,9 +40,14 @@ pub fn run(store: &dyn DocStore, bundle: &Path, options: &Options) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// Compiles the effective view as a string — the pure core, so tests assert on
-/// the compiled text without capturing stdout.
-pub fn compile(store: &dyn DocStore, bundle: &Path, options: &Options) -> String {
+/// Selects and orders the in-force view's records — the pure core shared by
+/// [`compile`] (text) and [`compile_json`] (JSON, ADR 0060) — returning the
+/// withheld count and the surviving [`View`]s in reading order.
+pub(crate) fn collect(
+    store: &dyn DocStore,
+    bundle: &Path,
+    options: &Options,
+) -> (usize, Vec<View>) {
     let all_md = store.list(bundle).unwrap_or_default();
     let records = read_records(store, &all_md);
     let topic = options.topic.as_deref().map(str::to_lowercase);
@@ -61,7 +67,52 @@ pub fn compile(store: &dyn DocStore, bundle: &Path, options: &Options) -> String
         .iter()
         .map(|(_, record)| view_of(record, &records))
         .collect();
+    (withheld, views)
+}
+
+/// Compiles the effective view as a string — the pure core, so tests assert on
+/// the compiled text without capturing stdout.
+pub fn compile(store: &dyn DocStore, bundle: &Path, options: &Options) -> String {
+    let (withheld, views) = collect(store, bundle, options);
     render::render(&views, options.full, withheld)
+}
+
+#[derive(Serialize)]
+struct RecordJson {
+    #[serde(rename = "type")]
+    doc_type: String,
+    number: Option<i32>,
+    title: String,
+    description: String,
+    lineage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    body: Option<String>,
+}
+
+#[derive(Serialize)]
+struct EffectiveJson {
+    withheld: usize,
+    records: Vec<RecordJson>,
+}
+
+/// Minified-JSON counterpart of [`compile`]:
+/// `{"withheld":N,"records":[{"type","number","title","description",
+/// "lineage","body"?}]}` — `body` present only under `options.full`.
+pub fn compile_json(store: &dyn DocStore, bundle: &Path, options: &Options) -> String {
+    let (withheld, views) = collect(store, bundle, options);
+    let records = views
+        .into_iter()
+        .map(|view| RecordJson {
+            doc_type: view.doc_type,
+            number: view.number,
+            title: view.title,
+            description: view.description,
+            lineage: view.lineage,
+            body: options.full.then_some(view.body),
+        })
+        .collect();
+    serde_json::to_string(&EffectiveJson { withheld, records })
+        .unwrap_or_else(|err| format!("{{\"error\":\"failed to serialize JSON: {err}\"}}"))
 }
 
 fn read_records(store: &dyn DocStore, all_md: &[PathBuf]) -> Vec<(PathBuf, ExtractedRecord)> {

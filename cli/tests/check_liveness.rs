@@ -14,7 +14,7 @@ fn liveness_bundle(label: &str) -> std::path::PathBuf {
 
 fn run_check(bundle: &Path) -> Output {
     living_docs()
-        .args(["check", bundle.to_str().unwrap()])
+        .args(["check", bundle.to_str().unwrap(), "--plain"])
         .output()
         .expect("failed to run living-docs check")
 }

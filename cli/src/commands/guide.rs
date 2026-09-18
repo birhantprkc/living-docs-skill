@@ -1,37 +1,14 @@
 //! `guide` verb wrapper (renamed from `skill` by ADR 0060): resolves the
-//! guide's target skill/topic and its plain-text-vs-JSON output mode, then
-//! delegates to the embedded skill corpus.
+//! guide's target skill/topic, then delegates to the embedded skill corpus
+//! through the shared `crate::output::OutputMode`.
 
 use crate::args::GuideArgs;
+use crate::output::OutputMode;
 use crate::skill;
 use crate::store::report_failure;
-use std::io::IsTerminal;
 use std::process::ExitCode;
 
 const DEFAULT_SKILL: &str = "living-docs";
-
-/// The resolved output shape for `guide`'s success path (ADR 0014). Errors
-/// are unaffected — they always print plain text to stderr regardless of
-/// mode.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum OutputMode {
-    Plain,
-    Json,
-}
-
-fn resolve_guide_output(json: bool, plain: bool, is_tty: bool) -> OutputMode {
-    if json {
-        return OutputMode::Json;
-    }
-    if plain {
-        return OutputMode::Plain;
-    }
-    if is_tty {
-        OutputMode::Plain
-    } else {
-        OutputMode::Json
-    }
-}
 
 /// The skill and, optionally, the topic `guide` resolves to run against.
 struct Target {
@@ -82,9 +59,8 @@ fn resolve_target(args: &GuideArgs) -> Target {
     }
 }
 
-pub(crate) fn run_guide(args: GuideArgs) -> ExitCode {
-    let mode = resolve_guide_output(args.json, args.plain, std::io::stdout().is_terminal());
-    let as_json = mode == OutputMode::Json;
+pub(crate) fn run_guide(args: GuideArgs, mode: OutputMode) -> ExitCode {
+    let as_json = mode.is_json();
     if args.list {
         return print_guide_result(if as_json {
             skill::list_json()
@@ -127,8 +103,6 @@ mod tests {
             skill: skill.map(str::to_owned),
             topic: topic.map(str::to_owned),
             list: false,
-            json: false,
-            plain: false,
         }
     }
 
@@ -169,27 +143,5 @@ mod tests {
         let target = resolve_target(&args(Some("living-docs"), None, Some("adr")));
         assert_eq!(target.skill, "living-docs");
         assert_eq!(target.topic.as_deref(), Some("adr"));
-    }
-
-    #[test]
-    fn resolve_guide_output_json_flag_wins_regardless_of_tty() {
-        assert_eq!(resolve_guide_output(true, false, true), OutputMode::Json);
-        assert_eq!(resolve_guide_output(true, false, false), OutputMode::Json);
-    }
-
-    #[test]
-    fn resolve_guide_output_plain_flag_wins_regardless_of_tty() {
-        assert_eq!(resolve_guide_output(false, true, true), OutputMode::Plain);
-        assert_eq!(resolve_guide_output(false, true, false), OutputMode::Plain);
-    }
-
-    #[test]
-    fn resolve_guide_output_defaults_to_json_when_stdout_is_not_a_tty() {
-        assert_eq!(resolve_guide_output(false, false, false), OutputMode::Json);
-    }
-
-    #[test]
-    fn resolve_guide_output_defaults_to_plain_when_stdout_is_a_tty() {
-        assert_eq!(resolve_guide_output(false, false, true), OutputMode::Plain);
     }
 }
