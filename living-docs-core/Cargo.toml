@@ -15,5 +15,3 @@ serde_yaml = "0.9"
 pulldown-cmark = { version = "=0.13.4", default-features = false }
 regex = "1"
 merman-core = "=0.7.0"
-hmac = "0.12"
-sha2 = "0.10"

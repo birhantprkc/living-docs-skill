@@ -50,19 +50,16 @@ pub(crate) enum Command {
     },
     Index {
         doc_type: Option<String>,
-        /// Restrict the rendered index to records whose effective visibility
-        /// (frontmatter `visibility`, or `private` when absent — default-deny,
-        /// ADR 0009) is in this comma-separated set. Omitted: every record
-        /// renders, unchanged from today's dev view.
-        #[arg(long, value_delimiter = ',')]
-        visibility: Option<Vec<String>>,
     },
     /// `old` and `new` each accept a bare `NNNN` or a type-qualified
     /// `TYPE/NNNN` reference (e.g. `issue/0028`) — required when the same
     /// number exists in more than one doc-type directory, since a bare
     /// `NNNN` fails loudly on that collision instead of guessing (issue
     /// 0029/0025).
-    Supersede { old: String, new: String },
+    Supersede {
+        old: String,
+        new: String,
+    },
     /// Sets one CLI-owned frontmatter field on a record: `status`,
     /// `description`, or `owner`. `status` is validated against the record's
     /// own type vocabulary (`Superseded` is reserved for `supersede`);
@@ -112,30 +109,6 @@ pub(crate) enum Command {
         /// failure or check regression. AUTHOR steps are never applied.
         #[arg(long)]
         apply: bool,
-    },
-    /// Materializes every record the active `--backend` lists back into
-    /// conformant `.md` files under `out_dir` — the lossless round-trip
-    /// fitness function (ADR 0007, issue 0006 slice 0006-D2).
-    Export {
-        out_dir: PathBuf,
-        /// Restrict the exported set to records whose effective visibility
-        /// (frontmatter `visibility`, or `private` when absent —
-        /// default-deny, ADR 0010) is in this comma-separated set. Omitted:
-        /// every record exports, unchanged from today's behavior.
-        #[arg(long, value_delimiter = ',')]
-        visibility: Option<Vec<String>>,
-    },
-    /// Fails closed when an exported bundle leaks a private doc, or a
-    /// dangling link to a doc withheld from the bundle (ADR 0010 leak gate,
-    /// part 1 — always inspects a materialized filesystem bundle, regardless
-    /// of `--backend`).
-    LeakGate {
-        bundle: PathBuf,
-        /// Additionally runs the Tier-3 PII detectors (ADR 0012) — the
-        /// highest-false-positive class, so they stay opt-in rather than
-        /// running by default.
-        #[arg(long)]
-        check_tier3: bool,
     },
     /// Compiles the agent-facing effective view of the bundle (ADR 0050):
     /// active records only (superseded/deprecated withheld), supersede chains

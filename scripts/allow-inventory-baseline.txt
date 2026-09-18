@@ -1,9 +1,4 @@
 1 cli/src/hooks.rs
 1 cli/src/main.rs
 1 cli/tests/hooks_install.rs
-8 cli/tests/index_supersede.rs
-3 living-docs-core/src/commands/leak_gate.rs
-1 living-docs-core/src/pii/brazil.rs
-2 living-docs-core/src/pii/contextual.rs
-1 living-docs-core/src/pii/europe.rs
-1 living-docs-core/src/pii/tier3.rs
+5 cli/tests/index_supersede.rs

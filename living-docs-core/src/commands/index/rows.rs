@@ -114,7 +114,6 @@ pub(super) fn render_row(record: &Record, all: &[Record]) -> String {
         filename,
         status,
         superseded_by,
-        visibility: _,
     } = record;
     let rendered_status =
         retirement_suffix(status, superseded_by.as_deref(), all).unwrap_or_else(|| status.clone());

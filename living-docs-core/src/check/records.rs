@@ -75,24 +75,6 @@ fn check_concept_file(f: &Path, contents: &str, reporter: &mut Reporter) {
     if frontmatter_scalar(contents, "type").is_none() {
         reporter.report(f, "frontmatter has no non-empty 'type'");
     }
-    if let Some(visibility) = frontmatter_scalar(contents, "visibility") {
-        if !is_valid_visibility(&visibility) {
-            reporter.report(
-                f,
-                format!(
-                    "invalid visibility '{visibility}' (allowed: private|public|showcase; absent means private)"
-                ),
-            );
-        }
-    }
-}
-
-/// Domain check for a *present* `visibility` value (ADR 0009). Absence is
-/// handled upstream by the `Option` branch in `check_concept_file` and never
-/// reaches this predicate — default-deny means an absent field is always
-/// valid, so only a present value needs validating against the domain.
-fn is_valid_visibility(value: &str) -> bool {
-    matches!(value, "private" | "public" | "showcase")
 }
 
 /// A `status: Superseded` record (case-insensitive) needs a non-empty

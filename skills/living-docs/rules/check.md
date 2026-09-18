@@ -51,5 +51,4 @@ eyeballing them; the rest are judgement:
 - [ ] Architecture diagrams use Mermaid (in-repo text) and match the code.
 - [ ] The constitution is singular (`docs/constitution.md`) — no NNNN prefix, no index entry.
 - [ ] Each index file's links all resolve (no dangling references).
-- [ ] Any doc declaring `visibility` uses `private | public | showcase` (check enforces the domain); absent ⇒ private, and a doc meant for a public bundle carries `visibility: public | showcase`.
 - [ ] Docs-first respected: the repo body matches the published tracker/wiki copy.

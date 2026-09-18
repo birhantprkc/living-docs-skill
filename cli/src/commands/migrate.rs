@@ -61,7 +61,7 @@ fn run_mechanical(
     bundle: &Path,
     before: usize,
 ) -> Result<usize, String> {
-    if !succeeded(commands::index::run(store, bundle, None, None)) {
+    if !succeeded(commands::index::run(store, bundle, None)) {
         return Err("`index` failed".to_string());
     }
     if !succeeded(commands::fmt::run(store, bundle, false)) {

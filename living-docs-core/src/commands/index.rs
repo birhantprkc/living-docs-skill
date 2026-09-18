@@ -28,19 +28,14 @@ fn all_type_tokens() -> Vec<String> {
         .collect()
 }
 
-pub fn run(
-    store: &dyn DocStore,
-    docs_dir: &Path,
-    doc_type: Option<String>,
-    visibility_filter: Option<Vec<String>>,
-) -> ExitCode {
+pub fn run(store: &dyn DocStore, docs_dir: &Path, doc_type: Option<String>) -> ExitCode {
     let types: Vec<String> = match doc_type {
         Some(t) => vec![t],
         None => all_type_tokens(),
     };
 
     for doc_type in &types {
-        if let Err(message) = regenerate(store, docs_dir, doc_type, visibility_filter.as_deref()) {
+        if let Err(message) = regenerate(store, docs_dir, doc_type) {
             eprintln!("living-docs index: {message}");
             return ExitCode::from(2);
         }
@@ -63,13 +58,8 @@ pub fn run(
 /// would materialize an empty `index.md` per registry token regardless of
 /// whether the bundle carries that type, breaking invariant 3 (an
 /// unreachable directory index) for every type the bundle never populated.
-fn regenerate(
-    store: &dyn DocStore,
-    docs_dir: &Path,
-    doc_type: &str,
-    visibility_filter: Option<&[String]>,
-) -> Result<(), String> {
-    let (index_path, content) = compute(store, docs_dir, doc_type, visibility_filter)?;
+fn regenerate(store: &dyn DocStore, docs_dir: &Path, doc_type: &str) -> Result<(), String> {
+    let (index_path, content) = compute(store, docs_dir, doc_type)?;
     let type_dir = index_path.parent().unwrap_or(docs_dir);
     if !type_dir.is_dir() {
         return Ok(());
@@ -87,14 +77,13 @@ pub fn compute(
     store: &dyn DocStore,
     docs_dir: &Path,
     doc_type: &str,
-    visibility_filter: Option<&[String]>,
 ) -> Result<(PathBuf, String), String> {
     let dir_name = numbered_dir_for(doc_type)?;
     let type_dir = docs_dir.join(dir_name);
     let index_path = type_dir.join("index.md");
     let existing = fs::read_to_string(&index_path).unwrap_or_default();
     let preamble = preamble_for(&existing, doc_type);
-    let body = body_for(store, docs_dir, doc_type, &type_dir, visibility_filter)?;
+    let body = body_for(store, docs_dir, doc_type, &type_dir)?;
 
     Ok((index_path, format!("{preamble}{body}")))
 }
@@ -108,19 +97,15 @@ fn body_for(
     docs_dir: &Path,
     doc_type: &str,
     type_dir: &Path,
-    visibility_filter: Option<&[String]>,
 ) -> Result<String, String> {
     let is_named = matches!(
         doc_type::spec_for(doc_type).map(|spec| spec.identity),
         Some(Identity::Named { .. })
     );
     if is_named {
-        return named::render_body(store, docs_dir, type_dir, visibility_filter);
+        return named::render_body(store, docs_dir, type_dir);
     }
-    let records: Vec<Record> = collect_records(store, docs_dir, type_dir)?
-        .into_iter()
-        .filter(|record| record_visible(record, visibility_filter))
-        .collect();
+    let records = collect_records(store, docs_dir, type_dir)?;
     Ok(rows::render_body(doc_type, &records))
 }
 
@@ -151,24 +136,7 @@ struct Record {
     title: String,
     status: String,
     filename: String,
-    visibility: String,
     superseded_by: Option<String>,
-}
-
-/// The default-deny fallback effective visibility for a record whose
-/// frontmatter carries no `visibility` key at all.
-const DEFAULT_VISIBILITY: &str = "private";
-
-/// True when `record` belongs in the rendered index under `filter`: every
-/// record passes when `filter` is `None` (today's unfiltered dev view, ADR
-/// 0009), otherwise only a record whose effective visibility is a member of
-/// `filter` passes — default-deny, so an absent-visibility record is only
-/// included when `filter` explicitly names `"private"`.
-fn record_visible(record: &Record, filter: Option<&[String]>) -> bool {
-    match filter {
-        None => true,
-        Some(allowed) => allowed.contains(&record.visibility),
-    }
 }
 
 /// Every `NNNN-*.md` record directly under `type_dir`, sorted ascending by
@@ -200,15 +168,12 @@ fn record_from_path(store: &dyn DocStore, path: &Path) -> Option<Record> {
     let contents = store.read(path).ok()?;
     let title = title_for_record(&contents, path, number);
     let status = frontmatter::read_scalar_from_str(&contents, "status").unwrap_or_default();
-    let visibility = frontmatter::read_scalar_from_str(&contents, "visibility")
-        .unwrap_or_else(|| DEFAULT_VISIBILITY.to_string());
     let superseded_by = frontmatter::read_scalar_from_str(&contents, "superseded_by");
     Some(Record {
         number,
         title,
         status,
         filename,
-        visibility,
         superseded_by,
     })
 }

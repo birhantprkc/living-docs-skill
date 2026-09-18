@@ -32,10 +32,7 @@ fn main() -> ExitCode {
                 owner: owner.as_deref(),
             },
         ),
-        Command::Index {
-            doc_type,
-            visibility,
-        } => commands::index::run_index(&cli.docs_dir, doc_type, visibility),
+        Command::Index { doc_type } => commands::index::run_index(&cli.docs_dir, doc_type),
         Command::Supersede { old, new } => {
             commands::supersede::run_supersede(&cli.docs_dir, &old, &new)
         }
@@ -58,14 +55,6 @@ fn main() -> ExitCode {
         Command::Migrate { paths, apply } => {
             commands::migrate::run_migrate(&cli.docs_dir, paths, apply)
         }
-        Command::Export {
-            out_dir,
-            visibility,
-        } => commands::export::run_export(&cli.docs_dir, &out_dir, visibility),
-        Command::LeakGate {
-            bundle,
-            check_tier3,
-        } => commands::leak_gate::run_leak_gate(&bundle, check_tier3),
         Command::Effective(args) => commands::effective::run_effective(&cli.docs_dir, args),
         Command::Skill {
             action:

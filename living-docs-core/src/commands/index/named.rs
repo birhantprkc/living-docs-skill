@@ -1,10 +1,9 @@
 //! Listing body for a Named-identity directory (ADR 0036): one row per
 //! view file, sorted by the C4/arc42 zoom rank of its `kind` frontmatter
 //! (`doc_type::VIEW_KIND_ORDER`), then filename; an absent or unknown kind
-//! ranks after every listed one. Reuses the parent module's visibility
-//! semantics (default-deny under a filter).
+//! ranks after every listed one.
 
-use super::{first_heading, DEFAULT_VISIBILITY};
+use super::first_heading;
 use crate::doc_type::VIEW_KIND_ORDER;
 use crate::frontmatter;
 use crate::store::DocStore;
@@ -15,17 +14,14 @@ struct View {
     filename: String,
     title: String,
     kind: String,
-    visibility: String,
 }
 
 pub(super) fn render_body(
     store: &dyn DocStore,
     docs_dir: &Path,
     type_dir: &Path,
-    visibility_filter: Option<&[String]>,
 ) -> Result<String, String> {
     let mut views = collect_views(store, docs_dir, type_dir)?;
-    views.retain(|view| view_visible(view, visibility_filter));
     views.sort_by(|a, b| (a.rank, &a.filename).cmp(&(b.rank, &b.filename)));
     if views.is_empty() {
         return Ok(String::new());
@@ -58,8 +54,6 @@ fn view_from_path(store: &dyn DocStore, path: &Path) -> Option<View> {
         rank: kind_rank(&kind),
         title: view_title(&contents, &filename),
         kind,
-        visibility: frontmatter::read_scalar_from_str(&contents, "visibility")
-            .unwrap_or_else(|| DEFAULT_VISIBILITY.to_string()),
         filename,
     })
 }
@@ -75,13 +69,6 @@ fn view_title(contents: &str, filename: &str) -> String {
     frontmatter::read_scalar_from_str(contents, "title")
         .or_else(|| first_heading(contents))
         .unwrap_or_else(|| filename.trim_end_matches(".md").to_string())
-}
-
-fn view_visible(view: &View, filter: Option<&[String]>) -> bool {
-    match filter {
-        None => true,
-        Some(allowed) => allowed.contains(&view.visibility),
-    }
 }
 
 fn render_row(view: &View) -> String {
@@ -125,7 +112,7 @@ mod tests {
             ),
         ]);
 
-        let body = render_body(&store, Path::new("/d"), Path::new("/d/architecture"), None)
+        let body = render_body(&store, Path::new("/d"), Path::new("/d/architecture"))
             .expect("render must succeed");
 
         assert_eq!(
@@ -147,7 +134,7 @@ mod tests {
             ),
         ]);
 
-        let body = render_body(&store, Path::new("/d"), Path::new("/d/architecture"), None)
+        let body = render_body(&store, Path::new("/d"), Path::new("/d/architecture"))
             .expect("render must succeed");
 
         let lines: Vec<&str> = body.lines().collect();
@@ -163,29 +150,10 @@ mod tests {
             ("/d/architecture/context.md", view_doc("Context", "context")),
         ]);
 
-        let body = render_body(&store, Path::new("/d"), Path::new("/d/architecture"), None)
+        let body = render_body(&store, Path::new("/d"), Path::new("/d/architecture"))
             .expect("render must succeed");
 
         assert_eq!(body, "* [Context](context.md) - context\n");
-    }
-
-    #[test]
-    fn a_visibility_filter_is_default_deny_for_views() {
-        let store = store_with(vec![(
-            "/d/architecture/context.md",
-            view_doc("Context", "context"),
-        )]);
-        let public_only = vec!["public".to_string()];
-
-        let body = render_body(
-            &store,
-            Path::new("/d"),
-            Path::new("/d/architecture"),
-            Some(&public_only),
-        )
-        .expect("render must succeed");
-
-        assert_eq!(body, "");
     }
 
     #[test]
