@@ -107,13 +107,6 @@ if [[ ! -e "${skill_mds[0]}" ]]; then
 fi
 check_versioned_class required spec-aware "${skill_mds[@]}"
 
-cursor_rule_mdcs=("$root"/.cursor/rules/*.mdc)
-if [[ ! -e "${cursor_rule_mdcs[0]}" ]]; then
-	echo "ERROR: no .cursor/rules/*.mdc files found" >&2
-	exit 1
-fi
-check_versioned_class optional plain "${cursor_rule_mdcs[@]}"
-
 if [[ "$fail" -ne 0 ]]; then
 	echo "Version check FAILED."
 	exit 1

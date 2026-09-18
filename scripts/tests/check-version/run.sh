@@ -60,7 +60,6 @@ set_all_versions() { # set_all_versions <dir> <version>
   printf '%s' "$version" >"$dir/VERSION"
   write_frontmatter "$dir/skills/foo/SKILL.md" "version: \"$version\""
   write_cargo "$dir" "$version"
-  write_frontmatter "$dir/.cursor/rules/foo.mdc" "version: \"$version\""
 }
 
 write_spec_skill() { # write_spec_skill <dir> <skill-md-version> -> a skill dir vendoring reference/SPEC.md at 0.1
@@ -76,7 +75,7 @@ write_spec_skill() { # write_spec_skill <dir> <skill-md-version> -> a skill dir 
 
 new_repo() { # new_repo <name> -> prints the path to a consistent baseline repo at 0.9.0
   local dir="$TMP/$1"
-  mkdir -p "$dir/scripts" "$dir/skills/foo" "$dir/.cursor/rules"
+  mkdir -p "$dir/scripts" "$dir/skills/foo"
   cp "$SCRIPT_SRC" "$dir/scripts/check-version.sh"
   chmod +x "$dir/scripts/check-version.sh"
   set_all_versions "$dir" "0.9.0"
@@ -135,37 +134,13 @@ invoke "$repo"
 assert_exit    "2-exit-1"     1
 assert_out_has "2-names-file" "skills/foo/SKILL.md"
 
-echo "case 5: a .cursor/rules/*.mdc drifted"
-repo="$(new_repo case5)"
-write_frontmatter "$repo/.cursor/rules/foo.mdc" 'version: "0.0.1"'
-invoke "$repo"
-assert_exit    "5-exit-1"     1
-assert_out_has "5-names-file" ".cursor/rules/foo.mdc"
-
-echo "case 6: regression — .cursor/rules/*.mdc with a space before the colon"
+echo "case 6: regression — a skills/*/SKILL.md with a space before the colon"
 repo="$(new_repo case6)"
-write_frontmatter "$repo/.cursor/rules/foo.mdc" 'version : "0.0.1"'
+write_frontmatter "$repo/skills/foo/SKILL.md" 'version : "0.0.1"'
 invoke "$repo"
 assert_exit    "6-exit-1"        1
 assert_out_has "6-malformed"     "MALFORMED"
-assert_out_has "6-names-file"    ".cursor/rules/foo.mdc"
-
-echo "case 7: same malformed form in .cursor/rules and skills/*/SKILL.md, both reported"
-repo="$(new_repo case7)"
-write_frontmatter "$repo/.cursor/rules/foo.mdc" 'version : "0.0.1"'
-write_frontmatter "$repo/skills/foo/SKILL.md" 'version : "0.0.1"'
-invoke "$repo"
-assert_exit     "7-exit-1"       1
-assert_out_has  "7-names-cursor" ".cursor/rules/foo.mdc"
-assert_out_has  "7-names-skill"  "skills/foo/SKILL.md"
-assert_out_count "7-both-reported" "MALFORMED" 2
-
-echo "case 8: .cursor/rules/*.mdc with no version key at all — legitimately skipped"
-repo="$(new_repo case8)"
-write_frontmatter "$repo/.cursor/rules/foo.mdc" ""
-invoke "$repo"
-assert_exit    "8-exit-0"     0
-assert_out_has "8-version-ok" "Version OK"
+assert_out_has "6-names-file"    "skills/foo/SKILL.md"
 
 echo "case 9: skills/*/SKILL.md with no version key at all — required, so it fails"
 repo="$(new_repo case9)"

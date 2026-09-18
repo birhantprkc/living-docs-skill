@@ -103,5 +103,5 @@ build: ## Build the release CLI binary natively (host cargo) -> target/release/l
 	cargo build --release --manifest-path cli/Cargo.toml
 
 cli-install: ## Install the living-docs CLI from the latest GitHub release
-	$(INSTALL)
+	$(INSTALL) cli
 

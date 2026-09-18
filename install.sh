@@ -58,6 +58,7 @@ while [[ $# -gt 0 ]]; do
     --from-source) FROM_SOURCE=1 ;;
     --dir) shift; OVERRIDE_DIR="${1:-}"; [[ -n "$OVERRIDE_DIR" ]] || die "--dir needs a path" ;;
     -h|--help) usage; exit 0 ;;
+    --*) die "unknown option: $1 (try --help)" ;;
     *) die "unsupported target: $1 (cli is the only target; try --help)" ;;
   esac
   shift
