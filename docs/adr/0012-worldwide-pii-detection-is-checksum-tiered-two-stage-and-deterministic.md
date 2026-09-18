@@ -3,10 +3,12 @@ type: ADR
 title: Worldwide PII detection is checksum-tiered, two-stage, and deterministic
 description: Expand the leak gate's PII scan from a minimal set to a worldwide catalog (~70 identifiers, 20+ countries, Brazil in depth), implemented as a two-stage detector (permissive regex then Rust checksum/constraint) with boolean-by-tier severity — Tier 1 checksum-validated always fires, Tier 2 needs a context word, Tier 3 is opt-in — staying pure-Rust and deterministic, never ML.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [brazil, leak-prevention, methodology, pii, privacy, publishing, security]
 timestamp: 2026-07-17T23:58:00Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs effective` for what is in force.
 
 # 0012. Worldwide PII detection is checksum-tiered, two-stage, and deterministic
 

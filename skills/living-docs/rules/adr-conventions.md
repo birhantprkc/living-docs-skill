@@ -31,7 +31,7 @@ See `templates/adr.md` for the skeleton.
 
 10. **Materiality — a decision earns an ADR only when it is expensive to reverse.** The trail is gated by *materiality*, not by *layer*. A decision gets its own ADR when it changes a stated invariant or constitution article, a public contract or schema, a dependency direction or module boundary, or a pinned external dependency — or it reverses a prior ADR. A decision that is cheap to reverse lives in the body of the issue that carries the work, not in an ADR. The one test: **"would a future reader pay to rediscover this?"** A *material* decision shipped without its ADR is an incomplete change; a cheap one recorded in its issue is complete. Do not manufacture a record per layer.
     - *Stays in the issue:* "we'll name the flag `--include-stale`, not `--with-stale`" — a rename, reversible in one commit. Put it in the issue's `## Decision`; do not open an ADR.
-    - *Earns an ADR:* "search defaults to the DB backend, not the fs tree" — changes a dependency direction and a public default many records build on; expensive to reverse. Write the ADR.
+    - *Earns an ADR:* "records live as `.md` in git, never in a database" — fixes the source of truth every verb and every consumer builds on; expensive to reverse. Write the ADR.
 
 ## Anti-patterns
 

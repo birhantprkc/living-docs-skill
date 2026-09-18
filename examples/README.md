@@ -8,7 +8,7 @@ A complete doc trail for a tiny product, so you can see every link of the chain 
 place and copy the shapes into your own project:
 
 ```
-constitution → PRD 0001 → ADR 0002 (+ superseded ADR 0001) + BDR 0001 → issue 0001 → code
+constitution → PRD 0001 → ADR 0002 (+ superseded ADR 0001) → issue 0001 → code
 ```
 
 It also demonstrates three things the prose only asserts:
@@ -19,8 +19,8 @@ It also demonstrates three things the prose only asserts:
   corpus-at-scale "active view" convention).
 - **Doc → implement → verify.** [ADR 0002](linkly/docs/adr/0002-sqlite-store.md) carries a
   *Verification* block, and [issue 0001](linkly/docs/issues/0001-implement-shorten-endpoint.md)
-  binds each acceptance line to a [BDR 0001](linkly/docs/bdr/0001-shorten-and-redirect.md)
-  scenario, so "done" is machine-checkable.
+  states each acceptance line as one test in the regression suite, so "done" is
+  machine-checkable.
 - **Indexed or it doesn't exist.** Every file is reachable from
   [`docs/index.md`](linkly/docs/index.md).
 

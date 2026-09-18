@@ -15,15 +15,15 @@ Keep the reason when it is load-bearing, but state the invariant itself. Never p
 
 The traceability chain (constitution -> PRD -> ADR -> issue -> code) lives in the docs and their indexes, which the doc-gate keeps in sync. Code stays self-explanatory; the docs carry the numbering.
 
-## The ban is enforced by a hook, not a prompt line
+## The ban is enforced by a gate, not a prompt line
 
-Instructions never block; only gates block. Keep the ban honest with a PreToolUse hook that rejects any diff introducing a doc-artifact citation in code, and let the author state the invariant instead:
+Instructions never block; only gates block. Keep the ban honest with a pre-commit or CI step that rejects any diff introducing a doc-artifact citation in code, and let the author state the invariant instead:
 
 ```bash
-# PreToolUse (Edit|Write|MultiEdit): reject a doc-artifact citation in code
-grep -nE '(ADR|PRD|issue)[ -]?[0-9]{4}' "$CHANGED_FILE" && {
+# pre-commit / CI: reject a doc-artifact citation in staged code
+git diff --cached -U0 -- '*.rs' '*.ts' '*.py' | grep -nE '^\+.*(ADR|PRD|issue)[ -]?[0-9]{4}' && {
   echo "state the invariant itself; the docs carry the numbering, not the code" >&2
-  exit 2
+  exit 1
 }
 ```
 

@@ -2,7 +2,7 @@
 type: Issue
 title: Atlas supersede — browser parity with the CLI supersede verb
 description: Adds an Atlas supersede action reusing living-docs-core's existing supersede verb, so superseding via the browser leaves both records linked and conformant identically to the CLI path.
-status: open
+status: closed
 labels: [web, atlas, authoring, database]
 blocked_by: [10, 11]
 timestamp: 2026-07-21T00:00:00Z

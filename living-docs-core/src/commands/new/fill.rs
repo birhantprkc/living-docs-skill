@@ -59,9 +59,7 @@ pub(crate) fn frontmatter_close_index(lines: &[&str]) -> Option<usize> {
 /// Fills the frontmatter `title:` line with `title`, quoted exactly as
 /// [`crate::record::to_canonical_markdown`] would (via
 /// [`format_scalar`]) — never a local quoting rule — so a fresh scaffold's
-/// frontmatter is already a canonical-check fixed point (ADR 0019). Shared
-/// with [`crate::commands::brief::run`], which applies the same fill on top
-/// of its own pre-filled sections.
+/// frontmatter is already a canonical-check fixed point (ADR 0019).
 pub(crate) fn fill_frontmatter_title(content: &str, title: &str) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let Some(close) = frontmatter_close_index(&lines) else {

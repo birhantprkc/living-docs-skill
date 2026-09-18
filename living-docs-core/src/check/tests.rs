@@ -232,7 +232,7 @@ fn run_require_owner_fails_on_an_adr_missing_owner() {
     assert_ne!(format!("{code:?}"), format!("{:?}", ExitCode::SUCCESS));
 }
 
-/// A non-ADR/BDR type (e.g. Issue) missing `owner` never produces a finding,
+/// A type that does not require an owner (e.g. Issue) missing `owner` never produces a finding,
 /// even under `--require-owner`.
 #[test]
 fn run_require_owner_never_flags_a_type_that_does_not_require_owner() {

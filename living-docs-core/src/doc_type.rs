@@ -51,7 +51,7 @@ pub struct DocTypeSpec {
     pub web_creatable: bool,
     pub body_size: BodySize,
     /// The values `living-docs status` is willing to set on this type's
-    /// records, in seed order — `status_vocabulary[0]` is what `new`/`brief`
+    /// records, in seed order — `status_vocabulary[0]` is what `new`
     /// seed a fresh record with (ADR 0029). `Superseded` is deliberately
     /// never a member of any row: it is reachable only through
     /// `living-docs supersede`, which also wires the
@@ -93,9 +93,9 @@ const PRD: DocTypeSpec = DocTypeSpec {
     index_partition: IndexPartition::ActiveSuperseded,
     web_creatable: true,
     body_size: BodySize::Targeted,
-    status_vocabulary: &["Draft", "Accepted", "Implemented"],
+    status_vocabulary: &["Draft", "Accepted", "Implemented", "Deprecated"],
     requires_owner: false,
-    terminal_statuses: &[],
+    terminal_statuses: &["Deprecated"],
 };
 
 const ISSUE: DocTypeSpec = DocTypeSpec {

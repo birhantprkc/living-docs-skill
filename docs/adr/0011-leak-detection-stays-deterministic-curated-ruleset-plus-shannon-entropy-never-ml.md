@@ -3,10 +3,12 @@ type: ADR
 title: Secret and PII detection stays deterministic — a curated ruleset plus Shannon entropy, never ML
 description: The leak gate's secret/PII scan deepens with a curated gitleaks-style regex ruleset, Shannon-entropy detection for generic high-entropy secrets, and deterministic PII (email, phone, CPF, Luhn-checked card), and explicitly rejects ML/NER PII detectors and shelling out to external scanners because both break the determinism boundary.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [leak-prevention, methodology, privacy, publishing, security]
 timestamp: 2026-07-17T23:20:00Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs effective` for what is in force.
 
 # 0011. Secret and PII detection stays deterministic — a curated ruleset plus Shannon entropy, never ML
 

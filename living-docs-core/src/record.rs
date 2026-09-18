@@ -29,7 +29,7 @@ use crate::frontmatter::{
 };
 
 /// The `identity_kind` discriminator for a sequentially numbered doc
-/// (`NNNN`, e.g. adr/bdr/prd/issue).
+/// (`NNNN`, e.g. adr/prd/issue).
 pub const NUMBER_IDENTITY_KIND: &str = "number";
 
 /// The `identity_kind` discriminator for a path-identified OKF concept doc.
@@ -53,7 +53,7 @@ const TYPED_FRONTMATTER_KEYS: [&str; 10] = [
 
 /// The fields extracted from a doc record's raw contents, ready to insert
 /// into the `records` table. `identity_kind` is derived from `doc_type`
-/// (ADR 0007 decision 2): a numbered type (adr/bdr/prd/issue) carries
+/// (ADR 0007 decision 2): a numbered type (adr/prd/issue) carries
 /// `number` — the record's path's filename `NNNN` prefix — with
 /// `concept_id` left `None`; every other type carries `concept_id` — the
 /// record's path with a trailing `.md` removed — with `number` left `None`

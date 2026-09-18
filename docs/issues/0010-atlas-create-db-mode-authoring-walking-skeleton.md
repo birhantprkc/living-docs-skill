@@ -2,7 +2,7 @@
 type: Issue
 title: Atlas create — db-mode authoring walking skeleton (mode guard, revision, transactional write+check)
 description: The first Atlas write-path slice — a per-record revision column, a transactional write+check core verb, the file-mode/db-mode mode guard fitness function, and one browser-authorable create route — so the web front can author its first record end-to-end in db-mode only.
-status: open
+status: closed
 labels: [web, atlas, authoring, database]
 blocked_by: [8]
 timestamp: 2026-07-21T00:00:00Z

@@ -2,7 +2,7 @@
 type: Issue
 title: Bundle identity variant plus the artifact registry row and new artifact scaffolds a directory bundle with README
 description: Add the Bundle identity variant and the artifact registry row, and make new artifact scaffold a directory bundle with a canonical README.
-status: open
+status: closed
 timestamp: 2026-08-07T14:38:11Z
 ---
 

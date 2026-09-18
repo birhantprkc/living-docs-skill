@@ -2,7 +2,7 @@
 type: Issue
 title: Atlas edit — optimistic concurrency via a revision precondition
 description: Adds the Atlas edit route on top of the create-slice's write+check plumbing, enforcing the ADR 0016 single-store optimistic-concurrency contract — a submitted base_revision that has moved is rejected, never silently overwritten or merged.
-status: open
+status: closed
 labels: [web, atlas, authoring, database, concurrency]
 blocked_by: [10]
 timestamp: 2026-07-21T00:00:00Z

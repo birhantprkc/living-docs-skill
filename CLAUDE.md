@@ -7,8 +7,8 @@ rule wins.
 ## What this project is
 
 `living-docs` is the deterministic layer of Living Docs authoring (see `docs/adr/0001`).
-A Rust CLI owns the mechanical, template-fillable steps (`new`, `brief`, `index`,
-`supersede`, `next`, `check`) so the authoring model never pays tokens for them. There is **no LLM
+A Rust CLI owns the mechanical, template-fillable steps (`new`, `set`, `supersede`,
+`index`, `check`, `fmt`, `effective`) so the authoring model never pays tokens for them. There is **no LLM
 inside the tool** — it is deterministic by construction.
 
 ## Hard rules
@@ -66,53 +66,42 @@ Maintainability is a gate, not an advisory. Layout rules for all Rust code:
 
 ## Architecture
 
-Target shape is a **modular monolith** (start here; split into crates only when a real
-seam demands it), organized hexagonally:
+A **modular monolith** organized hexagonally, cut to the authoring core by ADR 0059:
 
 ```
-living-docs-core   — domain + ports (traits), no I/O
-    ports:  DocStore (read/write records) · SearchIndex (FTS5)
+living-docs-core   — domain + the DocStore port, no I/O
 adapters:
-    fs-store   (LocalFileStorage)  → .md files
-    db-store   (DatabaseStorage)   → SQLite normalized + FTS5
+    fs-store       → .md files in git
 fronts:
-    cli   → depends on core, injects an adapter
-    web   → axum server on core, reads the db-store projection
+    cli            → depends on core, injects fs-store
 ```
 
 ### Locked decisions
 
-- **Single repository, Cargo workspace (monorepo).** `core`, `cli`, and `web` share one
-  domain and ship together. They live as members of one workspace, not separate repos:
-  domain changes stay atomic (one PR, one CI), with no cross-repo version coordination.
-  The hexagonal ports are the extraction seam — splitting into separate repos later is
-  cheap *because* the boundary already exists. **Reconsider only when** a front needs an
-  independent deploy cadence or separate ownership; until then, splitting adds release
-  friction for no gain.
-- **Config-selected, mutually exclusive backends (ADR 0003).** `fs-store` and `db-store`
-  sit behind `DocStore`, chosen by config/flag — never both at once. Exactly one backend is
-  authoritative per deployment (file-mode: `.md` in git; db-mode: the database), so there is
-  **no bidirectional sync and no source-of-truth conflict to resolve** — that framing was
-  considered and explicitly rejected. ADR 0016 layers Atlas's write path on top of this:
-  browser authoring is db-mode-only, gated by a per-record `revision` optimistic-concurrency
-  precondition, never a cross-backend merge.
-- **Web = Rust/axum reusing `living-docs-core`.** One language, one build, no model drift
-  between CLI and web. Web reads the db-store projection.
-- **CLI search defaults to the DB backend**, FTS5-powered (`living-docs search "..."`),
-  with an explicit sync step to (re)build the projection from records.
-- **Delivery sequence:** S1 extract `living-docs-core` + ports (refactor, no new behavior)
-  → S2 `db-store` + FTS5 + `search` → S3 web. Each slice is vertical and demoable.
+- **Single repository, Cargo workspace.** `core`, `fs-store` and `cli` share one domain and
+  ship together. The hexagonal port is the extraction seam: a new consumer is born as a
+  workspace front (ADR 0033), never a new repo, until it needs its own deploy cadence.
+- **The `.md` tree in git is the only backend (ADR 0059).** There is no read-model, no
+  search index, no web front and no publication path in the workspace. They return only
+  as workspace fronts when a consumer needs cross-project search or an independently
+  deployed surface; `grep` and `effective --topic` answer the search question until then.
+- **Nine verbs, one gate.** `new`, `set`, `supersede`, `index`, `check`, `fmt`,
+  `effective`, `skill`, `hooks`. `check` at commit and in CI is the only enforcement;
+  there is no write-time hook.
+- **One authoring path.** `new` scaffolds the numbered file with frontmatter and heading
+  filled and every body section as a `{{SLOT: hint}}`; the author edits the body; an
+  unfilled slot fails `check`.
 
 ## Working conventions
 
-- Every architectural fork (adapter sync contract, DB schema, web surface) gets an ADR via
-  `living-docs new adr "..."` **before** code. Decide, then implement.
+- Every decision expensive to reverse (a verb's contract, the registry, a gate) gets an ADR
+  via `living-docs new adr "..."` **before** code. Decide, then implement. A cheap choice
+  lives in the issue that carries the work.
 - `living-docs check` must pass over `docs/` — it is the doc-gate.
-- **Docs authoring is CLI-first and gate-enforced (ADR 0021).** Write ONLY the body below
+- **Docs authoring is CLI-first and gate-enforced (ADR 0059).** Write ONLY the body below
   the closing `---` of a record; numbering, frontmatter, supersede links, and index rows
-  come from `living-docs new`/`status`/`supersede`/`index`/`fmt`. A PreToolUse hook
-  (`.claude/settings.json` → `skills/living-docs/hooks/block-docs-handwrite.sh`) blocks
-  hand-writes under `docs/{adr,bdr,prd,issues}/`, and `.githooks/pre-commit` runs the
-  doc-gate before every commit.
+  come from `living-docs new`/`set`/`supersede`/`index`/`fmt`. `.githooks/pre-commit`
+  runs the doc-gate before every commit and CI runs it again; a hand-written record fails
+  there.
 - Conventional Commits; ticket ID when one exists. No AI attribution in commit messages.
 - Never bypass a failing hook with `--no-verify`; fix the cause.

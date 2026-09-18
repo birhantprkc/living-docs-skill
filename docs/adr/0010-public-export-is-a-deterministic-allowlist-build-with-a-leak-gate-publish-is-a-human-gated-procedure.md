@@ -3,10 +3,12 @@ type: ADR
 title: Public export is a deterministic allowlist build with a leak gate; publish is a human-gated procedure
 description: Split public-export into a deterministic Rust build (allowlist export of public/showcase docs plus a leak gate that fails on any private doc, dangling private link, or secret) and a human-gated clean-history publish that lives in a skill, never in the tool.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [documentation, methodology, publishing, security, visibility]
 timestamp: 2026-07-17T22:36:12Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs effective` for what is in force.
 
 # 0010. Public export is a deterministic allowlist build with a leak gate; publish is a human-gated procedure
 

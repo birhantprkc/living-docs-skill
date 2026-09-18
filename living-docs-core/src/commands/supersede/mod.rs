@@ -160,7 +160,7 @@ fn matches_record_prefix(path: &Path, prefix: &str) -> bool {
 /// the body survive untouched — then routes the whole frontmatter block
 /// through [`crate::record::canonicalize_frontmatter`] before writing it
 /// back once (ADR 0048). Templates ship most supersede keys as an empty line
-/// to fill; when a key is absent entirely (e.g. BDR/PRD templates have no
+/// to fill; when a key is absent entirely (e.g. the PRD template has no
 /// `supersedes` line), the targeted edit inserts it at the block's close,
 /// and the canonical pass then moves it into its fixed position — so an
 /// inserted or changed key always lands in canonical order and `living-docs

@@ -3,10 +3,12 @@ type: ADR
 title: Atlas delete is a soft-delete, scoped to non-decision doc types, refused on inbound relations
 description: Atlas's delete verb (ADR 0016, issue 0013) only applies to issue/concept records, never ADR/BDR/PRD/constitution; it soft-deletes via a deleted_at column rather than a hard row removal, and is refused outright when any inbound relation still points at the record.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [architecture, atlas, authoring, database, delete, web]
 timestamp: 2026-07-21T00:00:00Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs effective` for what is in force.
 
 # 0018. Atlas Delete Is a Soft-Delete, Scoped to Non-Decision Doc Types, Refused on Inbound Relations
 

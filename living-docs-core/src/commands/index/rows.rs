@@ -78,7 +78,7 @@ pub(super) fn render_partitioned(
     body
 }
 
-/// The decision-type axis (adr/bdr/prd): everything not explicitly retired
+/// The decision-type axis (adr/prd): everything not explicitly retired
 /// is still in force, so new decision statuses (e.g. a future vocabulary
 /// entry) default to Active without special-casing each type's own words.
 pub(super) fn is_active_status(status: &str) -> bool {

@@ -3,10 +3,12 @@ type: ADR
 title: Storage backend is config-selected, mutually exclusive, and both modes authoritative
 description: The DocStore backend is chosen by CLI config — file (markdown, default) or database — never both at once; each is authoritative in its mode, so there is no bidirectional sync and no source-of-truth conflict.
 owner: Evaldo Klock
-status: Accepted
+status: Deprecated
 tags: [architecture, configuration, ports, source-of-truth, storage]
 timestamp: 2026-07-16T00:00:00Z
 ---
+
+> **DEPRECATED — do not act on this record.** It has no successor. Run `living-docs effective` for what is in force.
 
 # 0003. Storage backend is config-selected, mutually exclusive, and both modes authoritative
 
