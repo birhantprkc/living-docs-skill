@@ -3,7 +3,7 @@
 //! body to match the status that frontmatter carries — the rest of the
 //! body below the closing `---` stays byte-for-byte unchanged. `target`
 //! accepts either a bundle root (canonicalizes every record under it,
-//! enumerated through the same `DocStore::list` call `check::run` reads
+//! enumerated through the same `DocStore::list` call `check::compile` reads
 //! from — no second directory walker) or a single record path
 //! (canonicalizes only that record). With `check_only`, no record is
 //! written: the command reports which records are pending instead.

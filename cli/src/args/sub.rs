@@ -1,5 +1,6 @@
 //! Second-level subcommand enums for `install`, `uninstall`, and `guide`.
 
+use super::help;
 use crate::skill_install::Harness;
 use clap::{Args, Subcommand};
 use std::path::PathBuf;
@@ -52,9 +53,16 @@ pub(crate) enum InstallCmd {
     /// `--project` scopes the destination to the current project instead of
     /// the harness's global, `$HOME`-rooted directory; `--dir` overrides the
     /// destination outright.
+    #[command(
+        about = help::INSTALL_SKILLS_ABOUT,
+        long_about = None,
+        after_help = help::with_exit_codes(help::INSTALL_SKILLS_EXAMPLES)
+    )]
     Skills {
         #[arg(long, value_enum, default_value = "claude")]
         harness: Harness,
+        /// Scope the destination to the current project's harness directory
+        /// instead of the harness's global, `$HOME`-rooted one.
         #[arg(long)]
         project: bool,
         /// Destination root for the skill directories, overriding both
@@ -74,6 +82,11 @@ pub(crate) enum InstallCmd {
     /// identity rather than appending. The generated commands pin the
     /// resolved `--docs-dir` bundle as a `LIVING_DOCS_BUNDLE=` prefix.
     /// `--dry-run` reports the same plan without writing anything.
+    #[command(
+        about = help::INSTALL_HOOKS_ABOUT,
+        long_about = None,
+        after_help = help::with_exit_codes(help::INSTALL_HOOKS_EXAMPLES)
+    )]
     Hooks {
         /// Target project root; defaults to the current directory.
         #[arg(long)]
@@ -92,6 +105,11 @@ pub(crate) enum UninstallCmd {
     /// unrelated entries and `core.hooksPath` untouched. A clean no-op when
     /// nothing was installed. `--dry-run` reports the same removal plan
     /// without deleting anything.
+    #[command(
+        about = help::UNINSTALL_HOOKS_ABOUT,
+        long_about = None,
+        after_help = help::with_exit_codes(help::UNINSTALL_HOOKS_EXAMPLES)
+    )]
     Hooks {
         /// Target project root; defaults to the current directory.
         #[arg(long)]

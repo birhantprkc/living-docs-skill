@@ -3,7 +3,23 @@
 //! headings, with `effective`/`skill` absent (they are hidden aliases); and
 //! `completions <shell>` prints a non-empty script.
 
+use std::collections::BTreeSet;
 use std::process::{Command, Output};
+
+#[path = "../src/args.rs"]
+#[allow(dead_code)]
+mod args;
+#[path = "../src/output.rs"]
+#[allow(dead_code)]
+mod output;
+#[path = "../src/skill.rs"]
+#[allow(dead_code)]
+mod skill;
+#[path = "../src/skill_install.rs"]
+#[allow(dead_code)]
+mod skill_install;
+
+const NON_VERB_SUBCOMMANDS: [&str; 1] = ["help"];
 
 fn living_docs() -> Command {
     Command::new(env!("CARGO_BIN_EXE_living-docs"))
@@ -32,6 +48,16 @@ fn lists_as_a_command(help: &str, name: &str) -> bool {
         .any(|line| line.trim_start().starts_with(&format!("{name} ")) || line.trim() == name)
 }
 
+fn non_hidden_verb_names() -> BTreeSet<String> {
+    use clap::CommandFactory;
+    args::Cli::command()
+        .get_subcommands()
+        .filter(|sub| !sub.is_hide_set())
+        .map(|sub| sub.get_name().to_string())
+        .filter(|name| !NON_VERB_SUBCOMMANDS.contains(&name.as_str()))
+        .collect()
+}
+
 #[test]
 fn root_help_lists_exactly_the_ten_verbs_plus_completions() {
     let output = living_docs()
@@ -52,6 +78,32 @@ fn root_help_lists_exactly_the_ten_verbs_plus_completions() {
         !lists_as_a_command(&help, "skill"),
         "hidden alias must not be listed:\n{help}"
     );
+}
+
+#[test]
+fn command_tree_non_hidden_subcommands_equal_the_hand_written_verb_list() {
+    let expected: BTreeSet<String> = VERBS.iter().map(|verb| verb.to_string()).collect();
+    let actual = non_hidden_verb_names();
+    assert_eq!(
+        actual, expected,
+        "a verb added to Command but missing from VERBS (or vice versa) must fail here"
+    );
+}
+
+#[test]
+fn every_non_hidden_verb_help_documents_exit_codes() {
+    for verb in non_hidden_verb_names() {
+        let output = living_docs()
+            .args([verb.as_str(), "--help"])
+            .output()
+            .unwrap_or_else(|_| panic!("failed to run living-docs {verb} --help"));
+        let help = stdout_of(&output);
+        assert!(output.status.success(), "{verb} --help got:\n{help}");
+        assert!(
+            help.contains("Exit codes:"),
+            "{verb} --help missing the exit-code table:\n{help}"
+        );
+    }
 }
 
 #[test]

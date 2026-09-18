@@ -17,19 +17,32 @@ pub(crate) enum OutputMode {
 }
 
 impl OutputMode {
-    pub(crate) fn resolve(json: bool, plain: bool, stdout_is_tty: bool) -> Self {
+    /// `color_always` is an explicit `--color=always`, which implies text
+    /// mode the same way `--plain` does — a piped `check --color=always`
+    /// prints colored text, not JSON (ADR 0060).
+    pub(crate) fn resolve(
+        json: bool,
+        plain: bool,
+        color_always: bool,
+        stdout_is_tty: bool,
+    ) -> Self {
         if json {
             return Self::Json;
         }
-        if plain || stdout_is_tty {
+        if plain || color_always || stdout_is_tty {
             Self::Text
         } else {
             Self::Json
         }
     }
 
-    pub(crate) fn from_flags(json: bool, plain: bool) -> Self {
-        Self::resolve(json, plain, std::io::stdout().is_terminal())
+    pub(crate) fn from_flags(json: bool, plain: bool, color: ColorChoice) -> Self {
+        Self::resolve(
+            json,
+            plain,
+            color == ColorChoice::Always,
+            std::io::stdout().is_terminal(),
+        )
     }
 
     pub(crate) fn is_json(self) -> bool {
@@ -116,24 +129,58 @@ mod tests {
 
     #[test]
     fn output_mode_json_flag_wins_regardless_of_tty() {
-        assert_eq!(OutputMode::resolve(true, false, true), OutputMode::Json);
-        assert_eq!(OutputMode::resolve(true, false, false), OutputMode::Json);
+        assert_eq!(
+            OutputMode::resolve(true, false, false, true),
+            OutputMode::Json
+        );
+        assert_eq!(
+            OutputMode::resolve(true, false, false, false),
+            OutputMode::Json
+        );
     }
 
     #[test]
     fn output_mode_plain_flag_wins_regardless_of_tty() {
-        assert_eq!(OutputMode::resolve(false, true, true), OutputMode::Text);
-        assert_eq!(OutputMode::resolve(false, true, false), OutputMode::Text);
+        assert_eq!(
+            OutputMode::resolve(false, true, false, true),
+            OutputMode::Text
+        );
+        assert_eq!(
+            OutputMode::resolve(false, true, false, false),
+            OutputMode::Text
+        );
     }
 
     #[test]
     fn output_mode_defaults_to_json_off_a_tty() {
-        assert_eq!(OutputMode::resolve(false, false, false), OutputMode::Json);
+        assert_eq!(
+            OutputMode::resolve(false, false, false, false),
+            OutputMode::Json
+        );
     }
 
     #[test]
     fn output_mode_defaults_to_text_on_a_tty() {
-        assert_eq!(OutputMode::resolve(false, false, true), OutputMode::Text);
+        assert_eq!(
+            OutputMode::resolve(false, false, false, true),
+            OutputMode::Text
+        );
+    }
+
+    #[test]
+    fn output_mode_explicit_color_always_implies_text_off_a_tty() {
+        assert_eq!(
+            OutputMode::resolve(false, false, true, false),
+            OutputMode::Text
+        );
+    }
+
+    #[test]
+    fn output_mode_json_flag_wins_over_explicit_color_always() {
+        assert_eq!(
+            OutputMode::resolve(true, false, true, false),
+            OutputMode::Json
+        );
     }
 
     #[test]

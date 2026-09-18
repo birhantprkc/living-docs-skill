@@ -3,7 +3,7 @@
 //! `lint-docs.sh`. Every record's content is read through `DocStore::read`,
 //! and the supersede-chain sibling lookup is driven by `all_md`
 //! (`DocStore::list`'s own enumeration) rather than a filesystem re-scan, so
-//! both invariants validate whichever backend `check::run` is given.
+//! both invariants validate whichever backend `check::compile` is given.
 
 use super::{file_name_str, Reporter};
 use crate::doc_type;
@@ -80,7 +80,7 @@ fn check_concept_file(f: &Path, contents: &str, reporter: &mut Reporter) {
 /// A `status: Superseded` record (case-insensitive) needs a non-empty
 /// `superseded_by` resolving to a sibling `<NNNN>-*.md` or `<NNNN>.md`
 /// record. The sibling lookup matches against `all_md` — the same
-/// enumeration `check::run` got from `DocStore::list` — instead of
+/// enumeration `check::compile` got from `DocStore::list` — instead of
 /// re-scanning the directory on disk, so a target the active backend never
 /// enumerates is caught even when a same-named file still exists on disk.
 pub(crate) fn check_supersede_chain(

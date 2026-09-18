@@ -96,7 +96,7 @@ fn set_status_deprecated_adds_the_deprecated_callout() {
     assert!(
         contents.contains(
             "> **DEPRECATED — do not act on this record.** It has no successor. \
-             Run `living-docs effective` for what is in force.\n\n# A Decision"
+             Run `living-docs read` for what is in force.\n\n# A Decision"
         ),
         "got: {contents}"
     );

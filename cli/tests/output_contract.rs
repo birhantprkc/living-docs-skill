@@ -148,3 +148,37 @@ fn unknown_verb_exits_with_code_two() {
     let output = run(&["no-such-verb"]);
     assert_eq!(output.status.code(), Some(2));
 }
+
+#[test]
+fn explicit_color_always_with_plain_emits_ansi_escapes() {
+    let bundle = fixture("09-okf-canonical");
+    let output = run(&[
+        "check",
+        bundle.to_str().unwrap(),
+        "--plain",
+        "--color=always",
+    ]);
+    assert!(
+        stdout_of(&output).contains("\x1b["),
+        "got:\n{}",
+        stdout_of(&output)
+    );
+}
+
+#[test]
+fn stdout_is_empty_when_a_verb_errors() {
+    let output = run(&["check", "/no/such/docs/bundle"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stdout_of(&output).is_empty(),
+        "got:\n{}",
+        stdout_of(&output)
+    );
+}
+
+#[test]
+fn json_and_plain_together_exit_two() {
+    let bundle = fixture("09-okf-canonical");
+    let output = run(&["check", bundle.to_str().unwrap(), "--json", "--plain"]);
+    assert_eq!(output.status.code(), Some(2));
+}

@@ -5,6 +5,13 @@
 
 pub(crate) const EXIT_CODES: &str = "Exit codes:\n  0  success\n  1  a gate or a verb's own check failed\n  2  invalid usage or a missing input";
 
+/// Appends the [`EXIT_CODES`] table to a verb's `Examples:` block, so every
+/// verb's `--help` ends with the same documented table as the root help
+/// (ADR 0060).
+pub(crate) fn with_exit_codes(examples: &str) -> String {
+    format!("{examples}\n\n{EXIT_CODES}")
+}
+
 pub(crate) const NEW_ABOUT: &str =
     "Scaffolds a new record with CLI-owned numbering, frontmatter, and heading.";
 pub(crate) const NEW_EXAMPLES: &str = "Examples:\n  living-docs new adr \"Cache invalidation strategy\"\n  living-docs new issue \"Flaky upload test\" --owner alice@example.com";
@@ -45,6 +52,19 @@ pub(crate) const INSTALL_EXAMPLES: &str =
 
 pub(crate) const UNINSTALL_ABOUT: &str = "Removes what `install hooks` placed.";
 pub(crate) const UNINSTALL_EXAMPLES: &str = "Examples:\n  living-docs uninstall hooks";
+
+pub(crate) const INSTALL_SKILLS_ABOUT: &str =
+    "Places the embedded skill directories into a harness's skills directory.";
+pub(crate) const INSTALL_SKILLS_EXAMPLES: &str = "Examples:\n  living-docs install skills --harness claude\n  living-docs install skills --project";
+
+pub(crate) const INSTALL_HOOKS_ABOUT: &str =
+    "Writes the session-teaching hook and the pre-commit doc-gate into a project.";
+pub(crate) const INSTALL_HOOKS_EXAMPLES: &str =
+    "Examples:\n  living-docs install hooks\n  living-docs install hooks --dir ./my-project";
+
+pub(crate) const UNINSTALL_HOOKS_ABOUT: &str = "Removes what `install hooks` placed.";
+pub(crate) const UNINSTALL_HOOKS_EXAMPLES: &str =
+    "Examples:\n  living-docs uninstall hooks\n  living-docs uninstall hooks --dir ./my-project";
 
 pub(crate) const COMPLETIONS_ABOUT: &str = "Prints a shell completion script.";
 pub(crate) const COMPLETIONS_EXAMPLES: &str = "Examples:\n  living-docs completions bash > /etc/bash_completion.d/living-docs\n  living-docs completions zsh > \"${fpath[1]}/_living-docs\"";

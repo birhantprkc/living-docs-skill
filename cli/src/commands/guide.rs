@@ -28,16 +28,8 @@ struct Target {
 /// 4. Otherwise, the default skill (`living-docs`); the positional, if any,
 ///    is the topic.
 fn resolve_target(args: &GuideArgs) -> Target {
-    if let Some(topic) = &args.topic {
-        let skill = args
-            .skill
-            .clone()
-            .or_else(|| args.topic_or_skill.clone())
-            .unwrap_or_else(|| DEFAULT_SKILL.to_owned());
-        return Target {
-            skill,
-            topic: Some(topic.clone()),
-        };
+    if let Some(target) = resolve_hidden_topic_alias(args) {
+        return target;
     }
     if let Some(skill) = &args.skill {
         return Target {
@@ -57,6 +49,21 @@ fn resolve_target(args: &GuideArgs) -> Target {
         skill: DEFAULT_SKILL.to_owned(),
         topic: args.topic_or_skill.clone(),
     }
+}
+
+/// Case 1 of [`resolve_target`]'s docblock: the hidden `--topic` flag (the
+/// retired `skill <name> --topic <t>` alias shape) wins outright when given.
+fn resolve_hidden_topic_alias(args: &GuideArgs) -> Option<Target> {
+    let topic = args.topic.as_ref()?;
+    let skill = args
+        .skill
+        .clone()
+        .or_else(|| args.topic_or_skill.clone())
+        .unwrap_or_else(|| DEFAULT_SKILL.to_owned());
+    Some(Target {
+        skill,
+        topic: Some(topic.clone()),
+    })
 }
 
 pub(crate) fn run_guide(args: GuideArgs, mode: OutputMode) -> ExitCode {

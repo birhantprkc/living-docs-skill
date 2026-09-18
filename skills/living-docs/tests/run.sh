@@ -62,7 +62,7 @@ run() { # run <name> <expected_exit> <present|absent> <substring>
 run_mermaid() { # run_mermaid <name> <expected_exit> <present|absent> <substring>
 	local name="$1" exp="$2" mode="$3" sub="$4"
 	local out rc
-	out="$("$LIVING_DOCS" check --mermaid-only "$FIXTURES/$name" 2>&1)"
+	out="$("$LIVING_DOCS" check --mermaid-only --plain "$FIXTURES/$name" 2>&1)"
 	rc=$?
 	assert_result "$name" "$exp" "$mode" "$sub" "$rc" "$out"
 }

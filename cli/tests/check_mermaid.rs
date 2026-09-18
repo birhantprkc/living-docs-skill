@@ -26,9 +26,12 @@ fn temp_dir(label: &str) -> PathBuf {
     dir
 }
 
+/// `--plain` forces text mode regardless of the piped, non-TTY stdout a
+/// spawned test process always has, so these assertions exercise the same
+/// text rendering a human at a terminal sees (ADR 0060).
 fn run_mermaid_only(path: &Path) -> Output {
     living_docs()
-        .args(["check", "--mermaid-only", path.to_str().unwrap()])
+        .args(["check", "--mermaid-only", "--plain", path.to_str().unwrap()])
         .output()
         .expect("failed to run living-docs check --mermaid-only")
 }
@@ -96,10 +99,58 @@ fn mermaid_only_with_no_fences_is_clean_without_requiring_docker() {
 
 fn run_mermaid_only_without_docker_on_path(path: &Path) -> Output {
     living_docs()
-        .args(["check", "--mermaid-only", path.to_str().unwrap()])
+        .args(["check", "--mermaid-only", "--plain", path.to_str().unwrap()])
         .env("PATH", "/nonexistent")
         .output()
         .expect("failed to run living-docs check --mermaid-only")
+}
+
+#[test]
+fn mermaid_only_prints_json_when_piped_without_plain() {
+    let output = living_docs()
+        .args([
+            "check",
+            "--mermaid-only",
+            fixture("11-mermaid-invalid").to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to run living-docs check --mermaid-only");
+    let stdout = stdout_of(&output);
+
+    assert_eq!(output.status.code(), Some(1), "got:\n{stdout}");
+    let value: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|err| panic!("expected one JSON document, got {err}:\n{stdout}"));
+    assert_eq!(value["ok"], false, "got:\n{stdout}");
+    assert!(value["diagrams"].is_number(), "got:\n{stdout}");
+    assert!(value["files"].is_number(), "got:\n{stdout}");
+    let errors = value["errors"]
+        .as_array()
+        .unwrap_or_else(|| panic!("expected an errors array, got:\n{stdout}"));
+    assert_eq!(errors.len(), 1, "got:\n{stdout}");
+    assert!(errors[0]["file"].is_string(), "got:\n{stdout}");
+    assert!(errors[0]["line"].is_number(), "got:\n{stdout}");
+    assert!(errors[0]["message"].is_string(), "got:\n{stdout}");
+}
+
+#[test]
+fn mermaid_only_prints_text_with_plain_even_when_piped() {
+    let output = living_docs()
+        .args([
+            "check",
+            "--mermaid-only",
+            "--plain",
+            fixture("11-mermaid-invalid").to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to run living-docs check --mermaid-only");
+    let stdout = stdout_of(&output);
+
+    assert_eq!(output.status.code(), Some(1), "got:\n{stdout}");
+    assert!(stdout.contains("FAIL"), "got:\n{stdout}");
+    assert!(
+        serde_json::from_str::<serde_json::Value>(stdout.trim()).is_err(),
+        "expected text, not JSON, got:\n{stdout}"
+    );
 }
 
 #[test]

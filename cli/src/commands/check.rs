@@ -4,7 +4,7 @@
 
 use crate::output::{self, ColorMode, OutputMode, Style};
 use crate::store::build_store;
-use living_docs_core::check::{self, Report};
+use living_docs_core::check::{self, MermaidReport, Report};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -65,6 +65,48 @@ fn render_verdict(report: &Report, color: ColorMode) {
             "FAIL — {} violation(s) across {} docs.",
             report.violations.len(),
             report.docs
+        );
+        println!("{}", output::paint(color, Style::Red, &line));
+    }
+}
+
+/// `check --mermaid-only [paths...]`: compiles the mermaid-fence report
+/// through `living_docs_core::check::compile_mermaid_only` and renders it as
+/// colored text or JSON per the resolved output mode (ADR 0060), the same
+/// split `run_check` uses for the full report.
+pub(crate) fn run_mermaid_only(paths: &[PathBuf], mode: OutputMode, color: ColorMode) -> ExitCode {
+    let report = check::compile_mermaid_only(paths);
+    if mode.is_json() {
+        println!("{}", output::to_json(&report));
+    } else {
+        render_mermaid_text(&report, color);
+    }
+    if report.ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    }
+}
+
+fn render_mermaid_text(report: &MermaidReport, color: ColorMode) {
+    for error in &report.errors {
+        println!("FAIL {}:{}", error.file, error.line);
+        for line in error.message.lines().take(5) {
+            println!("    {line}");
+        }
+    }
+    println!();
+    if report.ok {
+        let line = format!(
+            "OK: {} diagram(s) across {} file(s).",
+            report.diagrams, report.files
+        );
+        println!("{}", output::paint(color, Style::Green, &line));
+    } else {
+        let line = format!(
+            "FAIL: {} of {} diagram(s) failed to parse.",
+            report.errors.len(),
+            report.diagrams
         );
         println!("{}", output::paint(color, Style::Red, &line));
     }

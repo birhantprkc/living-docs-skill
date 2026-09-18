@@ -9,9 +9,9 @@ use super::Record;
 
 /// The reminder rendered above the `## Superseded` section's rows: a
 /// retired record is history, not something to act on — `living-docs
-/// effective` is the read verb for what is currently in force.
+/// read` is the read verb for what is currently in force.
 pub(super) const RETIRED_SECTION_NOTE: &str = "_History only. Do not act on these records — run \
-     `living-docs effective` for what is in force._";
+     `living-docs read` for what is in force._";
 
 /// Renders `records` along the partition axis `doc_type`'s registry spec
 /// declares: [`IndexPartition::OpenClosed`] for work-in-progress types,

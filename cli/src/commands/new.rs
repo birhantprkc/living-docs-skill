@@ -20,6 +20,7 @@ pub(crate) struct NewArgs<'a> {
 #[derive(Serialize)]
 struct NewJson<'a> {
     path: &'a Path,
+    instruction: &'a str,
 }
 
 pub(crate) fn run_new(
@@ -37,7 +38,13 @@ pub(crate) fn run_new(
     match commands::new::write(build_store().as_ref(), docs_dir, doc_type, title, &opts) {
         Ok(path) => {
             if mode.is_json() {
-                println!("{}", output::to_json(&NewJson { path: &path }));
+                println!(
+                    "{}",
+                    output::to_json(&NewJson {
+                        path: &path,
+                        instruction: BODY_ONLY_INSTRUCTION,
+                    })
+                );
             } else {
                 println!("{}", path.display());
                 println!("{BODY_ONLY_INSTRUCTION}");

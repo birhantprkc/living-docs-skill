@@ -7,9 +7,10 @@
 //! liveness (ADR 0049, `stale-proposed` only) is advisory.
 //!
 //! Every record's content (`records`, `links`) is read through
-//! `DocStore::read`, so `check` validates whichever backend `run` is given.
-//! `index.md`/`log.md` are excluded from the record domain by design (never
-//! synced to `db-store`); `check::graph` reads them straight from disk.
+//! `DocStore::read`, so `check` validates whichever backend `compile` is
+//! given. `index.md`/`log.md` are excluded from the record domain by design
+//! (never synced to `db-store`); `check::graph` reads them straight from
+//! disk.
 
 mod callout;
 pub(crate) mod canonical;
@@ -27,65 +28,17 @@ use crate::store::DocStore;
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(test)]
 use std::process::ExitCode;
 
-/// `check --mermaid-only [paths...]` — validates ONLY the mermaid fences under
-/// `paths`, skipping every other invariant. See `mermaid::run_mermaid_only`.
-pub fn run_mermaid_only(paths: &[PathBuf]) -> ExitCode {
-    mermaid::run_mermaid_only(paths)
-}
+pub use mermaid::{MermaidError, MermaidReport};
 
-pub fn run(store: &dyn DocStore, bundle: &Path) -> ExitCode {
-    run_require_owner(store, bundle, false)
-}
-
-/// `check --require-owner`: promotes a missing `owner` on a doctype whose
-/// registry row requires it from an advisory to an invariant violation.
-/// Every other invariant behaves exactly as [`run`]. A thin plain-text
-/// wrapper over [`compile`], kept for library callers that want `check`'s
-/// original always-text behavior; the CLI front renders `compile`'s
-/// [`Report`] itself so it can also emit JSON (ADR 0060).
-pub fn run_require_owner(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> ExitCode {
-    let Some(report) = compile(store, bundle, require_owner) else {
-        eprintln!(
-            "living-docs check: bundle root not found: {}",
-            bundle.display()
-        );
-        eprintln!(
-            "       run from the repo root, or pass the docs directory: living-docs check path/to/docs"
-        );
-        return ExitCode::from(2);
-    };
-    println!("Living Docs lint — bundle: {}", bundle.display());
-    println!();
-    print_report_text(&report);
-    if report.ok {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::from(1)
-    }
-}
-
-fn print_report_text(report: &Report) {
-    for advisory in &report.advisories {
-        println!("  {:<44} {}", advisory.file, advisory.message);
-    }
-    if !report.advisories.is_empty() {
-        println!();
-    }
-    for violation in &report.violations {
-        println!("  {:<44} {}", violation.file, violation.message);
-    }
-    println!();
-    if report.ok {
-        println!("OK — {} docs, no invariant violations.", report.docs);
-    } else {
-        println!(
-            "FAIL — {} violation(s) across {} docs.",
-            report.violations.len(),
-            report.docs
-        );
-    }
+/// `check --mermaid-only [paths...]` — validates ONLY the mermaid fences
+/// under `paths`, skipping every other invariant, without printing or
+/// choosing an exit code, so the CLI front can render it as colored text or
+/// JSON (ADR 0060). See `mermaid::compile`.
+pub fn compile_mermaid_only(paths: &[PathBuf]) -> MermaidReport {
+    mermaid::compile(paths)
 }
 
 /// Compiles `check`'s full report — every invariant plus the placeholder
@@ -103,10 +56,11 @@ pub fn compile(store: &dyn DocStore, bundle: &Path, require_owner: bool) -> Opti
 
 /// Every invariant `check` validates, without the surrounding
 /// `bundle.is_dir()` guard, header, or verdict rendering — shared by
-/// [`run`] (which prints the verdict) and [`check_violations`] (which
-/// returns the raw list, for a caller like `db_store::DbDocStore::write_checked`
-/// that gates a write on the same invariants without printing anything).
-/// Returns the number of docs `store` enumerated under `bundle`.
+/// [`compile`] (which builds the full [`Report`]) and [`check_violations`]
+/// (which returns the raw list, for a caller like
+/// `db_store::DbDocStore::write_checked` that gates a write on the same
+/// invariants without printing anything). Returns the number of docs
+/// `store` enumerated under `bundle`.
 fn run_all_checks(
     store: &dyn DocStore,
     bundle: &Path,

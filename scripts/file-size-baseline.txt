@@ -6,6 +6,5 @@
 732 cli/tests/index_supersede.rs
 301 cli/tests/new.rs
 304 living-docs-core/src/check/graph.rs
-332 living-docs-core/src/check/mermaid.rs
 324 living-docs-core/src/commands/index.rs
 402 living-docs-core/src/record.rs

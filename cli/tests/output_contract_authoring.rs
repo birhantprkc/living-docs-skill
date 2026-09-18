@@ -86,6 +86,7 @@ fn fmt_json_matches_the_documented_shape() {
 #[derive(Deserialize)]
 struct NewJson {
     path: String,
+    instruction: String,
 }
 
 #[test]
@@ -107,6 +108,13 @@ fn new_json_matches_the_documented_shape() {
         parsed.path.ends_with("adr/0001-a-new-record.md"),
         "got: {}",
         parsed.path
+    );
+    assert!(
+        parsed
+            .instruction
+            .contains("Write ONLY the body below the closing"),
+        "got: {}",
+        parsed.instruction
     );
     assert_eq!(stdout.trim_end().lines().count(), 1);
 }

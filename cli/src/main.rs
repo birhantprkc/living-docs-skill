@@ -1,5 +1,4 @@
 use args::{Command, InstallCmd, UninstallCmd};
-use living_docs_core::check;
 use output::{ColorMode, OutputMode};
 use std::process::ExitCode;
 
@@ -14,7 +13,7 @@ mod store;
 #[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let cli = args::parse();
-    let mode = OutputMode::from_flags(cli.json, cli.plain);
+    let mode = OutputMode::from_flags(cli.json, cli.plain, cli.color);
     let color = ColorMode::from_choice(cli.color);
     let quiet = cli.quiet;
     match cli.command {
@@ -48,7 +47,7 @@ fn main() -> ExitCode {
             paths,
             mermaid_only,
             ..
-        } if mermaid_only => check::run_mermaid_only(&paths),
+        } if mermaid_only => commands::check::run_mermaid_only(&paths, mode, color),
         Command::Check {
             paths,
             require_owner,
