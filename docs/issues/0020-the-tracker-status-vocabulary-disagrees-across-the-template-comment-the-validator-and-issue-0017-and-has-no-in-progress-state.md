@@ -2,7 +2,7 @@
 type: Issue
 title: The tracker status vocabulary disagrees across the template comment, the validator, and issue 0017 -- and has no in-progress state
 description: Unify the tracker status vocabulary — template comment, validator, and docs all say the same thing — and add an in-progress state, closing issue 0017's open half along the way.
-status: Proposed
+status: closed
 timestamp: 2026-08-03T12:04:35Z
 ---
 
@@ -62,3 +62,7 @@ flag / placeholder-format gaps, tracked separately.
 Blocked on a pending ADR that decides the vocabulary. Implementation then touches the
 `status` validator, the per-type template body comment, and any prose in `README.md` /
 `CONTRIBUTING.md` that quotes the old vocabulary.
+
+### Outcome
+
+Closed: ADR 0029 landed the per-doc-type status vocabulary sourced from one DocTypeSpec field, resolving the disagreement this issue was filed over.

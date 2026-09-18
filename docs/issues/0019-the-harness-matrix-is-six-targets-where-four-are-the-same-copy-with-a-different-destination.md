@@ -2,7 +2,7 @@
 type: Issue
 title: The harness matrix is six targets where four are the same copy with a different destination
 description: Decide whether the six harness targets become a registry row the way doc types did, now that placement has moved from shell into Rust and the duplication is visible in one file.
-status: Proposed
+status: closed
 timestamp: 2026-07-30T22:34:18Z
 ---
 
@@ -56,3 +56,7 @@ harness that is latently present in the other three.
 
 Until one of those fires, the duplication is four short functions that are read more often
 than they are edited, and a registry would be the more expensive shape.
+
+### Outcome
+
+Closed: the harness-registry question is superseded by the accessory-packaging cut (installer matrix, plugin, and Copilot copy) coming next, which removes the duplication this issue was weighing.

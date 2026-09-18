@@ -4,7 +4,7 @@ title: Atlas create — db-mode authoring walking skeleton (mode guard, revision
 description: The first Atlas write-path slice — a per-record revision column, a transactional write+check core verb, the file-mode/db-mode mode guard fitness function, and one browser-authorable create route — so the web front can author its first record end-to-end in db-mode only.
 status: closed
 labels: [web, atlas, authoring, database]
-blocked_by: [8]
+blocked_by: [45]
 timestamp: 2026-07-21T00:00:00Z
 ---
 
@@ -12,7 +12,7 @@ timestamp: 2026-07-21T00:00:00Z
 
 Implements the first slice of [ADR 0016](/adr/0016-atlas-makes-the-web-a-db-mode-authoring-front-superseding-web-read-only.md)
 (Atlas is writable only in db-mode) and [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-wiki-over-living-docs-core.md)
-(the Atlas authoring wiki). Builds on [issue 0008](/issues/0008-three-pane-web-shell-with-metadata-panel-and-cmd-k-palette.md)'s
+(the Atlas authoring wiki). Builds on [issue 0045](/issues/0045-three-pane-web-shell-with-metadata-panel-and-cmd-k-palette.md)'s
 read-only three-pane shell. This is the walking skeleton for every Atlas write that
 follows (edit, supersede, delete): once the mode guard, the `revision` column, and one
 transactional write verb exist, the remaining verbs are additive.
@@ -25,7 +25,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 
 ### Context manifest
 
-- Read: `web` crate (routes, `lib.rs`, `views.rs` from issue 0008), `living-docs-core`'s
+- Read: `web` crate (routes, `lib.rs`, `views.rs` from issue 0045), `living-docs-core`'s
   `new` service and `DocStore` port, `db-store`'s `records` schema (ADR 0005/0007).
 - Seams touched: a new `revision` column on `records` (db-store migration), a
   transactional write+`check` wrapper in `living-docs-core` that `new` (CLI) and Atlas's
@@ -73,7 +73,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 - **No second source of truth:** exercising the create route never writes a `.md` under
   the docs dir except via an explicit `export`. — `verify_by: test`
 - `revision` starts at `1` on a freshly created record and is queryable via the existing
-  `record_meta` getter (issue 0008). — `verify_by: test`
+  `record_meta` getter (issue 0045). — `verify_by: test`
 - `living-docs check` and `cargo test --workspace` stay green. — `verify_by: command`
 
 ### Out of scope

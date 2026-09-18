@@ -25,7 +25,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 ### Context manifest
 
 - Read: issue 0010's transactional write+check verb and `revision` column, `web`'s record
-  page (issue 0008) which already renders `record_meta`.
+  page (issue 0045) which already renders `record_meta`.
 - Seams touched: the edit form submits the `revision` it read alongside the body/frontmatter
   edits; the core write verb gains a `base_revision: Option<i64>` precondition — when
   present, the write commits only if the stored revision still matches, else it is

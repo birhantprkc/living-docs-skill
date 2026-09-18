@@ -2,6 +2,10 @@
 
 **Run a project's engineering decisions as a living log — not a write-once artifact that rots.**
 
+> **This is an experiment and it changes constantly.** Verbs and record formats may
+> change between releases without a deprecation window — see ADR 0059 for the latest
+> cut. Pin a release tag rather than tracking `main` if you need stability.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Format: OKF](https://img.shields.io/badge/Format-OKF%20v0.1-blue.svg)](skills/okf-knowledge-format/reference/SPEC.md)
 [![Skill: agent-ready](https://img.shields.io/badge/Skill-agent--ready-success.svg)](#whats-in-the-box)

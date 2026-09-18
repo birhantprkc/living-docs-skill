@@ -36,7 +36,7 @@ Constitution → [PRD 0001](/prd/0001-living-docs-atlas-multi-project-authoring-
 
 - `web`: a supersede action on the record page (author picks or types the superseding
   record's number/path, confirms); on success the page re-renders showing the updated
-  status badge and supersede chain (both already rendered by issue 0008's metadata panel).
+  status badge and supersede chain (both already rendered by issue 0045's metadata panel).
 - No new `living-docs-core` logic — this slice calls the existing supersede verb through
   the same transactional wrapper create/edit use, and surfaces its errors (e.g. "no record
   found for NNNN") in the browser instead of stderr.

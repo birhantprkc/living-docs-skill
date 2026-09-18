@@ -12,7 +12,7 @@ timestamp: 2026-08-14T08:06:39Z
 
 Can the structural architecture views (module layout, containers) be *generated* from a
 model the repository already carries — the typed bi-temporal edge set of
-[ADR 0031](/adr/0031-the-knowledge-graph-is-a-typed-bi-temporal-edge-set-in-the-existing-relational-store.md)
+ADR 0031 (deprecated by ADR 0059)
 and the declared doc–code lineage of
 [ADR 0032](/adr/0032-doc-code-lineage-is-declared-not-inferred.md) — instead of being
 hand-drawn Mermaid that only the no-drift rule keeps honest?

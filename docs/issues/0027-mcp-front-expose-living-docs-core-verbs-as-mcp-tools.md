@@ -14,7 +14,7 @@ timestamp: 2026-08-05T20:33:40Z
 
 ## MCP front: expose living-docs core verbs as MCP tools
 
-Agents are first-class consumers of living docs, and today they consume them by shelling out to the CLI or parsing markdown. An MCP server front makes the read-model and the knowledge graph directly consumable by any MCP-capable agent, with typed tools instead of ad-hoc parsing. Implements [ADR 0033](/adr/0033-new-consumers-are-fronts-in-the-workspace-never-new-repos-until-a-deploy-cadence-or-ownership-trigger-fires.md) (fronts in the workspace); consumes the graph verbs of [ADR 0031](/adr/0031-the-knowledge-graph-is-a-typed-bi-temporal-edge-set-in-the-existing-relational-store.md) as they land. Precedent: Graphiti ships its MCP server from the same repository as its core.
+Agents are first-class consumers of living docs, and today they consume them by shelling out to the CLI or parsing markdown. An MCP server front makes the read-model and the knowledge graph directly consumable by any MCP-capable agent, with typed tools instead of ad-hoc parsing. Implements [ADR 0033](/adr/0033-new-consumers-are-fronts-in-the-workspace-never-new-repos-until-a-deploy-cadence-or-ownership-trigger-fires.md) (fronts in the workspace); consumes the graph verbs of ADR 0031 (deprecated by ADR 0059) as they land. Precedent: Graphiti ships its MCP server from the same repository as its core.
 
 ### Scope
 
