@@ -16,8 +16,8 @@ invariants it preaches.
   `templates/` starter file.
 - **Improve clarity** — tighten wording, fix a broken cross-link, correct a
   diagram that no longer matches the prose.
-- **Add a harness** (a new tool's skills directory) to `living-docs skill
-  install --harness` (`cli/src/skill_install.rs`) and the README's
+- **Add a harness** (a new tool's skills directory) to `living-docs install
+  skills --harness` (`cli/src/skill_install.rs`) and the README's
   Installation section.
 - **Strengthen attribution** — if a practice is credited imprecisely or a source
   is missing, open a PR against `ATTRIBUTION.md` / `references/`. We never want
@@ -45,10 +45,10 @@ Makefile                   build, lint and gate targets, plus a cli-install wrap
 
 Packaging is the CLI (ADR 0028): the release binary is the unit of
 distribution, and every skill/hook placement is a `living-docs` CLI verb —
-`skill install --harness <claude|opencode|codex|pi>` and `hooks install`.
+`install skills --harness <claude|opencode|codex|pi>` and `install hooks`.
 `skills/living-docs/hooks/` is the **single source of truth** for both
 enforcement scripts (`session-context.sh`, `pre-commit`):
-`living-docs hooks install` materializes them from the embedded corpus
+`living-docs install hooks` materializes them from the embedded corpus
 (ADR 0023). Edit them there — never in a materialized copy under a consumer
 project's `.living-docs/hooks/`.
 
@@ -57,12 +57,12 @@ router. The per-doc-type prose lives in `skills/<name>/rules/*.md` (one file per
 topic, plus an optional `skills/<name>/templates/<topic>.md` starter) and is
 **embedded into the `living-docs` binary at compile time** via
 [`rust-embed`](https://crates.io/crates/rust-embed) ([ADR 0014](docs/adr/0014-the-cli-serves-skill-content-from-an-embedded-corpus-harness-skill-md-files-are-slim-stubs.md)).
-A native harness install (`living-docs skill install --harness claude`, etc.)
+A native harness install (`living-docs install skills --harness claude`, etc.)
 only copies the stub to disk; the CLI serves the rest on demand:
 
 ```bash
-living-docs skill <name> --list             # every topic the skill exposes
-living-docs skill <name> --topic <topic>    # that topic's rules (+ template)
+living-docs guide --list                       # every embedded skill and its topics
+living-docs guide <topic> --skill <name>        # that topic's rules (+ template)
 ```
 
 **Adding a topic** needs no code change and no new registration step: drop

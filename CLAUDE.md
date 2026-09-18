@@ -8,7 +8,7 @@ rule wins.
 
 `living-docs` is the deterministic layer of Living Docs authoring (see `docs/adr/0001`).
 A Rust CLI owns the mechanical, template-fillable steps (`new`, `set`, `supersede`,
-`index`, `check`, `fmt`, `effective`) so the authoring model never pays tokens for them. There is **no LLM
+`index`, `check`, `fmt`, `read`) so the authoring model never pays tokens for them. There is **no LLM
 inside the tool** — it is deterministic by construction.
 
 ## Hard rules
@@ -84,10 +84,10 @@ fronts:
 - **The `.md` tree in git is the only backend (ADR 0059).** There is no read-model, no
   search index, no web front and no publication path in the workspace. They return only
   as workspace fronts when a consumer needs cross-project search or an independently
-  deployed surface; `grep` and `effective --topic` answer the search question until then.
-- **Nine verbs, one gate.** `new`, `set`, `supersede`, `index`, `check`, `fmt`,
-  `effective`, `skill`, `hooks`. `check` at commit and in CI is the only enforcement;
-  there is no write-time hook.
+  deployed surface; `grep` and `read --topic` answer the search question until then.
+- **Ten verbs, one gate.** `new`, `set`, `supersede`, `index`, `check`, `fmt`,
+  `read`, `guide`, `install`, `uninstall`. `check` at commit and in CI is the only
+  enforcement; there is no write-time hook.
 - **One authoring path.** `new` scaffolds the numbered file with frontmatter and heading
   filled and every body section as a `{{SLOT: hint}}`; the author edits the body; an
   unfilled slot fails `check`.

@@ -36,20 +36,20 @@ fn corpus_root() -> PathBuf {
 
 fn run_hooks_install(args: &[&str]) -> Output {
     living_docs()
-        .arg("hooks")
         .arg("install")
+        .arg("hooks")
         .args(args)
         .output()
-        .expect("failed to run living-docs hooks install")
+        .expect("failed to run living-docs install hooks")
 }
 
 fn run_hooks_uninstall(args: &[&str]) -> Output {
     living_docs()
-        .arg("hooks")
         .arg("uninstall")
+        .arg("hooks")
         .args(args)
         .output()
-        .expect("failed to run living-docs hooks uninstall")
+        .expect("failed to run living-docs uninstall hooks")
 }
 
 fn run_uninstall(dir: &Path, dry_run: bool) -> Output {
@@ -196,10 +196,10 @@ fn install_defaults_dir_to_the_current_directory_when_omitted() {
     let project = project_with_bundle("default-dir", "docs");
 
     let output = living_docs()
-        .args(["hooks", "install", "--dry-run"])
+        .args(["install", "hooks", "--dry-run"])
         .current_dir(&project)
         .output()
-        .expect("failed to run living-docs hooks install");
+        .expect("failed to run living-docs install hooks");
 
     assert!(output.status.success());
     assert!(!project.join(".living-docs").exists());

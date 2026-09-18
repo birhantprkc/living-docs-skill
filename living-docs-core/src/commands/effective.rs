@@ -1,9 +1,11 @@
-//! `living-docs effective` (ADR 0050, simplified by ADR 0057): the agent-facing
-//! read of the bundle — active records only (superseded/deprecated withheld),
-//! supersede chains collapsed to the head with a one-line lineage, grouped by
-//! kind then number. `--topic` restricts to records mentioning a term
-//! (case-insensitive, title/description/body); `--full` prints bodies instead
-//! of the one-line index. Derived, never committed: the records stay the SSOT.
+//! `living-docs read` (ADR 0050, simplified by ADR 0057, renamed from
+//! `effective` by ADR 0060; the module keeps its original name internally):
+//! the agent-facing read of the bundle — active records only
+//! (superseded/deprecated withheld), supersede chains collapsed to the head
+//! with a one-line lineage, grouped by kind then number. `--topic` restricts
+//! to records mentioning a term (case-insensitive, title/description/body);
+//! `--full` prints bodies instead of the one-line index. Derived, never
+//! committed: the records stay the SSOT.
 
 use crate::record::{self, ExtractedRecord};
 use crate::store::DocStore;

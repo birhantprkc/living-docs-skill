@@ -207,7 +207,7 @@ fn arm_git_hooks_path(project_root: &Path) {
 
 fn warn_hooks_path(detail: &str) {
     eprintln!(
-        "living-docs hooks install: could not set core.hooksPath ({detail}) — the pre-commit doc-gate will not run automatically outside a git repository"
+        "living-docs install hooks: could not set core.hooksPath ({detail}) — the pre-commit doc-gate will not run automatically outside a git repository"
     );
 }
 

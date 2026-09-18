@@ -1,4 +1,4 @@
-use args::{Cli, Command, HooksCmd, SkillCmd};
+use args::{Cli, Command, InstallCmd, UninstallCmd};
 use clap::Parser;
 use living_docs_core::check;
 use std::process::ExitCode;
@@ -50,30 +50,22 @@ fn main() -> ExitCode {
             ..
         } => commands::check::run_check(&cli.docs_dir, paths, require_owner),
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
-        Command::Effective(args) => commands::effective::run_effective(&cli.docs_dir, args),
-        Command::Skill {
+        Command::Read(args) => commands::read::run_read(&cli.docs_dir, args),
+        Command::Guide(args) => commands::guide::run_guide(args),
+        Command::Install {
             action:
-                Some(SkillCmd::Install {
+                InstallCmd::Skills {
                     harness,
                     project,
                     dir,
                     dry_run,
-                }),
-            ..
-        } => skill_install::install(harness, project, dir, dry_run),
-        Command::Skill {
-            name,
-            topic,
-            list,
-            json,
-            plain,
-            ..
-        } => commands::skill_cmd::run_skill(name, topic, list, json, plain),
-        Command::Hooks {
-            cmd: HooksCmd::Install { dir, dry_run },
-        } => commands::hooks_cmd::run_hooks_install(dir, dry_run, &cli.docs_dir),
-        Command::Hooks {
-            cmd: HooksCmd::Uninstall { dir, dry_run },
-        } => commands::hooks_cmd::run_hooks_uninstall(dir, dry_run),
+                },
+        } => commands::install::run_install_skills(harness, project, dir, dry_run),
+        Command::Install {
+            action: InstallCmd::Hooks { dir, dry_run },
+        } => commands::install::run_install_hooks(dir, dry_run, &cli.docs_dir),
+        Command::Uninstall {
+            action: UninstallCmd::Hooks { dir, dry_run },
+        } => commands::uninstall::run_uninstall_hooks(dir, dry_run),
     }
 }

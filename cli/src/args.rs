@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 
 mod sub;
 use std::path::PathBuf;
-pub(crate) use sub::{EffectiveArgs, HooksCmd, SkillCmd};
+pub(crate) use sub::{GuideArgs, InstallCmd, ReadArgs, UninstallCmd};
 
 #[derive(Parser)]
 #[command(
@@ -99,40 +99,33 @@ pub(crate) enum Command {
     /// active records only (superseded/deprecated withheld), supersede chains
     /// collapsed to the head with a one-line lineage, grouped by kind. Read
     /// this instead of `index.md`. `--topic` filters by a substring; `--full`
-    /// prints bodies.
-    Effective(EffectiveArgs),
+    /// prints bodies. Renamed from `effective` by ADR 0060; `effective`
+    /// survives as a hidden alias for one release.
+    #[command(alias = "effective")]
+    Read(ReadArgs),
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
-    /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR
+    /// `SKILL.md` body, or print one topic's detail. `install skills` (ADR
     /// 0028) places the corpus into a harness's skills directory instead.
-    Skill {
-        /// The skill to query, e.g. `living-docs`. Required unless `--list`.
-        name: Option<String>,
-        /// Print only this topic's detail instead of the full `SKILL.md`
-        /// body; maps to a `rules/`/`templates/` basename.
-        #[arg(long)]
-        topic: Option<String>,
-        /// List every embedded skill and its available topics instead of
-        /// printing a single skill's content.
-        #[arg(long)]
-        list: bool,
-        /// Emit minified single-line JSON instead of plain text, for
-        /// consumption by other agents. Only changes the success-output
-        /// shape; errors still print to stderr as plain text. Overrides TTY
-        /// autodetection; mutually exclusive with `--plain`.
-        #[arg(long)]
-        json: bool,
-        /// Force human-readable plain text, overriding TTY autodetection.
-        /// Mutually exclusive with `--json`.
-        #[arg(long, conflicts_with = "json")]
-        plain: bool,
+    /// Renamed from `skill` by ADR 0060; `skill` survives as a hidden alias
+    /// for one release, keeping its old `skill <name> --topic <t>` shape.
+    #[command(alias = "skill")]
+    Guide(GuideArgs),
+    /// Places corpus content into a target project or harness (ADR 0060,
+    /// folding the retired `skill install` and `hooks install` verbs):
+    /// `install skills` places the embedded skill corpus, `install hooks`
+    /// materializes the session-teaching hook and the pre-commit doc-gate.
+    Install {
         #[command(subcommand)]
-        action: Option<SkillCmd>,
+        action: InstallCmd,
     },
-    /// Materializes the corpus hook scripts into a target project (ADR 0023).
-    Hooks {
+    /// Removes what `install` placed (ADR 0060, folding the retired `hooks
+    /// uninstall` verb): `uninstall hooks` removes the session-teaching hook
+    /// and the pre-commit doc-gate. There is no `uninstall skills` — no
+    /// verb wrote a skills-directory pointer to undo.
+    Uninstall {
         #[command(subcommand)]
-        cmd: HooksCmd,
+        action: UninstallCmd,
     },
 }
 
