@@ -24,6 +24,7 @@ one slice per fresh context, starting from the skeleton.
 * [0033 — index renders the Artifacts partition and the db-store projection indexes the artifact README body](0033-index-renders-the-artifacts-partition-and-the-db-store-projection-indexes-the-artifact-readme-body.md) - open
 * [0042 — Test suite duplication exceeds the jscpd five percent ratchet; extract shared helpers across db-store and command tests](0042-test-suite-duplication-exceeds-the-jscpd-five-percent-ratchet-extract-shared-helpers-across-db-store-and-command-tests.md) - open
 * [0043 — Retired-record callout: supersede/set/fmt write it, check enforces it, index rows name the successor, effective reports withheld count, skill rules teach the stop](0043-retired-record-callout-supersede-set-fmt-write-it-check-enforces-it-index-rows-name-the-successor-effective-reports-withheld-count-skill-rules-teach-the-stop.md) - open
+* [0044 — Execute the authoring-core cut: delete db-store, web, export, migrate, --json, seal remnants and the write-gate hook, retire their records and green the gates](0044-execute-the-authoring-core-cut-delete-db-store-web-export-migrate-json-seal-remnants-and-the-write-gate-hook-retire-their-records-and-green-the-gates.md) - in-progress
 
 ## Closed
 
