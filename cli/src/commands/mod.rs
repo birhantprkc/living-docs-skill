@@ -1,6 +1,7 @@
 //! One module per CLI subcommand wrapper, mirroring `living_docs_core::commands` (issue 0028).
 
 pub(crate) mod check;
+pub(crate) mod completions;
 pub(crate) mod fmt;
 pub(crate) mod guide;
 pub(crate) mod index;

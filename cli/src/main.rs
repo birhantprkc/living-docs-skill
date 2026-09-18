@@ -1,5 +1,4 @@
-use args::{Cli, Command, InstallCmd, UninstallCmd};
-use clap::Parser;
+use args::{Command, InstallCmd, UninstallCmd};
 use living_docs_core::check;
 use output::{ColorMode, OutputMode};
 use std::process::ExitCode;
@@ -14,7 +13,7 @@ mod store;
 
 #[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = args::parse();
     let mode = OutputMode::from_flags(cli.json, cli.plain);
     let color = ColorMode::from_choice(cli.color);
     let quiet = cli.quiet;
@@ -73,5 +72,6 @@ fn main() -> ExitCode {
         Command::Uninstall {
             action: UninstallCmd::Hooks { dir, dry_run },
         } => commands::uninstall::run_uninstall_hooks(dir, dry_run),
+        Command::Completions { shell } => commands::completions::run_completions(shell),
     }
 }

@@ -232,10 +232,16 @@ living-docs guide                                  # the full living-docs/SKILL.
 living-docs guide adr                              # just the adr topic's rules (+ template)
 ```
 
-Output is **context-aware**: piped or otherwise non-TTY output defaults to minified
-single-line JSON (the machine-friendly shape another agent parses); a real terminal
-gets human-readable plain text. `--json` and `--plain` override the autodetection in
-either direction and are mutually exclusive.
+Output is **context-aware** — for `guide` and every other data verb (`check`, `read`,
+`index`, `fmt`, `new`, `set`, `supersede`): piped or otherwise non-TTY output defaults
+to minified single-line JSON (the machine-friendly shape another agent parses); a real
+terminal gets human-readable, colored plain text. `--json` and `--plain` override the
+autodetection in either direction and are mutually exclusive; `--color=auto|always|never`
+and the `NO_COLOR` environment variable govern color, and `--quiet` silences
+informational stderr lines. Exit codes are stable and documented in `--help`: `0`
+success, `1` a gate or a verb's own check failed, `2` invalid usage. `living-docs
+completions bash|zsh|fish` prints a shell completion script generated straight from
+the same command tree `--help` reads, so it never drifts (ADR 0060).
 
 ### Any other tool
 

@@ -1,17 +1,40 @@
 //! Clap argument and subcommand definitions for the `living-docs` CLI.
+//!
+//! Docblocks on each verb document its mechanics for a reader of this file;
+//! they are no longer the help text (ADR 0060). `--help` comes from the
+//! explicit `about`/`after_help` attributes in `args/help.rs`, one short
+//! line plus a real `Examples:` block per verb. The root `--help`'s verb
+//! listing is grouped into Authoring (`new`, `set`, `supersede`, `index`,
+//! `fmt`), Gate (`check`), Reading (`read`, `guide`), and Distribution
+//! (`install`, `uninstall`, `completions`) by `help::root_command_template`
+//! — clap's `next_help_heading` groups an individual subcommand's own args,
+//! not sibling subcommands, so it cannot do this grouping itself.
 
 use crate::output::ColorChoice;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
+use clap_complete::Shell;
 
+mod help;
 mod sub;
 use std::path::PathBuf;
 pub(crate) use sub::{GuideArgs, InstallCmd, ReadArgs, UninstallCmd};
+
+/// Parses argv into a [`Cli`], first grafting the hand-grouped root command
+/// listing (`help::root_command_template`) onto the derived [`Command`] —
+/// clap's derive has no hook for a custom template, so this stands in for
+/// [`Cli::parse`].
+pub(crate) fn parse() -> Cli {
+    let command = Cli::command().help_template(help::root_command_template());
+    let matches = command.get_matches();
+    Cli::from_arg_matches(&matches).unwrap_or_else(|err| err.exit())
+}
 
 #[derive(Parser)]
 #[command(
     name = "living-docs",
     version,
-    about = "Deterministic layer of Living Docs authoring. Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs set` / `supersede` / `index`."
+    about = "Deterministic layer of Living Docs authoring. Write ONLY the body below the closing ---. Frontmatter and indexes are CLI-owned: `living-docs set` / `supersede` / `index`.",
+    after_help = help::EXIT_CODES
 )]
 pub(crate) struct Cli {
     /// Root of the docs bundle. Overridable so tests can point at a temp tree.
@@ -42,6 +65,7 @@ pub(crate) struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    #[command(about = help::NEW_ABOUT, long_about = None, after_help = help::NEW_EXAMPLES)]
     New {
         doc_type: String,
         title: String,
@@ -62,35 +86,34 @@ pub(crate) enum Command {
         #[arg(long)]
         owner: Option<String>,
     },
-    Index {
-        doc_type: Option<String>,
-    },
-    /// `old` and `new` each accept a bare `NNNN` or a type-qualified
-    /// `TYPE/NNNN` reference (e.g. `issue/0028`) — required when the same
-    /// number exists in more than one doc-type directory, since a bare
-    /// `NNNN` fails loudly on that collision instead of guessing (issue
-    /// 0029/0025).
-    Supersede {
-        old: String,
-        new: String,
-    },
-    /// Sets one CLI-owned frontmatter field on a record: `status`,
-    /// `description`, or `owner`. `status` is validated against the record's
-    /// own type vocabulary (`Superseded` is reserved for `supersede`);
-    /// `description`/`owner` accept any string. `reference` accepts a bare
-    /// `NNNN` or a type-qualified `TYPE/NNNN` reference (e.g. `issue/0028`),
-    /// required when the same number exists in more than one doc-type
-    /// directory (issue 0029/0025).
+    /// `reference` accepts a bare `NNNN` or a type-qualified `TYPE/NNNN`
+    /// (e.g. `issue/0028`), required on a cross-type number collision (issue
+    /// 0029/0025). `status` is validated against the record's own type
+    /// vocabulary (`Superseded` is reserved for `supersede`).
+    #[command(about = help::SET_ABOUT, long_about = None, after_help = help::SET_EXAMPLES)]
     Set {
         reference: String,
         key: String,
         value: String,
     },
-    /// Validate the mechanical Living Docs invariants on a docs bundle, matching
-    /// `lint-docs.sh`'s `[BUNDLE_ROOT]` argument (default `docs`) rather than the
-    /// global `--docs-dir`. With `--mermaid-only`, `paths` instead lists the
-    /// file(s)/directory(ies) to sweep for ```mermaid``` fences (default:
-    /// git-tracked `*.md`, fixtures dir excluded), matching `lint-mermaid.sh`.
+    /// `old`/`new` accept the same reference shape as `set`'s `reference`.
+    #[command(about = help::SUPERSEDE_ABOUT, long_about = None, after_help = help::SUPERSEDE_EXAMPLES)]
+    Supersede { old: String, new: String },
+    /// With no `doc_type`, regenerates every registered type's index.
+    #[command(about = help::INDEX_ABOUT, long_about = None, after_help = help::INDEX_EXAMPLES)]
+    Index { doc_type: Option<String> },
+    /// `paths` accepts a bundle root or a single record path; fs-backend
+    /// only. `--check` reports what's pending without writing anything.
+    #[command(about = help::FMT_ABOUT, long_about = None, after_help = help::FMT_EXAMPLES)]
+    Fmt {
+        paths: Vec<PathBuf>,
+        #[arg(long)]
+        check: bool,
+    },
+    /// `paths` accepts a bundle root (default `docs`) or, with
+    /// `--mermaid-only`, the file(s)/directory(ies) to sweep for
+    /// ```mermaid``` fences instead.
+    #[command(about = help::CHECK_ABOUT, long_about = None, after_help = help::CHECK_EXAMPLES)]
     Check {
         paths: Vec<PathBuf>,
         /// Validate only ```mermaid``` fences over `paths`, skipping every other invariant.
@@ -101,51 +124,32 @@ pub(crate) enum Command {
         #[arg(long)]
         require_owner: bool,
     },
-    /// Canonicalizes a concept record's frontmatter in place, leaving its
-    /// body untouched — the remediation verb for `check`'s
-    /// canonical-frontmatter invariant. `paths` accepts a bundle root or a
-    /// single record path, matching `check`'s own `[BUNDLE_ROOT]` argument
-    /// rather than the global `--docs-dir`; fs-backend only, since db-mode
-    /// is canonical by construction on export.
-    Fmt {
-        paths: Vec<PathBuf>,
-        /// Reports which records would change without writing any of them;
-        /// exits non-zero when at least one record is pending.
-        #[arg(long)]
-        check: bool,
-    },
-    /// Compiles the agent-facing effective view of the bundle (ADR 0050):
-    /// active records only (superseded/deprecated withheld), supersede chains
-    /// collapsed to the head with a one-line lineage, grouped by kind. Read
-    /// this instead of `index.md`. `--topic` filters by a substring; `--full`
-    /// prints bodies. Renamed from `effective` by ADR 0060; `effective`
-    /// survives as a hidden alias for one release.
-    #[command(alias = "effective")]
+    /// Renamed from `effective` by ADR 0060; `effective` survives as a
+    /// hidden alias for one release.
+    #[command(alias = "effective", about = help::READ_ABOUT, long_about = None, after_help = help::READ_EXAMPLES)]
     Read(ReadArgs),
-    /// Serves skill content embedded in the binary at compile time (ADR
-    /// 0014): list embedded skills and their topics, print a skill's full
-    /// `SKILL.md` body, or print one topic's detail. `install skills` (ADR
-    /// 0028) places the corpus into a harness's skills directory instead.
     /// Renamed from `skill` by ADR 0060; `skill` survives as a hidden alias
-    /// for one release, keeping its old `skill <name> --topic <t>` shape.
-    #[command(alias = "skill")]
+    /// for one release, keeping its old `skill <name> --topic <t>` shape
+    /// (see `crate::commands::guide::resolve_target`).
+    #[command(alias = "skill", about = help::GUIDE_ABOUT, long_about = None, after_help = help::GUIDE_EXAMPLES)]
     Guide(GuideArgs),
-    /// Places corpus content into a target project or harness (ADR 0060,
-    /// folding the retired `skill install` and `hooks install` verbs):
-    /// `install skills` places the embedded skill corpus, `install hooks`
-    /// materializes the session-teaching hook and the pre-commit doc-gate.
+    /// Folds the retired `skill install` verb (ADR 0060).
+    #[command(about = help::INSTALL_ABOUT, long_about = None, after_help = help::INSTALL_EXAMPLES)]
     Install {
         #[command(subcommand)]
         action: InstallCmd,
     },
-    /// Removes what `install` placed (ADR 0060, folding the retired `hooks
-    /// uninstall` verb): `uninstall hooks` removes the session-teaching hook
-    /// and the pre-commit doc-gate. There is no `uninstall skills` — no
-    /// verb wrote a skills-directory pointer to undo.
+    /// Folds the retired `hooks uninstall` verb (ADR 0060). There is no
+    /// `uninstall skills` — no verb wrote a skills-directory pointer to undo.
+    #[command(about = help::UNINSTALL_ABOUT, long_about = None, after_help = help::UNINSTALL_EXAMPLES)]
     Uninstall {
         #[command(subcommand)]
         action: UninstallCmd,
     },
+    /// Generated by `clap_complete` straight from this command tree, so it
+    /// never drifts from the verbs/flags above (ADR 0060).
+    #[command(about = help::COMPLETIONS_ABOUT, long_about = None, after_help = help::COMPLETIONS_EXAMPLES)]
+    Completions { shell: Shell },
 }
 
 #[cfg(test)]
