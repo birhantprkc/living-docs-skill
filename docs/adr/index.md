@@ -32,6 +32,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0057 — Refocus living-docs on a decision log: delete BDR, cut peripheral verbs and check advisories, and consolidate the rule corpus](0057-refocus-living-docs-on-a-decision-log-delete-bdr-cut-peripheral-verbs-and-check-advisories-and-consolidate-the-rule-corpus.md) - Accepted
 * [0058 — Retired records declare themselves: a CLI-written callout in the body, successor-bearing index rows, and effective as the agent read verb](0058-retired-records-declare-themselves-a-cli-written-callout-in-the-body-successor-bearing-index-rows-and-effective-as-the-agent-read-verb.md) - Accepted
 * [0059 — Cut living-docs to the authoring core: remove the database read-model, web front, public export, migrate, JSON authoring and the write-gate hook](0059-cut-living-docs-to-the-authoring-core-remove-the-database-read-model-web-front-public-export-migrate-json-authoring-and-the-write-gate-hook.md) - Accepted
+* [0060 — The CLI surface is a contract: ten intention-named verbs, one output mode per stream, documented exit codes, and help written for an agent](0060-the-cli-surface-is-a-contract-ten-intention-named-verbs-one-output-mode-per-stream-documented-exit-codes-and-help-written-for-an-agent.md) - Accepted
 
 ## Superseded
 
