@@ -1,11 +1,10 @@
-use args::{Cli, Command, DbCmd, HooksCmd, SkillCmd};
+use args::{Cli, Command, HooksCmd, SkillCmd};
 use clap::Parser;
 use living_docs_core::check;
 use std::process::ExitCode;
 
 mod args;
 mod commands;
-mod config;
 mod hooks;
 mod skill;
 mod skill_install;
@@ -23,8 +22,6 @@ fn main() -> ExitCode {
             json,
             owner,
         } => commands::new::run_new(
-            cli.backend,
-            cli.engine,
             &cli.docs_dir,
             &doc_type,
             &title,
@@ -38,24 +35,15 @@ fn main() -> ExitCode {
         Command::Index {
             doc_type,
             visibility,
-        } => {
-            commands::index::run_index(cli.backend, cli.engine, &cli.docs_dir, doc_type, visibility)
-        }
+        } => commands::index::run_index(&cli.docs_dir, doc_type, visibility),
         Command::Supersede { old, new } => {
-            commands::supersede::run_supersede(cli.backend, cli.engine, &cli.docs_dir, &old, &new)
+            commands::supersede::run_supersede(&cli.docs_dir, &old, &new)
         }
         Command::Set {
             reference,
             key,
             value,
-        } => commands::set::run_set(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            &reference,
-            &key,
-            &value,
-        ),
+        } => commands::set::run_set(&cli.docs_dir, &reference, &key, &value),
         Command::Check {
             paths,
             mermaid_only,
@@ -65,38 +53,20 @@ fn main() -> ExitCode {
             paths,
             require_owner,
             ..
-        } => {
-            commands::check::run_check(cli.backend, cli.engine, &cli.docs_dir, paths, require_owner)
-        }
+        } => commands::check::run_check(&cli.docs_dir, paths, require_owner),
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
         Command::Migrate { paths, apply } => {
-            commands::migrate::run_migrate(cli.backend, cli.engine, &cli.docs_dir, paths, apply)
+            commands::migrate::run_migrate(&cli.docs_dir, paths, apply)
         }
         Command::Export {
             out_dir,
             visibility,
-        } => commands::export::run_export(
-            cli.backend,
-            cli.engine,
-            &cli.docs_dir,
-            &out_dir,
-            visibility,
-        ),
+        } => commands::export::run_export(&cli.docs_dir, &out_dir, visibility),
         Command::LeakGate {
             bundle,
             check_tier3,
         } => commands::leak_gate::run_leak_gate(&bundle, check_tier3),
-        Command::Db {
-            cmd: DbCmd::Sync { project },
-        } => commands::db::run_db_sync(&cli.docs_dir, cli.engine, project),
-        Command::Effective(args) => {
-            commands::effective::run_effective(cli.backend, cli.engine, &cli.docs_dir, args)
-        }
-        Command::Search {
-            query,
-            project,
-            strict,
-        } => commands::search::run_search(&query, cli.engine, project, &cli.docs_dir, strict),
+        Command::Effective(args) => commands::effective::run_effective(&cli.docs_dir, args),
         Command::Skill {
             action:
                 Some(SkillCmd::Install {

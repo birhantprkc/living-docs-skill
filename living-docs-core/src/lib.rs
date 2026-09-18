@@ -7,7 +7,6 @@ pub mod callout;
 pub mod check;
 pub mod commands;
 pub mod doc_type;
-pub mod fingerprint;
 pub mod frontmatter;
 pub mod paths;
 pub mod pii;

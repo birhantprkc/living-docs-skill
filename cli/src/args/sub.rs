@@ -1,4 +1,4 @@
-//! Second-level subcommand enums for `hooks`, `skill`, and `db`.
+//! Second-level subcommand enums for `hooks` and `skill`.
 
 use crate::skill_install::Harness;
 use clap::{Args, Subcommand};
@@ -71,20 +71,5 @@ pub(crate) enum SkillCmd {
         /// Report the plan without writing any file.
         #[arg(long)]
         dry_run: bool,
-    },
-}
-
-#[derive(Subcommand)]
-pub(crate) enum DbCmd {
-    /// Rebuild the read-model from every doc `--docs-dir` lists, scoped to
-    /// one named project (ADR 0005, issue 0005 slice 0005-B).
-    Sync {
-        /// The project slug to sync into. Defaults to a slug derived from
-        /// `--docs-dir`: its own directory name, or its parent directory's
-        /// name when the final component is literally `docs` — so every
-        /// repo's `<repo>/docs` bundle gets a project unique to that repo
-        /// instead of every repo colliding on the literal word `docs`.
-        #[arg(long)]
-        project: Option<String>,
     },
 }

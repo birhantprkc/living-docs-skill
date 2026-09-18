@@ -4,12 +4,6 @@
 SHELL := /bin/bash
 INSTALL := ./install.sh
 
-# Dev-env docker-compose (issue 0007): pulls POSTGRES_USER/POSTGRES_DB/PG_PORT from .env
-# into the targets below. The leading `-` makes a missing .env non-fatal (docker compose
-# itself also reads .env for ${VAR} substitution in docker-compose.yml).
--include .env
-export
-
 # Docker-always dev environment for cli/ (Rust). The host is not assumed to have a
 # toolchain — Dockerfile.dev pins the exact version from cli/rust-toolchain.toml, plus
 # rustfmt/clippy/build-essential. Mounts the repo + the host cargo registry (reused
@@ -35,8 +29,7 @@ LIVING_DOCS_BIN := target/release/living-docs
         test-release-gate test-version-gate version \
         test-filesize-gate filesize \
         allow-inventory test-allow-inventory-gate test-install-gate \
-        cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install \
-        up down db-up db-psql db-logs db-test
+        cli-dev-image cli-build cli-test cli-fmt cli-clippy build cli-install
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -162,23 +155,3 @@ build: ## Build the release CLI binary natively (host cargo) -> target/release/l
 cli-install: ## Install the living-docs CLI from the latest GitHub release
 	$(INSTALL) cli
 
-# Provisions the ParadeDB (Postgres + BM25) service from ADR 0004 for local db-mode work.
-# The compose `web` service is deferred to issues 0004/0006.
-
-up: ## Start every compose service in the background
-	docker compose up -d
-
-down: ## Stop compose services (the named paradedb-data volume is kept)
-	docker compose down
-
-db-up: ## Start only the paradedb service and block until its healthcheck passes
-	docker compose up -d --wait paradedb
-
-db-psql: ## Open a psql shell against the composed paradedb service
-	docker compose exec paradedb psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
-
-db-logs: ## Follow the paradedb service logs
-	docker compose logs -f paradedb
-
-db-test: db-up ## Run the db-store dual-engine test suite against the composed DB
-	LIVING_DOCS_TEST_PG_URL=$(DATABASE_URL) cargo test --manifest-path db-store/Cargo.toml

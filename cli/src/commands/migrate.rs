@@ -7,44 +7,21 @@
 //! refuses `--apply`.
 
 use crate::commands::check::check_bundle;
-use crate::config::{Backend, Engine};
-use crate::store::{build_backend_store, report_failure};
+use crate::store::build_store;
 use living_docs_core::{check, commands};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::{fs, io};
 
-pub(crate) fn run_migrate(
-    backend: Backend,
-    engine: Engine,
-    docs_dir: &Path,
-    paths: Vec<PathBuf>,
-    apply: bool,
-) -> ExitCode {
-    let bundle = check_bundle(backend, docs_dir, paths);
+pub(crate) fn run_migrate(docs_dir: &Path, paths: Vec<PathBuf>, apply: bool) -> ExitCode {
+    let bundle = check_bundle(docs_dir, paths);
+    let store = build_store();
     if apply {
-        return run_apply(backend, engine, &bundle);
+        let steps = commands::migrate::plan(store.as_ref(), &bundle);
+        return apply_plan(store.as_ref(), &bundle, &steps);
     }
-    match build_backend_store(backend, engine, &bundle) {
-        Ok(store) => commands::migrate::run(store.as_ref(), &bundle),
-        Err(err) => report_failure(&err),
-    }
-}
-
-fn run_apply(backend: Backend, engine: Engine, bundle: &Path) -> ExitCode {
-    if matches!(backend, Backend::Db) {
-        eprintln!(
-            "living-docs migrate --apply: fs backend only — db-mode writes are already transactional per record and have no bundle-wide snapshot (ADR 0040)"
-        );
-        return ExitCode::from(2);
-    }
-    let store = match build_backend_store(backend, engine, bundle) {
-        Ok(store) => store,
-        Err(err) => return report_failure(&err),
-    };
-    let steps = commands::migrate::plan(store.as_ref(), bundle);
-    apply_plan(store.as_ref(), bundle, &steps)
+    commands::migrate::run(store.as_ref(), &bundle)
 }
 
 fn apply_plan(

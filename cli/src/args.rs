@@ -1,11 +1,10 @@
 //! Clap argument and subcommand definitions for the `living-docs` CLI.
 
-use crate::config::{Backend, Engine};
 use clap::{Parser, Subcommand};
 
 mod sub;
 use std::path::PathBuf;
-pub(crate) use sub::{DbCmd, EffectiveArgs, HooksCmd, SkillCmd};
+pub(crate) use sub::{EffectiveArgs, HooksCmd, SkillCmd};
 
 #[derive(Parser)]
 #[command(
@@ -17,24 +16,6 @@ pub(crate) struct Cli {
     /// Root of the docs bundle. Overridable so tests can point at a temp tree.
     #[arg(long, global = true, default_value = "docs")]
     pub(crate) docs_dir: PathBuf,
-
-    /// Which persistence backend `new`/`check`/`export`/`index`/`supersede`
-    /// operate against: the local `.md` tree (`fs`, default) or the
-    /// SQLite/ParadeDB read-model (`db`), scoped to a project derived from
-    /// `--docs-dir` (ADR 0007, issue 0006 slices 0006-D2/0006-E). `index`'s
-    /// output artifact (`index.md`) is always written to the filesystem
-    /// regardless of this flag — only the records feeding it move through
-    /// the active backend (ADR 0007: `index.md` is fs-only).
-    #[arg(long, global = true, value_enum, default_value = "fs")]
-    pub(crate) backend: Backend,
-
-    /// Which database engine `db sync`/`search`, and any `--backend db`
-    /// authoring command, connects to: ParadeDB via `$DATABASE_URL` (the
-    /// default, ADR 0004) or the local embedded SQLite/FTS5 file (`sqlite`,
-    /// opt-in, falling back to `.living-docs/index.db` when `$DATABASE_URL`
-    /// is unset).
-    #[arg(long, global = true, value_enum, default_value = "paradedb")]
-    pub(crate) engine: Engine,
 
     #[command(subcommand)]
     pub(crate) command: Command,
@@ -144,13 +125,6 @@ pub(crate) enum Command {
         #[arg(long, value_delimiter = ',')]
         visibility: Option<Vec<String>>,
     },
-    /// Operate on the derived read-model — ParadeDB via `$DATABASE_URL` by
-    /// default (ADR 0004), or the local embedded SQLite/FTS5 file with
-    /// `--engine sqlite`.
-    Db {
-        #[command(subcommand)]
-        cmd: DbCmd,
-    },
     /// Fails closed when an exported bundle leaks a private doc, or a
     /// dangling link to a doc withheld from the bundle (ADR 0010 leak gate,
     /// part 1 — always inspects a materialized filesystem bundle, regardless
@@ -169,19 +143,6 @@ pub(crate) enum Command {
     /// this instead of `index.md`. `--topic` filters by a substring; `--full`
     /// prints bodies.
     Effective(EffectiveArgs),
-    /// Full-text search the derived read-model, ranked best-match-first.
-    Search {
-        query: String,
-        /// Narrow results to one project's slug. Omitted spans every
-        /// project, labeling each hit by the project it belongs to (ADR
-        /// 0005, issue 0005 slice 0005-C1).
-        #[arg(long)]
-        project: Option<String>,
-        /// Refuse with a nonzero exit and no results when the projection is
-        /// behind the records tree, instead of the default stderr warning.
-        #[arg(long)]
-        strict: bool,
-    },
     /// Serves skill content embedded in the binary at compile time (ADR
     /// 0014): list embedded skills and their topics, print a skill's full
     /// `SKILL.md` body, or print one topic's detail. `skill install` (ADR
