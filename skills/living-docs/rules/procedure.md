@@ -8,13 +8,12 @@ the CLI's job; the judgment prose (the "why") is yours to write directly in the 
 - **Use the CLI verb for every mechanical step — never hand-do it:** `new` (number + frontmatter
   + skeleton), `set <ref> <key> <value>` (set `status`/`description`/`owner`), `supersede <old>
   <new>` (links + status on both records), `index` (regenerate the listing), `check` (the gate,
-  must pass), `export` (byte-stable materialization).
-- **Prefer authoring the whole record in one call: `new <type> "<title>" --json '{...}'`
-  (ADR 0038).** The payload keys are the type template's own section headings (plus `Intro`);
-  unknown keys are refused listing the valid ones. One call, no scaffold read-back, no
-  boilerplate tokens — and several records batch as chained `new --json` calls. The
-  scaffold-then-edit path stays valid when you genuinely need to think inside the file, but fill
-  every `{{PLACEHOLDER}}` before committing — `check` fails on an unfilled slot.
+  must pass).
+- **One authoring path: scaffold, then edit the body.** `new` writes the numbered file with
+  its frontmatter and title heading filled and every body section as a `{{SLOT: hint}}`
+  placeholder; the hint says what belongs in the slot and vanishes with it. Replace every slot
+  with prose, or delete the slot and its heading when the record has nothing to say there —
+  `check` fails on any slot left behind.
 - **Write the body prose directly.** The CLI must never author rationale, so there is no
   paragraph-editing verb — editing the body is a normal edit, not a process error. What *is* a
   process error is hand-numbering a doc, hand-writing frontmatter, hand-maintaining an index row,

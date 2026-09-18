@@ -43,3 +43,12 @@ fn a_fully_filled_record_is_clean() {
     )]);
     assert!(violations(&store).is_empty());
 }
+
+#[test]
+fn a_placeholder_carrying_its_hint_is_still_a_violation() {
+    let store = store_of(&[(
+        "docs/adr/0001-x.md",
+        "---\ntype: ADR\n---\n\n## Context\n\n{{CONTEXT: the forces at play; no solution here, <= 80 words}}\n",
+    )]);
+    assert_eq!(violations(&store).len(), 1);
+}

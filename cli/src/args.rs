@@ -36,11 +36,6 @@ pub(crate) enum Command {
         /// orders the generated architecture index.
         #[arg(long)]
         kind: Option<String>,
-        /// Section-keyed JSON body (ADR 0038): keys must match the type
-        /// template's headings (plus `Intro`); `-` reads stdin, `@file`
-        /// reads a file. One call authors the whole record.
-        #[arg(long)]
-        json: Option<String>,
         /// Seeds the frontmatter `owner:` field with this value — a
         /// free-form name or email, inserted in canonical position
         /// immediately after `description:`. Never validated against an
@@ -99,16 +94,6 @@ pub(crate) enum Command {
         /// exits non-zero when at least one record is pending.
         #[arg(long)]
         check: bool,
-    },
-    /// Read-only adaptation advisor (ADR 0037): prints an ordered plan of
-    /// RUN (mechanical), AUTHOR (judgment) or ADOPT (bootstrap) steps.
-    Migrate {
-        paths: Vec<PathBuf>,
-        /// Apply the mechanical subset transactionally (ADR 0040):
-        /// snapshot, run `index` + `fmt`, roll back byte-for-byte on any
-        /// failure or check regression. AUTHOR steps are never applied.
-        #[arg(long)]
-        apply: bool,
     },
     /// Compiles the agent-facing effective view of the bundle (ADR 0050):
     /// active records only (superseded/deprecated withheld), supersede chains

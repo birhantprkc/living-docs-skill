@@ -1,13 +1,12 @@
 use crate::commands::next::next_number_from_store;
 
 mod fill;
-mod sections;
 use crate::doc_type::{self, Identity};
 use crate::paths;
 use crate::store::DocStore;
 pub(crate) use fill::{
     fill_frontmatter, fill_frontmatter_description, fill_frontmatter_kind, fill_frontmatter_owner,
-    fill_frontmatter_title,
+    fill_frontmatter_title, fill_heading,
 };
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -18,13 +17,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// text and the `living-docs` SKILL.md stub, so an agent meets the
 /// CLI-owns-the-mechanics rule at the moment it authors a record.
 /// Optional authoring inputs for `new` beyond the type and title:
-/// `--description`, `--kind` (ADR 0036) and the `--json` sections payload
-/// (ADR 0038).
+/// `--description`, `--kind` (ADR 0036) and `--owner`.
 #[derive(Default)]
 pub struct NewOptions<'a> {
     pub description: Option<&'a str>,
     pub kind: Option<&'a str>,
-    pub sections_json: Option<&'a str>,
     /// Seeds the frontmatter `owner:` field with this value, inserted in its
     /// canonical position immediately after `description:`. `None` leaves
     /// the record with no `owner:` field at all.
@@ -78,12 +75,7 @@ fn plan_at(
     let filled = fill_frontmatter_description(&filled, opts.description);
     let filled = fill_frontmatter_owner(&filled, opts.owner);
     let filled = fill_frontmatter_kind(&filled, spec, opts.kind)?;
-    let filled = match opts.sections_json {
-        Some(payload) => {
-            sections::fill_sections(&filled, payload, title, numbered_prefix_of(&target_path))?
-        }
-        None => filled,
-    };
+    let filled = fill_heading(&filled, title, numbered_prefix_of(&target_path));
     Ok((target_path, filled))
 }
 

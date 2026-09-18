@@ -129,7 +129,7 @@ fn new_fills_type_status_and_an_iso8601_timestamp() {
 }
 
 #[test]
-fn new_preserves_body_placeholders_and_guidance_comments_verbatim() {
+fn new_preserves_body_placeholders_and_their_hints_verbatim() {
     let docs = temp_dir("placeholders");
 
     let output = run_new(&docs, "adr", "Preserve Body");
@@ -137,11 +137,9 @@ fn new_preserves_body_placeholders_and_guidance_comments_verbatim() {
     assert!(output.status.success());
     let contents = fs::read_to_string(docs.join("adr/0001-preserve-body.md")).unwrap();
 
-    assert!(contents.contains(
-        "<!-- Status lives in frontmatter (`status`), not a body line. Settable values are"
-    ));
-    assert!(contents.contains("exactly Proposed | Accepted | Deprecated."));
-    assert!(contents.contains("`living-docs supersede` sets Superseded on the old record"));
+    assert!(contents.contains("{{CONTEXT: the forces at play"));
+    assert!(contents.contains("{{REJECTED_ALTERNATIVES:"));
+    assert!(!contents.contains("<!--"));
     assert!(contents.contains("We will {{DECISION}}."));
     assert!(contents.contains("status: Proposed"));
 

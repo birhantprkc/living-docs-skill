@@ -5,7 +5,6 @@ pub(crate) mod effective;
 pub(crate) mod fmt;
 pub(crate) mod hooks_cmd;
 pub(crate) mod index;
-pub(crate) mod migrate;
 pub(crate) mod new;
 pub(crate) mod set;
 pub(crate) mod skill_cmd;

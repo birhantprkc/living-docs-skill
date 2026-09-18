@@ -19,7 +19,6 @@ fn main() -> ExitCode {
             title,
             description,
             kind,
-            json,
             owner,
         } => commands::new::run_new(
             &cli.docs_dir,
@@ -28,7 +27,6 @@ fn main() -> ExitCode {
             &commands::new::NewArgs {
                 description: description.as_deref(),
                 kind: kind.as_deref(),
-                json: json.as_deref(),
                 owner: owner.as_deref(),
             },
         ),
@@ -52,9 +50,6 @@ fn main() -> ExitCode {
             ..
         } => commands::check::run_check(&cli.docs_dir, paths, require_owner),
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check),
-        Command::Migrate { paths, apply } => {
-            commands::migrate::run_migrate(&cli.docs_dir, paths, apply)
-        }
         Command::Effective(args) => commands::effective::run_effective(&cli.docs_dir, args),
         Command::Skill {
             action:

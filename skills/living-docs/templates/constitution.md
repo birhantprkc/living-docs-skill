@@ -8,17 +8,9 @@ timestamp: <ISO 8601 datetime>
 
 # Product Constitution
 
-<!-- Status lives in frontmatter (`status`: Draft | Ratified | Amended). This file is
-     singular — no NNNN prefix, and it is NOT listed as a concept in any index.md.
-     It is the bundle's root of trace. -->
-
 ## Product
 
-<!-- What the product is, in one or two sentences. State the core value it delivers and
-     who it delivers it to. This is the north star -- every PRD and ADR must be consistent
-     with it. -->
-
-{{PRODUCT}}
+{{PRODUCT: what the product is and who it serves, in one or two sentences; every PRD and ADR must be consistent with it}}
 
 ## Scope Boundaries
 
@@ -28,9 +20,7 @@ timestamp: <ISO 8601 datetime>
 
 **Explicitly out of scope:**
 
-<!-- Name the tempting-but-excluded capability so it cannot silently creep in. -->
-
-- {{OUT_OF_SCOPE}}
+- {{OUT_OF_SCOPE: the tempting-but-excluded capability, named so it cannot creep in}}
 
 **Phase boundaries:**
 
@@ -50,23 +40,12 @@ erDiagram
     ENTITY_A ||--o{ ENTITY_B : "relationship"
 ```
 
-<!-- The core entities and their relationships. This section fixes what the rest of the
-     system is built on. Represent structure as a Mermaid entity-relationship or class
-     diagram. Describe cardinalities and invariants in prose below the diagram. -->
-
-{{DATA_MODEL}}
+{{DATA_MODEL: the core entities, cardinalities and invariants the diagram above shows}}
 
 ## Non-negotiables
 
-<!-- Constraints that hold regardless of feature set, phase, or implementation choice.
-     Examples: compliance requirements, security invariants, performance floors, user-trust
-     commitments. Each item should be falsifiable -- someone could check the running system
-     and say "violated" or "holds". -->
-
-- {{NON_NEGOTIABLE}}
+- {{NON_NEGOTIABLE: a constraint that holds regardless of feature or phase, falsifiable against the running system}}
 
 ## Amendment Log
 
-<!-- Append amendments here; do not edit sections above once ratified.            -->
-<!-- Format: ## Amendment N — YYYY-MM-DD: {{SUMMARY}}                              -->
-<!-- A directory-level log.md (OKF §7) MAY also record amendment history.          -->
+Amendments are appended here as `## Amendment N — YYYY-MM-DD: summary`; the sections above are not edited once ratified.

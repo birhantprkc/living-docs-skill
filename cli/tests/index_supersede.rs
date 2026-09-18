@@ -595,12 +595,8 @@ fn supersede_wires_status_and_both_links_bidirectionally() {
         "body lost: {new_contents}"
     );
     assert!(
-        old_contents.contains("Proposed | Accepted | Deprecated"),
-        "comment lost: {old_contents}"
-    );
-    assert!(
-        old_contents.contains("`living-docs supersede` sets Superseded"),
-        "comment lost: {old_contents}"
+        old_contents.contains("{{REJECTED_ALTERNATIVES:"),
+        "hinted slot lost: {old_contents}"
     );
 
     let _ = fs::remove_dir_all(&docs);
@@ -668,12 +664,8 @@ fn status_sets_the_field_and_preserves_body_and_other_frontmatter() {
         "body lost: {contents}"
     );
     assert!(
-        contents.contains("Proposed | Accepted | Deprecated"),
-        "comment lost: {contents}"
-    );
-    assert!(
-        contents.contains("`living-docs supersede` sets Superseded"),
-        "comment lost: {contents}"
+        contents.contains("{{REJECTED_ALTERNATIVES:"),
+        "hinted slot lost: {contents}"
     );
 
     let _ = fs::remove_dir_all(&docs);

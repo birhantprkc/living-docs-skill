@@ -57,35 +57,6 @@ fn strip_inline_code_spans(body: &str) -> String {
         .into_owned()
 }
 
-/// ADR 0029 fitness function: a numbered type's template comment must
-/// name every one of that type's own `status_vocabulary` values and
-/// mention Superseded, so the registry and the template comment cannot
-/// silently drift apart. Constitution is skipped -- its vocabulary is
-/// empty and out of scope (ADR 0029) -- and so is every Named type:
-/// a view carries no status and is never superseded (ADR 0036).
-#[test]
-fn template_comments_agree_with_their_own_status_vocabulary() {
-    for spec in DOC_TYPES {
-        if !matches!(spec.identity, Identity::Numbered { .. }) {
-            continue;
-        }
-
-        for value in spec.status_vocabulary {
-            assert!(
-                spec.template.contains(*value),
-                "{} template is missing status_vocabulary value {value:?}",
-                spec.token
-            );
-        }
-
-        assert!(
-            spec.template.to_lowercase().contains("uperseded"),
-            "{} template must mention Superseded via `living-docs supersede`",
-            spec.token
-        );
-    }
-}
-
 /// ADR 0030 fitness function: a template's body may no longer carry the legacy
 /// angle-bracket-with-embedded-space placeholder (e.g. `<the choice, in active
 /// voice -- specific and testable>`) that made programmatic edits fragile
