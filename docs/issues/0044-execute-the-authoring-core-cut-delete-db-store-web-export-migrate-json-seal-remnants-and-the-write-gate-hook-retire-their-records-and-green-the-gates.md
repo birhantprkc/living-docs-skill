@@ -2,7 +2,7 @@
 type: Issue
 title: "Execute the authoring-core cut: delete db-store, web, export, migrate, --json, seal remnants and the write-gate hook, retire their records and green the gates"
 description: Implementation slices for the authoring-core cut, one commit per slice, ending with a green CI and the retired records deprecated or closed
-status: in-progress
+status: closed
 timestamp: 2026-09-18T08:26:00Z
 ---
 
