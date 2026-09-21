@@ -12,6 +12,7 @@ one slice per fresh context, starting from the skeleton.
 * [0024 — Doc-code pairing for living-docs: commit trailers, covers-based drift detection, and executable acceptance](0024-doc-code-pairing-for-living-docs-commit-trailers-covers-based-drift-detection-and-executable-acceptance.md) - open
 * [0027 — MCP front: expose living-docs core verbs as MCP tools](0027-mcp-front-expose-living-docs-core-verbs-as-mcp-tools.md) - open
 * [0042 — Test suite duplication exceeds the jscpd five percent ratchet; extract shared helpers across db-store and command tests](0042-test-suite-duplication-exceeds-the-jscpd-five-percent-ratchet-extract-shared-helpers-across-db-store-and-command-tests.md) - open
+* [0047 — set accepts title so a Proposed record can be retitled without hand-editing frontmatter](0047-set-accepts-title-so-a-proposed-record-can-be-retitled-without-hand-editing-frontmatter.md) - open
 
 ## Closed
 
