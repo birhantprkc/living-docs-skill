@@ -2,7 +2,7 @@
 type: Issue
 title: "MCP front: expose the ten authoring verbs as MCP tools over the .md tree"
 description: A read-only MCP server crate in the workspace exposing search/show/list and, as they land, the graph verbs — agents consume the read-model through typed tools instead of parsing markdown.
-status: open
+status: closed
 timestamp: 2026-08-05T20:33:40Z
 ---
 
@@ -13,6 +13,8 @@ timestamp: 2026-08-05T20:33:40Z
      published tracker body — strip the frontmatter when publishing. -->
 
 ## MCP front: expose the ten authoring verbs as MCP tools over the .md tree
+
+**Closed 2026-09-22 — won't do.** MCP is not the right surface for living-docs. An agent already drives the CLI through its shell, and the CLI is the agent contract ([ADR 0060](/adr/0060-the-cli-surface-is-a-contract-ten-intention-named-verbs-one-output-mode-per-stream-documented-exit-codes-and-help-written-for-an-agent.md)); an MCP front would duplicate that surface without a consumer that needs it. The body below is kept as the record of what was proposed.
 
 Agents are first-class consumers of living docs, and today they consume them by shelling out to the CLI or parsing markdown. An MCP server front makes the bundle directly consumable by any MCP-capable agent, with typed tools and typed errors instead of exit codes and stdout parsing. Implements [ADR 0033](/adr/0033-new-consumers-are-fronts-in-the-workspace-never-new-repos-until-a-deploy-cadence-or-ownership-trigger-fires.md) (a new consumer is born as a workspace front). Precedent: Graphiti ships its MCP server from the same repository as its core.
 
