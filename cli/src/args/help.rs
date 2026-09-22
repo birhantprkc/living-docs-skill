@@ -17,8 +17,8 @@ pub(crate) const NEW_ABOUT: &str =
 pub(crate) const NEW_EXAMPLES: &str = "Examples:\n  living-docs new adr \"Cache invalidation strategy\"\n  living-docs new issue \"Flaky upload test\" --owner alice@example.com";
 
 pub(crate) const SET_ABOUT: &str =
-    "Sets one CLI-owned frontmatter field: status, description, or owner.";
-pub(crate) const SET_EXAMPLES: &str = "Examples:\n  living-docs set 0012 status Accepted\n  living-docs set adr/0012 owner carol@example.com";
+    "Sets one CLI-owned frontmatter field: status, description, owner, or title.";
+pub(crate) const SET_EXAMPLES: &str = "Examples:\n  living-docs set 0012 status Accepted\n  living-docs set adr/0012 owner carol@example.com\n  living-docs set adr/0012 title \"Cache invalidation is write-through\"";
 
 pub(crate) const SUPERSEDE_ABOUT: &str =
     "Retires an old record in favor of a new one, wiring both link directions.";

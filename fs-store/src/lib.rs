@@ -38,6 +38,13 @@ impl DocStore for FsStore {
         }
         fs::write(path, contents)
     }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::rename(from, to)
+    }
 }
 
 fn collect_md_files(dir: &Path, out: &mut Vec<PathBuf>) {

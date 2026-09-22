@@ -6,6 +6,22 @@ use crate::store::DocStore;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod retitle;
+
+/// What `set` wrote: the record's path — the new one when a retitle renamed
+/// the file — and the other bundle records whose reference to the old
+/// filename was rewritten with it (ADR 0061). `rewritten` is empty for every
+/// key but `title`.
+#[derive(Debug)]
+pub struct Applied {
+    pub path: PathBuf,
+    /// Where the record lived before a retitle renamed it, so the front can
+    /// name the search for the references outside the bundle that no scan of
+    /// the bundle can reach. `None` when nothing was renamed.
+    pub previous: Option<PathBuf>,
+    pub rewritten: Vec<PathBuf>,
+}
+
 pub fn run(
     store: &dyn DocStore,
     docs_dir: &Path,
@@ -23,27 +39,44 @@ pub fn run(
 }
 
 /// Sets one CLI-owned frontmatter field on a record: `status`, `description`,
-/// or `owner`. Record resolution ([`find_record`], accepting a bare `NNNN` or
-/// a type-qualified `TYPE/NNNN` reference) and the frontmatter write
-/// ([`set_frontmatter_fields`]) are shared with `supersede`. Only `status`
-/// carries a vocabulary constraint (validated against the record's own type,
-/// `Superseded` reserved for `supersede`); `description`/`owner` accept any
-/// string, quoted via [`format_scalar`]. Nothing is written when the
-/// reference is unresolvable or the value fails validation. Returns the
-/// written record's path — the CLI front renders this as colored text or
-/// JSON (ADR 0060); [`run`] is the plain-text-always convenience wrapper.
+/// `owner`, or `title`. Record resolution ([`find_record`], accepting a bare
+/// `NNNN` or a type-qualified `TYPE/NNNN` reference) and the frontmatter
+/// write ([`set_frontmatter_fields`]) are shared with `supersede`. Only
+/// `status` carries a vocabulary constraint (validated against the record's
+/// own type, `Superseded` reserved for `supersede`); `description`/`owner`
+/// accept any string, quoted via [`format_scalar`]. `title` is the one key
+/// that reaches beyond the record's frontmatter — it rewrites the heading,
+/// renames the file and repoints every in-bundle reference, and is refused on
+/// a record closed for good (ADR 0061, [`retitle`]). Nothing is written when
+/// the reference is unresolvable or the value fails validation. Returns what
+/// was written — the CLI front renders it as colored text or JSON (ADR 0060);
+/// [`run`] is the plain-text-always convenience wrapper.
 pub fn apply(
     store: &dyn DocStore,
     docs_dir: &Path,
     reference: &str,
     key: &str,
     value: &str,
-) -> Result<PathBuf, String> {
+) -> Result<Applied, String> {
     let path = find_record(store, docs_dir, reference)?;
+    if key == "title" {
+        let retitled = retitle::apply(store, docs_dir, &path, value)?;
+        callout::reconcile(store, &retitled.path)?;
+        let previous = (retitled.path != path).then_some(path);
+        return Ok(Applied {
+            path: retitled.path,
+            previous,
+            rewritten: retitled.rewritten,
+        });
+    }
     let field = resolve_field(store, &path, key, value)?;
     set_frontmatter_fields(store, &path, &[field])?;
     callout::reconcile(store, &path)?;
-    Ok(path)
+    Ok(Applied {
+        path,
+        previous: None,
+        rewritten: Vec::new(),
+    })
 }
 
 fn resolve_field(
@@ -62,7 +95,7 @@ fn resolve_field(
         "description" => Ok(("description", format_scalar(value))),
         "owner" => Ok(("owner", format_scalar(value))),
         other => Err(format!(
-            "'{other}' is not a settable field; expected one of status, description, owner"
+            "'{other}' is not a settable field; expected one of status, description, owner, title"
         )),
     }
 }

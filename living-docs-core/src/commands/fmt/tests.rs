@@ -1,7 +1,4 @@
 use super::*;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::io;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Creates a real, empty temp file/dir tree mirroring `paths` so
@@ -22,56 +19,7 @@ fn real_temp_tree(label: &str, paths: &[&str]) -> PathBuf {
     root
 }
 
-struct MapStore {
-    files: RefCell<BTreeMap<PathBuf, String>>,
-}
-
-impl MapStore {
-    fn seeded(seed: &[(&str, &str)]) -> Self {
-        let files = seed
-            .iter()
-            .map(|(path, contents)| (PathBuf::from(path), (*contents).to_string()))
-            .collect();
-        Self {
-            files: RefCell::new(files),
-        }
-    }
-
-    fn contents(&self, path: &str) -> String {
-        self.files
-            .borrow()
-            .get(&PathBuf::from(path))
-            .cloned()
-            .unwrap_or_default()
-    }
-}
-
-impl DocStore for MapStore {
-    fn list(&self, root: &Path) -> io::Result<Vec<PathBuf>> {
-        Ok(self
-            .files
-            .borrow()
-            .keys()
-            .filter(|path| path.starts_with(root))
-            .cloned()
-            .collect())
-    }
-
-    fn read(&self, path: &Path) -> io::Result<String> {
-        self.files
-            .borrow()
-            .get(path)
-            .cloned()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
-    }
-
-    fn write(&self, path: &Path, contents: &str) -> io::Result<()> {
-        self.files
-            .borrow_mut()
-            .insert(path.to_path_buf(), contents.to_string());
-        Ok(())
-    }
-}
+use crate::test_support::WritableMapStore as MapStore;
 
 #[test]
 fn is_reserved_file_matches_index_and_log_only() {

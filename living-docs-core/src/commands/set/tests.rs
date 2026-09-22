@@ -54,6 +54,15 @@ impl DocStore for MapStore {
             .insert(path.to_path_buf(), contents.to_string());
         Ok(())
     }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        let mut files = self.files.borrow_mut();
+        let contents = files
+            .remove(from)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))?;
+        files.insert(to.to_path_buf(), contents);
+        Ok(())
+    }
 }
 
 const ADR: &str = "---\ntype: ADR\ntitle: A Decision\ndescription: <One sentence — the decision and its scope.>\nstatus: Proposed\nsupersedes:\nsuperseded_by:\n---\n\n# A Decision\n";
@@ -154,8 +163,8 @@ fn set_owner_accepts_any_string() {
 #[test]
 fn set_rejects_an_unknown_field() {
     let store = store();
-    let err = apply(&store, Path::new("/bundle"), "0001", "title", "New")
-        .expect_err("title is not a settable field");
+    let err = apply(&store, Path::new("/bundle"), "0001", "labels", "urgent")
+        .expect_err("labels is not a settable field");
     assert!(err.contains("not a settable field"), "got: {err}");
     assert_eq!(store.contents("/bundle/adr/0001-a-decision.md"), ADR);
 }

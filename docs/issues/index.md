@@ -12,7 +12,6 @@ one slice per fresh context, starting from the skeleton.
 * [0024 — Doc-code pairing for living-docs: commit trailers, covers-based drift detection, and executable acceptance](0024-doc-code-pairing-for-living-docs-commit-trailers-covers-based-drift-detection-and-executable-acceptance.md) - open
 * [0027 — MCP front: expose living-docs core verbs as MCP tools](0027-mcp-front-expose-living-docs-core-verbs-as-mcp-tools.md) - open
 * [0042 — Test suite duplication exceeds the jscpd five percent ratchet; extract shared helpers across db-store and command tests](0042-test-suite-duplication-exceeds-the-jscpd-five-percent-ratchet-extract-shared-helpers-across-db-store-and-command-tests.md) - open
-* [0047 — set accepts title so a Proposed record can be retitled without hand-editing frontmatter](0047-set-accepts-title-so-a-proposed-record-can-be-retitled-without-hand-editing-frontmatter.md) - open
 
 ## Closed
 
@@ -57,3 +56,4 @@ one slice per fresh context, starting from the skeleton.
 * [0044 — Execute the authoring-core cut: delete db-store, web, export, migrate, --json, seal remnants and the write-gate hook, retire their records and green the gates](0044-execute-the-authoring-core-cut-delete-db-store-web-export-migrate-json-seal-remnants-and-the-write-gate-hook-retire-their-records-and-green-the-gates.md) - closed
 * [0045 — Three-pane web shell with metadata panel and Cmd+K palette](0045-three-pane-web-shell-with-metadata-panel-and-cmd-k-palette.md) - done
 * [0046 — Packaging is the CLI: install.sh bootstraps the binary only, and the harness install matrix, the Claude Code plugin channel and the generated Copilot copy leave the repo](0046-packaging-is-the-cli-install-sh-bootstraps-the-binary-only-and-the-harness-install-matrix-the-claude-code-plugin-channel-and-the-generated-copilot-copy-leave-the-repo.md) - closed
+* [0047 — set accepts title so a live record can be retitled without hand-editing frontmatter](0047-set-accepts-title-so-a-live-record-can-be-retitled-without-hand-editing-frontmatter.md) - closed

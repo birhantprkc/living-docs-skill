@@ -48,6 +48,15 @@ impl DocStore for MapStore {
             .insert(path.to_path_buf(), contents.to_string());
         Ok(())
     }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        let mut files = self.files.borrow_mut();
+        let contents = files
+            .remove(from)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))?;
+        files.insert(to.to_path_buf(), contents);
+        Ok(())
+    }
 }
 
 const OLD_RECORD: &str =

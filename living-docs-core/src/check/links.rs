@@ -121,6 +121,10 @@ mod tests {
         fn write(&self, _path: &Path, _contents: &str) -> io::Result<()> {
             Ok(())
         }
+
+        fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
+            Ok(())
+        }
     }
 
     #[test]
