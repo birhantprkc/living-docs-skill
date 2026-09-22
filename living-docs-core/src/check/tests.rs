@@ -69,6 +69,13 @@ impl DocStore for RealFsStore {
         }
         fs::write(path, contents)
     }
+
+    fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::rename(from, to)
+    }
 }
 
 /// Pins the invariant `is_bundle_singleton`'s docblock names: an unlisted

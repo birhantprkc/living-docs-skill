@@ -81,6 +81,7 @@ fn run_all_checks(
     callout::check_callouts(store, &all_md, reporter);
     moved_source::check_moved_source(store, bundle, &all_md, reporter);
     records::check_owner_requirement(store, &all_md, require_owner, reporter);
+    records::check_heading_matches_title(store, &all_md, reporter);
     canonical::check_canonical_frontmatter(store, bundle, &all_md, reporter);
     mermaid::check_bundle(&all_md, reporter);
     size::check_body_size(store, &all_md, reporter);

@@ -20,6 +20,13 @@ pub trait DocStore {
     /// Writes `contents` to the doc record at `path`, creating any missing
     /// parent directories.
     fn write(&self, path: &Path, contents: &str) -> io::Result<()>;
+
+    /// Moves the doc record at `from` to `to` in one operation, creating any
+    /// missing parent directories. A retitle renames a record's file, and a
+    /// two-step write-then-delete can leave two copies of one record in the
+    /// tree, so the port asks the adapter for the move itself (ADR 0061).
+    /// Callers refuse a destination collision before calling.
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()>;
 }
 
 /// Full-text search over doc records. No adapter exists yet — the FTS5-backed

@@ -55,6 +55,15 @@ impl DocStore for MapStore {
             .insert(path.to_path_buf(), contents.to_string());
         Ok(())
     }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        let mut files = self.files.borrow_mut();
+        let contents = files
+            .remove(from)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))?;
+        files.insert(to.to_path_buf(), contents);
+        Ok(())
+    }
 }
 
 fn opts<'a>(description: Option<&'a str>, kind: Option<&'a str>) -> NewOptions<'a> {
@@ -236,6 +245,10 @@ impl DocStore for StaleListingStore {
     }
 
     fn write(&self, _path: &Path, _contents: &str) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
         Ok(())
     }
 }

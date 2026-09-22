@@ -91,7 +91,9 @@ pub(crate) enum Command {
     /// `reference` accepts a bare `NNNN` or a type-qualified `TYPE/NNNN`
     /// (e.g. `issue/0028`), required on a cross-type number collision (issue
     /// 0029/0025). `status` is validated against the record's own type
-    /// vocabulary (`Superseded` is reserved for `supersede`).
+    /// vocabulary (`Superseded` is reserved for `supersede`). `title` also
+    /// rewrites the heading, renames the file to the new slug and repoints
+    /// every in-bundle reference; it is refused on a record closed for good.
     #[command(about = help::SET_ABOUT, long_about = None, after_help = help::with_exit_codes(help::SET_EXAMPLES))]
     Set {
         reference: String,

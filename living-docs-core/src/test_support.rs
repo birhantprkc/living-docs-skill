@@ -5,6 +5,7 @@
 //! copies of the same fixture.
 
 use crate::store::DocStore;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -31,6 +32,76 @@ impl DocStore for MapStore {
     }
 
     fn write(&self, _path: &Path, _contents: &str) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// A [`MapStore`] that keeps what it is told to write, for the command tests
+/// that assert on a record's contents after a verb ran. Mutation lives
+/// behind a `RefCell` so the `DocStore` shared-reference contract holds.
+pub(crate) struct WritableMapStore {
+    files: RefCell<BTreeMap<PathBuf, String>>,
+}
+
+impl WritableMapStore {
+    pub(crate) fn seeded(seed: &[(&str, &str)]) -> Self {
+        Self {
+            files: RefCell::new(
+                seed.iter()
+                    .map(|(path, contents)| (PathBuf::from(path), (*contents).to_string()))
+                    .collect(),
+            ),
+        }
+    }
+
+    /// What the store holds at `path` — the empty string when it holds
+    /// nothing, so a test asserting on absence reads as plainly as one
+    /// asserting on content.
+    pub(crate) fn contents(&self, path: &str) -> String {
+        self.files
+            .borrow()
+            .get(&PathBuf::from(path))
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
+impl DocStore for WritableMapStore {
+    fn list(&self, root: &Path) -> io::Result<Vec<PathBuf>> {
+        Ok(self
+            .files
+            .borrow()
+            .keys()
+            .filter(|path| path.starts_with(root))
+            .cloned()
+            .collect())
+    }
+
+    fn read(&self, path: &Path) -> io::Result<String> {
+        self.files
+            .borrow()
+            .get(path)
+            .cloned()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
+    }
+
+    fn write(&self, path: &Path, contents: &str) -> io::Result<()> {
+        self.files
+            .borrow_mut()
+            .insert(path.to_path_buf(), contents.to_string());
+        Ok(())
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        let mut files = self.files.borrow_mut();
+        let contents = files
+            .remove(from)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))?;
+        files.insert(to.to_path_buf(), contents);
         Ok(())
     }
 }

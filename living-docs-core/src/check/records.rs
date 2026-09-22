@@ -127,6 +127,53 @@ fn check_supersede_target(f: &Path, contents: &str, all_md: &[PathBuf], reporter
     }
 }
 
+/// A record whose heading disagrees with its frontmatter `title` is an
+/// advisory (ADR 0061): `set title` writes both from one value, so a
+/// divergence means one of them was hand-edited. It stays advisory because a
+/// heading shortened by hand is a legitimate historical shape — the finding
+/// names the drift without failing a corpus that predates the rule.
+pub(crate) fn check_heading_matches_title(
+    store: &dyn DocStore,
+    all_md: &[PathBuf],
+    reporter: &mut Reporter,
+) {
+    for f in all_md {
+        if is_reserved(&file_name_str(f)) {
+            continue;
+        }
+        let Ok(contents) = store.read(f) else {
+            continue;
+        };
+        let (Some(title), Some(heading)) = (
+            frontmatter_scalar(&contents, "title"),
+            heading_title(&contents),
+        ) else {
+            continue;
+        };
+        if heading != title {
+            reporter.advise(
+                f,
+                "heading",
+                format!("HEADING '{heading}' disagrees with title '{title}'"),
+            );
+        }
+    }
+}
+
+/// The record's heading text, with the heading marks and the `NNNN.` number
+/// prefix the templates write stripped, so it compares against the bare
+/// frontmatter `title`.
+fn heading_title(contents: &str) -> Option<String> {
+    let body = contents.split("\n---\n").nth(1)?;
+    let heading = body.lines().find(|line| line.starts_with('#'))?;
+    let text = heading.trim_start_matches('#').trim();
+    let stripped = text
+        .split_once(". ")
+        .filter(|(number, _)| number.len() == 4 && number.chars().all(|c| c.is_ascii_digit()))
+        .map_or(text, |(_, rest)| rest);
+    Some(stripped.to_owned())
+}
+
 /// A record whose doctype registry row sets `requires_owner` and whose
 /// frontmatter carries no `owner:` value is a finding: an advisory by
 /// default, or an invariant violation under `require_owner`. The

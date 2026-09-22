@@ -120,6 +120,10 @@ mod tests {
         fn write(&self, _path: &Path, _contents: &str) -> io::Result<()> {
             Ok(())
         }
+
+        fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
+            Ok(())
+        }
     }
 
     #[test]
@@ -178,6 +182,13 @@ mod tests {
                 fs::create_dir_all(parent)?;
             }
             fs::write(path, contents)
+        }
+
+        fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+            if let Some(parent) = to.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::rename(from, to)
         }
     }
 
