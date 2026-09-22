@@ -127,6 +127,12 @@ pub(crate) enum Command {
         /// requires it (ADR) from a warning to an invariant violation.
         #[arg(long)]
         require_owner: bool,
+        /// Report only the findings anchored to these records, so a bundle
+        /// with legacy debt can gate a commit on what it touched (ADR 0062).
+        /// Every invariant still runs over the whole bundle; CI, not this
+        /// mode, is what proves the corpus.
+        #[arg(long, num_args = 1.., value_name = "PATH")]
+        changed_files: Vec<PathBuf>,
     },
     /// Renamed from `effective` by ADR 0060; `effective` survives as a
     /// hidden alias for one release.

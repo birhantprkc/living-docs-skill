@@ -34,7 +34,7 @@ pub(crate) const FMT_EXAMPLES: &str =
 
 pub(crate) const CHECK_ABOUT: &str = "Validates the bundle's mechanical invariants — the doc-gate.";
 pub(crate) const CHECK_EXAMPLES: &str =
-    "Examples:\n  living-docs check docs\n  living-docs check --require-owner docs";
+    "Examples:\n  living-docs check docs\n  living-docs check --require-owner docs\n  living-docs check --changed-files docs/adr/0001-x.md -- docs";
 
 pub(crate) const READ_ABOUT: &str =
     "Prints the agent-facing in-force view: active records, supersede chains collapsed.";

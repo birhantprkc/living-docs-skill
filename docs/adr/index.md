@@ -34,6 +34,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0059 — Cut living-docs to the authoring core: remove the database read-model, web front, public export, migrate, JSON authoring and the write-gate hook](0059-cut-living-docs-to-the-authoring-core-remove-the-database-read-model-web-front-public-export-migrate-json-authoring-and-the-write-gate-hook.md) - Accepted
 * [0060 — The CLI surface is a contract: ten intention-named verbs, one output mode per stream, documented exit codes, and help written for an agent](0060-the-cli-surface-is-a-contract-ten-intention-named-verbs-one-output-mode-per-stream-documented-exit-codes-and-help-written-for-an-agent.md) - Accepted
 * [0061 — set title retitles a record: frontmatter, heading, filename and every in-bundle link, refused only on a terminal or superseded record](0061-set-title-retitles-a-record-frontmatter-heading-filename-and-every-in-bundle-link-refused-only-on-a-terminal-or-superseded-record.md) - Accepted
+* [0062 — check --changed-files scopes the gate to the records a commit touches, so a brownfield bundle can arm the hook](0062-check-changed-files-scopes-the-gate-to-the-records-a-commit-touches-so-a-brownfield-bundle-can-arm-the-hook.md) - Accepted
 
 ## Superseded
 

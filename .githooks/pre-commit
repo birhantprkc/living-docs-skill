@@ -5,6 +5,10 @@
 # Runs `living-docs check` over the docs bundle so a hand-written or drifted
 # record fails in the authoring session, not at CI. Fail-open when no binary
 # is resolvable (CI still gates); never bypass a real failure with --no-verify.
+#
+# LIVING_DOCS_CHECK_CHANGED_ONLY=1 narrows the verdict to the staged records
+# (ADR 0062), so a bundle carrying legacy debt can arm this hook while it pays
+# that debt down. CI still runs the full gate.
 
 set -u
 
@@ -23,6 +27,15 @@ BIN="$(resolve_bin)"
 if [ -z "$BIN" ]; then
   echo "living-docs pre-commit: no binary found (PATH or target/release) — doc-gate skipped, CI will enforce it. Build with \`make build\`." >&2
   exit 0
+fi
+
+if [ "${LIVING_DOCS_CHECK_CHANGED_ONLY:-0}" = "1" ]; then
+  STAGED="$(git diff --cached --name-only --diff-filter=ACMR -- "$BUNDLE" | sed "s|^|$ROOT/|")"
+  if [ -z "$STAGED" ]; then
+    exit 0
+  fi
+  # shellcheck disable=SC2086
+  exec "$BIN" check --require-owner --plain --changed-files $STAGED -- "$ROOT/$BUNDLE"
 fi
 
 exec "$BIN" check --require-owner --plain "$ROOT/$BUNDLE"

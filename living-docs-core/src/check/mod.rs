@@ -189,6 +189,50 @@ pub struct Report {
     pub ok: bool,
 }
 
+impl Report {
+    /// The same report with every finding not anchored to one of `paths`
+    /// dropped, and `ok` recomputed from what remains (ADR 0062). Every
+    /// invariant still ran over the whole bundle — this narrows what is
+    /// reported, never what was computed — so a brownfield bundle can gate a
+    /// commit on the records it touched while legacy debt elsewhere is paid
+    /// down. An empty `paths` narrows to nothing and reports nothing.
+    #[must_use]
+    pub fn scoped_to(self, paths: &[PathBuf]) -> Self {
+        let scope: Vec<String> = paths
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect();
+        let violations: Vec<Violation> = self
+            .violations
+            .into_iter()
+            .filter(|violation| anchors_in(&violation.file, &scope))
+            .collect();
+        Self {
+            ok: violations.is_empty(),
+            violations,
+            advisories: self
+                .advisories
+                .into_iter()
+                .filter(|advisory| anchors_in(&advisory.file, &scope))
+                .collect(),
+            ..self
+        }
+    }
+}
+
+/// Whether `file` names the same record as one of `scope`. The two come from
+/// different hands — the report's paths are the store's enumeration, the
+/// scope's are whatever git or the caller printed — so one is allowed to be
+/// the other's suffix: `docs/adr/0001-x.md` matches an absolute
+/// `/repo/docs/adr/0001-x.md` and vice versa.
+fn anchors_in(file: &str, scope: &[String]) -> bool {
+    scope.iter().any(|candidate| {
+        file == candidate
+            || file.ends_with(&format!("/{candidate}"))
+            || candidate.ends_with(&format!("/{file}"))
+    })
+}
+
 /// Collects violations and advisories as `run_all_checks` walks the bundle,
 /// mirroring `report()`/`advise()` of `lint-docs.sh`.
 pub(crate) struct Reporter {
@@ -247,5 +291,7 @@ impl Reporter {
     }
 }
 
+#[cfg(test)]
+mod scope_tests;
 #[cfg(test)]
 mod tests;
