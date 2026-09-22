@@ -51,8 +51,16 @@ fn main() -> ExitCode {
         Command::Check {
             paths,
             require_owner,
+            changed_files,
             ..
-        } => commands::check::run_check(&cli.docs_dir, paths, require_owner, mode, color),
+        } => commands::check::run_check(
+            &cli.docs_dir,
+            paths,
+            require_owner,
+            &changed_files,
+            mode,
+            color,
+        ),
         Command::Fmt { paths, check } => commands::fmt::run_fmt(&cli.docs_dir, paths, check, mode),
         Command::Read(args) => commands::read::run_read(&cli.docs_dir, args, mode),
         Command::Guide(args) => commands::guide::run_guide(args, mode),

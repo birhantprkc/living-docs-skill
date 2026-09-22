@@ -12,11 +12,12 @@ pub(crate) fn run_check(
     docs_dir: &Path,
     paths: Vec<PathBuf>,
     require_owner: bool,
+    changed_files: &[PathBuf],
     mode: OutputMode,
     color: ColorMode,
 ) -> ExitCode {
     let bundle = check_bundle(docs_dir, paths);
-    let Some(report) = check::compile(build_store().as_ref(), &bundle, require_owner) else {
+    let Some(report) = compile_scoped(&bundle, require_owner, changed_files) else {
         eprintln!(
             "living-docs check: bundle root not found: {}",
             bundle.display()
@@ -36,6 +37,16 @@ pub(crate) fn run_check(
     } else {
         ExitCode::from(1)
     }
+}
+
+/// The bundle's report, narrowed to `changed_files` when the caller named
+/// any (ADR 0062). An empty list is the unscoped gate, not an empty scope.
+fn compile_scoped(bundle: &Path, require_owner: bool, changed_files: &[PathBuf]) -> Option<Report> {
+    let report = check::compile(build_store().as_ref(), bundle, require_owner)?;
+    if changed_files.is_empty() {
+        return Some(report);
+    }
+    Some(report.scoped_to(changed_files))
 }
 
 fn render_text(report: &Report, color: ColorMode) {

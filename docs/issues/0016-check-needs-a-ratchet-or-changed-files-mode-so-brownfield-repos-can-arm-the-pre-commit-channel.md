@@ -2,7 +2,7 @@
 type: Issue
 title: check needs a ratchet or changed-files mode so brownfield repos can arm the pre-commit channel
 description: Give check a baseline or changed-files mode so a brownfield bundle can arm the pre-commit channel against new debt while legacy debt is paid down incrementally.
-status: Proposed
+status: closed
 timestamp: 2026-07-30T18:58:58Z
 ---
 
