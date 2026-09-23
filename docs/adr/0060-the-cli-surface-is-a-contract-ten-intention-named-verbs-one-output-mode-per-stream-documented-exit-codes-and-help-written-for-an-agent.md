@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-09-18T09:11:58Z
 ---
 
-# 0060. The CLI surface is a contract
+# 0060. The CLI surface is a contract: ten intention-named verbs, one output mode per stream, documented exit codes, and help written for an agent
 
 ## Context
 

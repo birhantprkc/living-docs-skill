@@ -57,11 +57,7 @@ fn guard_status(path: &Path, contents: &str, spec: &DocTypeSpec) -> Result<(), S
     let Some(status) = extract_record(path, contents).status else {
         return Ok(());
     };
-    let terminal = spec
-        .terminal_statuses
-        .iter()
-        .any(|known| status.eq_ignore_ascii_case(known));
-    if !terminal && !status.eq_ignore_ascii_case("superseded") {
+    if !spec.is_retired(&status) {
         return Ok(());
     }
     Err(format!(
@@ -76,7 +72,9 @@ fn guard_status(path: &Path, contents: &str, spec: &DocTypeSpec) -> Result<(), S
 fn target_path(spec: &DocTypeSpec, path: &Path, title: &str) -> Result<Option<PathBuf>, String> {
     let slug = slugify(title);
     if slug.is_empty() {
-        return Err(format!("'{title}' has no slug; a title needs alphanumerics"));
+        return Err(format!(
+            "'{title}' has no slug; a title needs alphanumerics"
+        ));
     }
     let dir = path.parent().unwrap_or(Path::new(""));
     let target = match spec.identity {
@@ -130,7 +128,10 @@ pub(crate) fn replace_heading(contents: &str, title: &str) -> Option<String> {
     let mut lines: Vec<String> = contents.lines().map(str::to_owned).collect();
     let index = heading_index(&lines)?;
     let heading = &lines[index];
-    let hashes = heading.chars().take_while(|c| *c == '#').collect::<String>();
+    let hashes = heading
+        .chars()
+        .take_while(|c| *c == '#')
+        .collect::<String>();
     lines[index] = match heading_number(heading) {
         Some(number) => format!("{hashes} {number}. {title}"),
         None => format!("{hashes} {title}"),

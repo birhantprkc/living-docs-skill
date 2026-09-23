@@ -34,6 +34,7 @@ repo teaches. The decision *log* is this listing plus each record's `status` /
 * [0060 — The CLI surface is a contract: ten intention-named verbs, one output mode per stream, documented exit codes, and help written for an agent](0060-the-cli-surface-is-a-contract-ten-intention-named-verbs-one-output-mode-per-stream-documented-exit-codes-and-help-written-for-an-agent.md) - Accepted
 * [0061 — set title retitles a record: frontmatter, heading, filename and every in-bundle link, refused only on a terminal or superseded record](0061-set-title-retitles-a-record-frontmatter-heading-filename-and-every-in-bundle-link-refused-only-on-a-terminal-or-superseded-record.md) - Accepted
 * [0062 — check --changed-files scopes the gate to the records a commit touches, so a brownfield bundle can arm the hook](0062-check-changed-files-scopes-the-gate-to-the-records-a-commit-touches-so-a-brownfield-bundle-can-arm-the-hook.md) - Accepted
+* [0063 — Authoring advisories skip retired records](0063-authoring-advisories-skip-retired-records.md) - Accepted
 
 ## Superseded
 

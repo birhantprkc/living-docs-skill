@@ -9,7 +9,7 @@ tags: [cli, documentation, progressive-disclosure, skill-distribution, tokens, t
 timestamp: 2026-07-20T15:29:03Z
 ---
 
-# 0017. SKILL.md Stubs Are Pure Routers; the Spine and All Detail Move to CLI Topics
+# 0017. SKILL.md stubs are pure routers; the spine and all detail move to CLI topics
 
 ## Context
 

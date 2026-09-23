@@ -7,7 +7,7 @@ tags: [brazil, checksum, leak-prevention, methodology, pii, privacy, research]
 timestamp: 2026-07-17T23:55:00Z
 ---
 
-# Worldwide PII Detection Catalog — Deterministic (regex + checksum) Reference
+# Worldwide PII detection catalog — deterministic regex + checksum reference
 
 Compiled: 2026-07-17
 Scope: identifiers a pure-Rust, regex + check-digit scanner can detect (no ML, no external binaries).

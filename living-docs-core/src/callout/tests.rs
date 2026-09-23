@@ -1,48 +1,5 @@
 use super::*;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::io;
-use std::path::PathBuf;
-
-struct MapStore {
-    files: RefCell<BTreeMap<PathBuf, String>>,
-}
-
-impl DocStore for MapStore {
-    fn list(&self, root: &Path) -> io::Result<Vec<PathBuf>> {
-        Ok(self
-            .files
-            .borrow()
-            .keys()
-            .filter(|path| path.starts_with(root))
-            .cloned()
-            .collect())
-    }
-
-    fn read(&self, path: &Path) -> io::Result<String> {
-        self.files
-            .borrow()
-            .get(path)
-            .cloned()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
-    }
-
-    fn write(&self, path: &Path, contents: &str) -> io::Result<()> {
-        self.files
-            .borrow_mut()
-            .insert(path.to_path_buf(), contents.to_string());
-        Ok(())
-    }
-
-    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
-        let mut files = self.files.borrow_mut();
-        let contents = files
-            .remove(from)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))?;
-        files.insert(to.to_path_buf(), contents);
-        Ok(())
-    }
-}
+use crate::test_support::WritableMapStore as MapStore;
 
 #[test]
 fn expected_superseded_links_the_resolved_successor() {
@@ -138,13 +95,7 @@ fn reconcile_body_leaves_an_already_correct_body_untouched() {
 }
 
 fn store_with(files: &[(&str, &str)]) -> MapStore {
-    let map = files
-        .iter()
-        .map(|(path, contents)| (PathBuf::from(path), (*contents).to_string()))
-        .collect();
-    MapStore {
-        files: RefCell::new(map),
-    }
+    MapStore::seeded(files)
 }
 
 #[test]

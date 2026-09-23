@@ -89,52 +89,17 @@ fn is_external(target: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
-    use std::io;
+    use crate::test_support::MapStore;
     use std::process::ExitCode;
 
     fn exit_code_is_success(code: ExitCode) -> bool {
         format!("{code:?}") == format!("{:?}", ExitCode::SUCCESS)
     }
 
-    struct MapStore {
-        files: BTreeMap<PathBuf, String>,
-    }
-
-    impl DocStore for MapStore {
-        fn list(&self, root: &Path) -> io::Result<Vec<PathBuf>> {
-            Ok(self
-                .files
-                .keys()
-                .filter(|path| path.starts_with(root))
-                .cloned()
-                .collect())
-        }
-
-        fn read(&self, path: &Path) -> io::Result<String> {
-            self.files
-                .get(path)
-                .cloned()
-                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
-        }
-
-        fn write(&self, _path: &Path, _contents: &str) -> io::Result<()> {
-            Ok(())
-        }
-
-        fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
-            Ok(())
-        }
-    }
-
     #[test]
     fn check_file_links_reads_content_the_store_serves_with_no_disk_backing() {
-        let mut files = BTreeMap::new();
-        files.insert(
-            PathBuf::from("/bundle/adr/0001.md"),
-            "[missing](./0099-missing.md)\n".to_string(),
-        );
-        let store = MapStore { files };
+        let (store, _all_md) =
+            MapStore::seeded(&[("/bundle/adr/0001.md", "[missing](./0099-missing.md)\n")]);
         let mut reporter = Reporter::new();
 
         check_file_links(
@@ -149,9 +114,7 @@ mod tests {
 
     #[test]
     fn check_file_links_is_a_no_op_when_the_store_has_no_content_at_the_path() {
-        let store = MapStore {
-            files: BTreeMap::new(),
-        };
+        let (store, _all_md) = MapStore::seeded(&[]);
         let mut reporter = Reporter::new();
 
         check_file_links(

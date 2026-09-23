@@ -1,8 +1,6 @@
-//! Shared `#[cfg(test)]` fixtures for `check`'s unit tests: a single
-//! `MapStore` (a [`crate::store::DocStore`] backed by an in-memory
-//! `BTreeMap`, with no filesystem I/O) reused by `check::mod`,
-//! `check::records`, and `check::canonical` instead of three near-identical
-//! copies of the same fixture.
+//! Shared `#[cfg(test)]` fixtures: in-memory [`crate::store::DocStore`]
+//! doubles backed by a `BTreeMap`, with no filesystem I/O, so every unit test
+//! reuses one store instead of carrying its own copy.
 
 use crate::store::DocStore;
 use std::cell::RefCell;
@@ -12,6 +10,20 @@ use std::path::{Path, PathBuf};
 
 pub(crate) struct MapStore {
     pub(crate) files: BTreeMap<PathBuf, String>,
+}
+
+impl MapStore {
+    /// A store and its `all_md` listing seeded from `(path, contents)`
+    /// pairs — the fixture shape `check`'s per-file tests build over and
+    /// over, so a scenario is one call instead of a `BTreeMap` built by hand.
+    pub(crate) fn seeded(seed: &[(&str, &str)]) -> (Self, Vec<PathBuf>) {
+        let files: BTreeMap<PathBuf, String> = seed
+            .iter()
+            .map(|(path, contents)| (PathBuf::from(*path), (*contents).to_string()))
+            .collect();
+        let all_md = files.keys().cloned().collect();
+        (Self { files }, all_md)
+    }
 }
 
 impl DocStore for MapStore {
@@ -48,6 +60,12 @@ pub(crate) struct WritableMapStore {
 }
 
 impl WritableMapStore {
+    /// An empty store, for a test that scaffolds into a bundle with
+    /// nothing in it yet.
+    pub(crate) fn new() -> Self {
+        Self::seeded(&[])
+    }
+
     pub(crate) fn seeded(seed: &[(&str, &str)]) -> Self {
         Self {
             files: RefCell::new(

@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-07-30T22:33:04Z
 ---
 
-# 0028. The release binary is the unit of distribution
+# 0028. The release binary is the unit of distribution: install.sh only bootstraps it and every placement becomes a CLI verb
 
 ## Context
 

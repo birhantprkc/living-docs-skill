@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-08-03T12:12:00Z
 ---
 
-# 0029. The status vocabulary is per doc type, sourced from one DocTypeSpec field
+# 0029. The status vocabulary is per doc type, sourced from one DocTypeSpec field -- not one global list validated against every template's own dialect
 
 <!-- Status lives in frontmatter (`status`), not a body line. When superseding a
      prior ADR, set `supersedes` here and `superseded_by` on the old record.

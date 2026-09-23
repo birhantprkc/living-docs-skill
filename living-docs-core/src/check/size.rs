@@ -34,9 +34,20 @@ pub(crate) fn check_body_size(store: &dyn DocStore, all_md: &[PathBuf], reporter
 fn over_target_body_lines(content: &str) -> Option<usize> {
     let doc_type = frontmatter::read_scalar_from_str(content, "type")?;
     let spec = doc_type::spec_for_frontmatter(&doc_type)?;
+    if is_retired(content, spec) {
+        return None;
+    }
     (spec.body_size == BodySize::Targeted)
         .then(|| body_line_count(content))
         .filter(|lines| *lines > WARN_LINES)
+}
+
+/// Whether `content`'s own `status` frontmatter, judged against `spec`,
+/// marks the record retired — the shared [`doc_type::DocTypeSpec::is_retired`]
+/// predicate (ADR 0063). Absent `status`, the record is judged live.
+fn is_retired(content: &str, spec: &doc_type::DocTypeSpec) -> bool {
+    frontmatter::read_scalar_from_str(content, "status")
+        .is_some_and(|status| spec.is_retired(&status))
 }
 
 fn body_line_count(content: &str) -> usize {

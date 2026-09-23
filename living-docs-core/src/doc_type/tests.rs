@@ -112,6 +112,28 @@ fn spec_for_dir_returns_none_for_an_unknown_directory() {
     assert!(spec_for_dir("").is_none());
 }
 
+#[test]
+fn is_retired_matches_the_types_own_terminal_status_case_insensitively() {
+    let adr = spec_for("adr").unwrap();
+    assert!(adr.is_retired("Deprecated"));
+    assert!(adr.is_retired("deprecated"));
+    assert!(!adr.is_retired("Accepted"));
+
+    let issue = spec_for("issue").unwrap();
+    assert!(issue.is_retired("closed"));
+    assert!(issue.is_retired("done"));
+    assert!(issue.is_retired("CLOSED"));
+    assert!(!issue.is_retired("open"));
+}
+
+#[test]
+fn is_retired_treats_superseded_as_retired_for_every_type() {
+    for spec in DOC_TYPES {
+        assert!(spec.is_retired("Superseded"));
+        assert!(spec.is_retired("superseded"));
+    }
+}
+
 /// ADR 0027: `spec_for_frontmatter` resolves the first row whose
 /// `frontmatter` matches, so a duplicate would make that resolution
 /// non-deterministic. This guards the invariant, not a literal list.
