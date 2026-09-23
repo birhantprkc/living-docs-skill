@@ -1,15 +1,6 @@
 use super::*;
 use crate::check::Reporter;
 use crate::test_support::MapStore;
-use std::collections::BTreeMap;
-
-fn store_of(files: &[(&str, &str)]) -> MapStore {
-    let mut map = BTreeMap::new();
-    for (path, contents) in files {
-        map.insert(PathBuf::from(path), (*contents).to_string());
-    }
-    MapStore { files: map }
-}
 
 fn adr(status: &str, body: &str) -> String {
     format!("---\ntype: ADR\ntitle: t\nstatus: {status}\n---\n\n{body}")
@@ -20,9 +11,8 @@ fn issue(status: &str) -> String {
 }
 
 fn stale_count(files: &[(&str, &str)]) -> usize {
-    let store = store_of(files);
+    let (store, all_md) = MapStore::seeded(files);
     let bundle = Path::new("docs");
-    let all_md = store.list(bundle).unwrap();
     let mut reporter = Reporter::new();
     check_liveness(&store, bundle, &all_md, &mut reporter);
     reporter.advisories.len()
@@ -101,10 +91,25 @@ fn is_seed_status_reads_the_registry_seed_for_adr() {
 }
 
 #[test]
-fn terminal_issue_status_covers_closed_done_and_superseded_only() {
-    assert!(is_terminal_issue_status("closed"));
-    assert!(is_terminal_issue_status("done"));
-    assert!(is_terminal_issue_status("Superseded"));
-    assert!(!is_terminal_issue_status("open"));
-    assert!(!is_terminal_issue_status("in-progress"));
+fn a_proposed_adr_linking_a_superseded_issue_is_stale_proposed() {
+    let n = stale_count(&[
+        (
+            "docs/adr/0001-x.md",
+            &adr("Proposed", "See [issue](/issues/0002-y.md)."),
+        ),
+        ("docs/issues/0002-y.md", &issue("Superseded")),
+    ]);
+    assert_eq!(n, 1);
+}
+
+#[test]
+fn a_proposed_adr_linking_an_in_progress_issue_is_active() {
+    let n = stale_count(&[
+        (
+            "docs/adr/0001-x.md",
+            &adr("Proposed", "See [issue](/issues/0002-y.md)."),
+        ),
+        ("docs/issues/0002-y.md", &issue("in-progress")),
+    ]);
+    assert_eq!(n, 0);
 }

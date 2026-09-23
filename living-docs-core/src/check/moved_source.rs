@@ -90,26 +90,21 @@ fn check_target(
     );
 }
 
+/// True when the dependent's own status retires it: `Superseded` regardless
+/// of `type` — a missing or unregistered `type` still counts, per the
+/// issue's Decision — or a status `is_retired` accepts for a registered
+/// `type`.
 fn is_closed_dependent(contents: &str) -> bool {
     let Some(status) = frontmatter_scalar(contents, "status") else {
         return false;
     };
-    status.eq_ignore_ascii_case("superseded") || is_terminal_for_type(contents, &status)
-}
-
-/// Whether `status` is one of the calling record's own doc type's terminal
-/// statuses, per the registry row's `terminal_statuses`. An unregistered or
-/// missing `type` resolves to `false` rather than guessing.
-fn is_terminal_for_type(contents: &str, status: &str) -> bool {
+    if status.eq_ignore_ascii_case("superseded") {
+        return true;
+    }
     let Some(type_value) = frontmatter_scalar(contents, "type") else {
         return false;
     };
-    let Some(spec) = doc_type::spec_for_frontmatter(&type_value) else {
-        return false;
-    };
-    spec.terminal_statuses
-        .iter()
-        .any(|terminal| terminal.eq_ignore_ascii_case(status))
+    doc_type::spec_for_frontmatter(&type_value).is_some_and(|spec| spec.is_retired(&status))
 }
 
 /// True when `successor_id` — the moved source's `superseded_by` value —
