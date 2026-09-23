@@ -88,6 +88,27 @@ pub(crate) fn check_supersede_chain(
     all_md: &[PathBuf],
     reporter: &mut Reporter,
 ) {
+    for_each_readable_record(store, all_md, |f, contents| {
+        if !has_frontmatter(&contents) {
+            return;
+        }
+        let Some(status) = frontmatter_scalar(&contents, "status") else {
+            return;
+        };
+        if status.to_lowercase() == "superseded" {
+            check_supersede_target(f, &contents, all_md, reporter);
+        }
+    });
+}
+
+/// Visits every non-reserved, store-readable record in `all_md` — the
+/// skeleton `check_supersede_chain`, `check_heading_matches_title` and
+/// `check_owner_requirement` all walk before applying their own rule.
+fn for_each_readable_record<'a>(
+    store: &dyn DocStore,
+    all_md: &'a [PathBuf],
+    mut visit: impl FnMut(&'a Path, String),
+) {
     for f in all_md {
         if is_reserved(&file_name_str(f)) {
             continue;
@@ -95,15 +116,7 @@ pub(crate) fn check_supersede_chain(
         let Ok(contents) = store.read(f) else {
             continue;
         };
-        if !has_frontmatter(&contents) {
-            continue;
-        }
-        let Some(status) = frontmatter_scalar(&contents, "status") else {
-            continue;
-        };
-        if status.to_lowercase() == "superseded" {
-            check_supersede_target(f, &contents, all_md, reporter);
-        }
+        visit(f, contents);
     }
 }
 
@@ -137,18 +150,15 @@ pub(crate) fn check_heading_matches_title(
     all_md: &[PathBuf],
     reporter: &mut Reporter,
 ) {
-    for f in all_md {
-        if is_reserved(&file_name_str(f)) {
-            continue;
+    for_each_readable_record(store, all_md, |f, contents| {
+        if is_retired_record(&contents) {
+            return;
         }
-        let Ok(contents) = store.read(f) else {
-            continue;
-        };
         let (Some(title), Some(heading)) = (
             frontmatter_scalar(&contents, "title"),
             heading_title(&contents),
         ) else {
-            continue;
+            return;
         };
         if heading != title {
             reporter.advise(
@@ -157,7 +167,7 @@ pub(crate) fn check_heading_matches_title(
                 format!("HEADING '{heading}' disagrees with title '{title}'"),
             );
         }
-    }
+    });
 }
 
 /// The record's heading text, with the heading marks and the `NNNN.` number
@@ -174,6 +184,20 @@ fn heading_title(contents: &str) -> Option<String> {
     Some(stripped.to_owned())
 }
 
+/// Whether `contents`' own `type`/`status` frontmatter marks the record
+/// retired, through the shared [`doc_type::DocTypeSpec::is_retired`]
+/// predicate (ADR 0063). Absent either key, or an unregistered `type`, the
+/// record is judged live — there is nothing to retire it against.
+fn is_retired_record(contents: &str) -> bool {
+    let Some(doc_type) = frontmatter_scalar(contents, "type") else {
+        return false;
+    };
+    let Some(status) = frontmatter_scalar(contents, "status") else {
+        return false;
+    };
+    doc_type::spec_for_frontmatter(&doc_type).is_some_and(|spec| spec.is_retired(&status))
+}
+
 /// A record whose doctype registry row sets `requires_owner` and whose
 /// frontmatter carries no `owner:` value is a finding: an advisory by
 /// default, or an invariant violation under `require_owner`. The
@@ -186,18 +210,12 @@ pub(crate) fn check_owner_requirement(
     require_owner: bool,
     reporter: &mut Reporter,
 ) {
-    for f in all_md {
-        if is_reserved(&file_name_str(f)) {
-            continue;
-        }
-        let Ok(contents) = store.read(f) else {
-            continue;
-        };
+    for_each_readable_record(store, all_md, |f, contents| {
         if !has_frontmatter(&contents) {
-            continue;
+            return;
         }
         report_missing_owner(f, &contents, require_owner, reporter);
-    }
+    });
 }
 
 fn report_missing_owner(f: &Path, contents: &str, require_owner: bool, reporter: &mut Reporter) {

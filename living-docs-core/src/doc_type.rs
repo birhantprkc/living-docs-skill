@@ -70,6 +70,22 @@ pub struct DocTypeSpec {
     pub terminal_statuses: &'static [&'static str],
 }
 
+impl DocTypeSpec {
+    /// Whether `status` (case-insensitive) retires a record of this type:
+    /// `Superseded` for every type, or a status this row's
+    /// `terminal_statuses` lists. `set title` refuses a retired record and
+    /// `check`'s `HEADING`/`SIZE` advisories skip one, both through this one
+    /// definition (ADR 0063), so the CLI's writes and `check`'s reads can
+    /// never disagree about which records are history.
+    pub fn is_retired(&self, status: &str) -> bool {
+        status.eq_ignore_ascii_case("superseded")
+            || self
+                .terminal_statuses
+                .iter()
+                .any(|terminal| terminal.eq_ignore_ascii_case(status))
+    }
+}
+
 const ADR: DocTypeSpec = DocTypeSpec {
     token: "adr",
     identity: Identity::Numbered { dir: "adr" },

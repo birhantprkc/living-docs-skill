@@ -1,70 +1,8 @@
 use super::*;
 use crate::store::DocStore;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
+use crate::test_support::WritableMapStore as MapStore;
 use std::io;
 use std::path::{Path, PathBuf};
-
-/// A minimal in-memory [`DocStore`] test double, so `scaffold`'s tests
-/// need no filesystem at all — `living-docs-core` depends on no
-/// concrete adapter (issue 0006 slice 0006-D2).
-struct MapStore {
-    files: RefCell<BTreeMap<PathBuf, String>>,
-}
-
-impl MapStore {
-    fn new() -> Self {
-        Self {
-            files: RefCell::new(BTreeMap::new()),
-        }
-    }
-
-    fn seeded(seed: &[(&str, &str)]) -> Self {
-        let files = seed
-            .iter()
-            .map(|(path, contents)| (PathBuf::from(path), (*contents).to_string()))
-            .collect();
-        Self {
-            files: RefCell::new(files),
-        }
-    }
-}
-
-impl DocStore for MapStore {
-    fn list(&self, root: &Path) -> io::Result<Vec<PathBuf>> {
-        Ok(self
-            .files
-            .borrow()
-            .keys()
-            .filter(|path| path.starts_with(root))
-            .cloned()
-            .collect())
-    }
-
-    fn read(&self, path: &Path) -> io::Result<String> {
-        self.files
-            .borrow()
-            .get(path)
-            .cloned()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
-    }
-
-    fn write(&self, path: &Path, contents: &str) -> io::Result<()> {
-        self.files
-            .borrow_mut()
-            .insert(path.to_path_buf(), contents.to_string());
-        Ok(())
-    }
-
-    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
-        let mut files = self.files.borrow_mut();
-        let contents = files
-            .remove(from)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))?;
-        files.insert(to.to_path_buf(), contents);
-        Ok(())
-    }
-}
 
 fn opts<'a>(description: Option<&'a str>, kind: Option<&'a str>) -> NewOptions<'a> {
     NewOptions {
@@ -229,7 +167,7 @@ fn scaffold_writes_the_given_description_when_some_is_passed() {
 /// clobber guard checks `DocStore::read` directly rather than trusting
 /// `DocStore::list`'s allocation to have already ruled the path out.
 struct StaleListingStore {
-    files: BTreeMap<PathBuf, String>,
+    inner: crate::test_support::MapStore,
 }
 
 impl DocStore for StaleListingStore {
@@ -238,29 +176,25 @@ impl DocStore for StaleListingStore {
     }
 
     fn read(&self, path: &Path) -> io::Result<String> {
-        self.files
-            .get(path)
-            .cloned()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not found"))
+        self.inner.read(path)
     }
 
-    fn write(&self, _path: &Path, _contents: &str) -> io::Result<()> {
-        Ok(())
+    fn write(&self, path: &Path, contents: &str) -> io::Result<()> {
+        self.inner.write(path, contents)
     }
 
-    fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
-        Ok(())
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        self.inner.rename(from, to)
     }
 }
 
 #[test]
 fn scaffold_refuses_to_clobber_a_path_the_store_already_serves_even_when_listing_omits_it() {
-    let mut files = BTreeMap::new();
-    files.insert(
-        PathBuf::from("/bundle/adr/0001-first-decision.md"),
-        "existing".to_string(),
-    );
-    let store = StaleListingStore { files };
+    let (inner, _all_md) = crate::test_support::MapStore::seeded(&[(
+        "/bundle/adr/0001-first-decision.md",
+        "existing",
+    )]);
+    let store = StaleListingStore { inner };
 
     let err = scaffold(
         &store,

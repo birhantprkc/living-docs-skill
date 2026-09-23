@@ -1,11 +1,68 @@
 use super::*;
 
 fn doc_with_body_lines(doc_type: &str, body_lines: usize) -> String {
+    doc_with_status_and_body_lines(doc_type, None, body_lines)
+}
+
+fn doc_with_status_and_body_lines(
+    doc_type: &str,
+    status: Option<&str>,
+    body_lines: usize,
+) -> String {
     let body = (0..body_lines)
         .map(|i| format!("line {i}"))
         .collect::<Vec<_>>()
         .join("\n");
-    format!("---\ntype: {doc_type}\n---\n{body}")
+    let status_line = status.map_or(String::new(), |status| format!("status: {status}\n"));
+    format!("---\ntype: {doc_type}\n{status_line}---\n{body}")
+}
+
+#[test]
+fn a_deprecated_adr_over_target_is_not_flagged() {
+    assert_eq!(
+        over_target_body_lines(&doc_with_status_and_body_lines(
+            "ADR",
+            Some("Deprecated"),
+            121
+        )),
+        None
+    );
+}
+
+#[test]
+fn a_superseded_adr_over_target_is_not_flagged() {
+    assert_eq!(
+        over_target_body_lines(&doc_with_status_and_body_lines(
+            "ADR",
+            Some("Superseded"),
+            121
+        )),
+        None
+    );
+}
+
+#[test]
+fn an_accepted_adr_over_target_is_still_flagged() {
+    assert_eq!(
+        over_target_body_lines(&doc_with_status_and_body_lines(
+            "ADR",
+            Some("Accepted"),
+            121
+        )),
+        Some(121)
+    );
+}
+
+#[test]
+fn a_case_insensitive_deprecated_status_is_not_flagged() {
+    assert_eq!(
+        over_target_body_lines(&doc_with_status_and_body_lines(
+            "ADR",
+            Some("deprecated"),
+            121
+        )),
+        None
+    );
 }
 
 #[test]
