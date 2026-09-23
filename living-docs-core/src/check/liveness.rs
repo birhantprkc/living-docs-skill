@@ -95,18 +95,7 @@ fn issue_target_is_terminal(store: &dyn DocStore, target: &Path, all_md: &[PathB
     let Some(status) = frontmatter_scalar(&contents, "status") else {
         return false;
     };
-    is_terminal_issue_status(&status)
-}
-
-fn is_terminal_issue_status(status: &str) -> bool {
-    if status.eq_ignore_ascii_case("superseded") {
-        return true;
-    }
-    doc_type::spec_for_frontmatter("Issue").is_some_and(|spec| {
-        spec.terminal_statuses
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case(status))
-    })
+    doc_type::spec_for_frontmatter("Issue").is_some_and(|spec| spec.is_retired(&status))
 }
 
 #[cfg(test)]

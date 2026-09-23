@@ -134,26 +134,19 @@ fn clears_when_the_resolved_successor_is_the_dependent_record_itself() {
 }
 
 #[test]
-fn keeps_firing_when_an_open_dependent_links_a_superseded_record_with_a_distinct_successor() {
+fn clears_when_the_dependent_is_superseded_with_no_registered_type() {
     let reporter = run_over(vec![
         (
-            "/bundle/adr/0001-a.md",
-            "---\ntype: ADR\nstatus: Accepted\n---\n\n[b](./0002-b.md)\n",
+            "/bundle/misc/0001-a.md",
+            "---\ntype: Playbook\nstatus: Superseded\n---\n\n[b](./0002-b.md)\n",
         ),
         (
-            "/bundle/adr/0002-b.md",
+            "/bundle/misc/0002-b.md",
             "---\ntype: ADR\nstatus: Superseded\nsuperseded_by: 0003\n---\n# B\n",
-        ),
-        (
-            "/bundle/adr/0003-c.md",
-            "---\ntype: ADR\nstatus: Accepted\n---\n# C\n",
         ),
     ]);
 
-    let messages = advisory_messages(&reporter);
-    assert_eq!(messages.len(), 1);
-    assert!(messages[0].contains("MOVED-SOURCE"));
-    assert!(messages[0].contains("superseded by 0003"));
+    assert!(advisory_messages(&reporter).is_empty());
 }
 
 #[test]
