@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-09-11T15:57:55Z
 ---
 
-# 0057. Refocus living-docs on a decision log
+# 0057. Refocus living-docs on a decision log: delete BDR, cut peripheral verbs and check advisories, and consolidate the rule corpus
 
 ## Context
 

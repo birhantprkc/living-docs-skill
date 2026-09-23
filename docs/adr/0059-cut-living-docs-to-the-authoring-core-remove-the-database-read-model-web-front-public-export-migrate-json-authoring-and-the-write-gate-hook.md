@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-09-18T08:26:00Z
 ---
 
-# 0059. Cut living-docs to the authoring core
+# 0059. Cut living-docs to the authoring core: remove the database read-model, web front, public export, migrate, JSON authoring and the write-gate hook
 
 ## Context
 

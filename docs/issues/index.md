@@ -56,3 +56,4 @@ one slice per fresh context, starting from the skeleton.
 * [0045 — Three-pane web shell with metadata panel and Cmd+K palette](0045-three-pane-web-shell-with-metadata-panel-and-cmd-k-palette.md) - done
 * [0046 — Packaging is the CLI: install.sh bootstraps the binary only, and the harness install matrix, the Claude Code plugin channel and the generated Copilot copy leave the repo](0046-packaging-is-the-cli-install-sh-bootstraps-the-binary-only-and-the-harness-install-matrix-the-claude-code-plugin-channel-and-the-generated-copilot-copy-leave-the-repo.md) - closed
 * [0047 — set accepts title so a live record can be retitled without hand-editing frontmatter](0047-set-accepts-title-so-a-live-record-can-be-retitled-without-hand-editing-frontmatter.md) - closed
+* [0048 — check stops advising on retired records and the live headings align with their titles](0048-check-stops-advising-on-retired-records-and-the-live-headings-align-with-their-titles.md) - closed

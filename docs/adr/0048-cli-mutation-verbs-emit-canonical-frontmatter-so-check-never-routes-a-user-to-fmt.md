@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-09-07T16:50:28Z
 ---
 
-# 0048. CLI mutation verbs emit canonical frontmatter
+# 0048. CLI mutation verbs emit canonical frontmatter so check never routes a user to fmt
 
 This decision answers the second defect in [issue 0041](/issues/0041-fmt-rewrites-record-bodies-reference-lists-collapse-to-one-line-and-supersede-emits-non-canonical-frontmatter-that-sends-users-to-fmt.md) and pairs with [ADR 0047](/adr/0047-living-docs-fmt-is-frontmatter-only-and-the-record-body-stays-byte-identical.md).
 

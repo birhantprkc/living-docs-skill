@@ -8,7 +8,7 @@ supersedes: 0046
 timestamp: 2026-09-07T16:50:25Z
 ---
 
-# 0047. fmt is frontmatter-only; the record body stays byte-identical
+# 0047. living-docs fmt is frontmatter-only and the record body stays byte-identical
 
 This decision supersedes [ADR 0046](/adr/0046-fmt-unwraps-hard-wrapped-prose-one-paragraph-is-one-line-and-the-authoring-rule-says-so.md) and answers [issue 0041](/issues/0041-fmt-rewrites-record-bodies-reference-lists-collapse-to-one-line-and-supersede-emits-non-canonical-frontmatter-that-sends-users-to-fmt.md).
 

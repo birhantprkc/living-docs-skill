@@ -7,7 +7,7 @@ tags: [codegraph, knowledge-graph, ontology, oxigraph, rdf, research, rust, sema
 timestamp: 2026-07-20T00:00:00Z
 ---
 
-# Ontology Tooling and the Code-to-Docs Bridge — Rust-Native Options for a Living-Docs Knowledge Layer
+# Ontology tooling and the code-to-docs bridge — Rust-native options for a living-docs knowledge layer
 
 Compiled: 2026-07-20
 Scope: open-source ontology substrates and formats evaluated for one job — bridging codegraph's code-symbol graph and the living-docs semantic index ("from code up to the human, and back"), under this repo's locked constraints (one language / one build; determinism boundary; "every doc lands in exactly one place").

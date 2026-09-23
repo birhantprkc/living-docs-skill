@@ -7,7 +7,7 @@ status: Accepted
 timestamp: 2026-09-17T14:49:14Z
 ---
 
-# 0058. Retired records declare themselves
+# 0058. Retired records declare themselves: a CLI-written callout in the body, successor-bearing index rows, and effective as the agent read verb
 
 ## Context
 

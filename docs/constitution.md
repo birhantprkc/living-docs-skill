@@ -6,7 +6,7 @@ status: Draft
 timestamp: 2026-07-16T00:00:00Z
 ---
 
-# Product Constitution
+# living-docs Constitution
 
 ## Product
 
