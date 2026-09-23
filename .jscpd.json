@@ -1,0 +1,12 @@
+{
+  "minLines": 5,
+  "ignore": [
+    "cli/tests/**",
+    "scripts/tests/**",
+    "**/tests.rs",
+    "**/*_tests.rs",
+    "**/tests/**",
+    "living-docs-core/src/test_support.rs",
+    "**/*.md"
+  ]
+}
